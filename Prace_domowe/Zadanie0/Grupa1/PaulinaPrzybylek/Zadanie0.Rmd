@@ -1,0 +1,71 @@
+---
+title: "Zadanie0"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(data.table)
+library(ggplot2)
+
+```
+
+## Zbiór danych abalone
+
+```{r, cache=TRUE}
+abalone <- read.csv("abalone_dataset.csv")
+head(abalone)
+```
+
+## Analiza danych
+
+Rozkład wagi całkowitej naszych abalone (uchowców, dziwnych zwierzątek). 
+
+```{r , cache = TRUE, echo=FALSE}
+#rozkład wagi całkowitej
+ggplot(abalone)+
+  geom_histogram(aes(whole_weight))+
+  labs(title = "Rozkład wagi całkowitej abalone (uchowca)",
+       x = "Waga",
+       y = "Liczba") +
+  theme_bw()
+```
+
+Sprawdzenie oddzielnie, mało kolumn, w ramach szukania ciekawych zależności. Szukanie do skutku. 
+
+```{r ,}
+#zależności między zmiennymi
+ggplot(abalone, aes(length, whole_weight))+
+  geom_point() +
+  geom_smooth(method="lm", color="red", se=FALSE) +
+  labs(title = "Zależność długości i wagi")
+
+ggplot(abalone, aes(height, whole_weight))+
+  geom_point() +
+  geom_smooth(method="lm", color="red", se=FALSE) +
+  labs(title = "Zależność wysokości i wagi")
+
+ggplot(abalone, aes(diameter, whole_weight))+
+  geom_point() +
+  geom_smooth(method="lm", color="red", se=FALSE) +
+  labs(title = "Zależność ... i wagi")
+
+ggplot(abalone, aes(viscera_weight, whole_weight))+
+  geom_point() +
+  geom_smooth(method="lm", color="red", se=FALSE) +
+  labs(title = "Zależność ... i wagi")
+
+ggplot(abalone, aes(shucked_weight, whole_weight))+
+  geom_point() +
+  geom_smooth(method="lm", color="red", se=FALSE) +
+  labs(title = "Zależność ... i wagi")
+
+ggplot(abalone, aes(rings, whole_weight))+
+  geom_point() +
+  geom_smooth(method="lm", color="red", se=FALSE) +
+  labs(title = "Zależność ... i wagi")
+```
+
+Okazuje się, że waga koreluje ze wszytkimi kolumnami w podobny sposób.
+
+Przepraszam, za dość okropny sposób wizualizacji, to było jedynie do testów - problemy ze sprzętem i wyłaczączenie się komputera bez zapisu pliku spowodowało brak czasu na poprawienie analizy. Zrobienie fasetów itp...

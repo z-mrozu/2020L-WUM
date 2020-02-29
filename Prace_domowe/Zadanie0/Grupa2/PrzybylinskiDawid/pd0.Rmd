@@ -1,0 +1,62 @@
+---
+title: "PD0"
+author: "Dawid Przybyliński"
+date: "2/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+data <- read.csv("/home/samba/przybylinskid/WUM/bank.csv", sep = ";")
+library(ggplot2)
+```
+
+# EDA kolumny numerycznej wiek w danych klientów bankowych, korzystając z języka R
+
+## 1. Badanie rozkładu zmiennej:
+
+### Stworzenie histogramu:
+
+```{r}
+ggplot(data=data) + 
+  geom_histogram(aes(x=data$age,y=..density..), breaks=seq(15,90,5), fill='#6197ed', col='black') +
+  geom_density(aes(x=data$age,y=..density..)) +
+  labs(title = "Histogram wieku klientów wraz z krzywą gęstości") +
+  xlab("wiek") +
+  ylab("liczność") +
+  theme_bw()
+
+```
+
+## 2. Korelacja z innymi zmiennymi 
+
+### Histogram wieku po podziale na to czy klient jest żonaty/zamężny, stanu wolnego, czy też rozwiedziony/owdowiały:
+
+```{r}
+ggplot(data=data, aes(x = age)) +
+  geom_histogram(breaks=seq(10,90,5), fill='#6197ed', col='black') +
+  facet_wrap(~ marital, ) +
+  theme_bw() +
+  xlab("wiek") +
+  ylab("liczność")
+```
+
+### Boxplot wieku w zależności od edukacji:
+
+```{r}
+ggplot(data, aes(x=as.factor(education), y=age)) + 
+  geom_boxplot(fill="slateblue", alpha=0.2) + 
+  xlab("edukacja") +
+  ylab("wiek") +
+  theme(text = element_text(size=14))
+```
+
+## 3. Wnioski
+ - Najwięcej klientów banku jest w przedziale wiekowym 30-35 lat,
+ - Trend ten jest zachodzi zarówno dla singli, jak i osób żonatych/zamężnych,
+ - Osoby z podstawowym wykształceniem stanowią najliczniejszą grupę klientów.
+ 
+ 
+ 
+
+

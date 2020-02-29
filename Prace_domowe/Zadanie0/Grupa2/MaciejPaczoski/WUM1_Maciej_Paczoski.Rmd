@@ -1,0 +1,37 @@
+---
+title: "WUM1"
+author: "Maciej Paczóski"
+date: "2/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load}
+library(ggplot2)
+bank <- read.csv("/home/samba/paczoskim/WUM/bank.csv",sep=";")
+```
+
+## Rozkład zmiennej "duration"
+
+
+```{r hist, echo=FALSE}
+ggplot(bank,aes(x=duration)) +
+  geom_histogram()
+```
+
+## Zależności między zmienną "duration" a innymi
+
+
+```{r cor, echo=FALSE}
+a <- as.data.frame(t(cor(bank$duration,bank[c("age","balance","day","campaign","pdays","previous")])))
+a$col <- rownames(a)
+rownames(a) <- NULL
+colnames(a) <- c("Correlation","Variable")
+ggplot(a,aes(x=Variable,y=Correlation)) +
+  geom_bar(stat="identity")
+```
+
+Nie ma zależności między zmienną duration a innymi zmiennymi.
