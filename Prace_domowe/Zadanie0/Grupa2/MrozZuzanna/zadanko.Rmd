@@ -1,0 +1,27 @@
+---
+title: "Lab01"
+author: "Zuzanna Mróz"
+date: "2/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+data <- read.csv("bank.csv", sep=";")
+library(ggplot2)
+```
+
+## Rozklad wieku
+
+```{r hist, message=FALSE}
+ggplot(data=data, aes(x=age)) + geom_histogram(aes(y=..density..), fill="purple", binwidth=3) + geom_density()
+```
+
+## Korelacja (???)
+
+```{r cor, message=FALSE, warning=FALSE}
+ggplot(data, aes(age, balance)) + 
+    geom_point(alpha=0.5, color="purple") + facet_grid(marital ~ education)+
+    geom_smooth(method = "lm", color="pink") 
+```
+

@@ -1,0 +1,48 @@
+---
+title: "Zadanie 0"
+author: "Aleksander Podsiad"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+library(ggplot2)
+```
+
+
+```{r}
+bank <- read.csv2("bank.csv")
+summary(bank$age)
+```
+
+# Rozkład wieku
+
+```{r}
+ggplot(bank, aes(x=age)) + 
+    geom_histogram(aes(y=..density..),      
+                   bins = 18,
+                   colour="black", fill="white") +
+    geom_density()
+```
+
+# Zależność między wiekiem a stanem cywilnym
+
+```{r}
+ggplot(bank, aes(x=marital,y=age)) + geom_boxplot()
+```
+
+# Zależność między wiekiem a pożyczką
+
+```{r}
+ggplot(bank, aes(x=loan,y=age)) + geom_boxplot()
+```
+
+# Zależność między wiekiem a zawodem
+
+```{r}
+ggplot(bank, aes(x=age, y=job)) + geom_boxplot()
+```
+
