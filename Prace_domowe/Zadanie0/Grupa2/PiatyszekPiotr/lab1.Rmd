@@ -1,0 +1,64 @@
+---
+title: "WUM Lab 1"
+author: "Piotr Piątyszek"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=T)
+```
+
+# Ładowanie danych
+```{r, warning=FALSE, fig.width=10, fig.height=8}
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+
+bank <- read.csv('./bank-full.csv', sep=";")
+```
+
+# Będziemy analizować zmienną wieku
+```{r}
+summary(bank$age)
+```
+
+# Violin plot tej zmiennej
+```{r, fig.width=10, fig.height=8}
+ggplot(bank, aes(x="", y=age)) +
+  geom_violin()
+```
+
+# Wykres gęstości
+```{r, fig.width=10, fig.height=8}
+# Rozkład zmiennej age
+ggplot(bank, aes(x=age)) + 
+    geom_histogram(aes(y=..density..), binwidth=5, color="black", fill="white") +
+    geom_density(alpha=.1, fill="#FF6666")
+```
+
+# Macierz korelacji ze zmiennymi numerycznymi
+```{r, fig.width=10, fig.height=8}
+# Kolumny numeryczne
+numerical <- sapply(colnames(bank), function(x) {is.numeric(bank[,x])})
+
+# Macierz korelacji
+cor_matrix <- round(cor(bank[, numerical]),2)
+ggplot(melt(cor_matrix), aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1),
+                       space = "Lab", name="Pearson\nCorrelation")
+```
+
+# Zależności ze zmiennymi kategorycznymi
+```{r, fig.width=12, fig.height=6}
+# Marital status
+ggplot(bank, aes(x=marital, y=age)) + geom_boxplot()
+# Education
+ggplot(bank, aes(x=education, y=age)) + geom_boxplot()
+# Age
+ggplot(bank, aes(x=job, y=age)) + geom_boxplot()
+
+```
+
+# Wnioski
+Struktura wieku jest zbliżona do rozkładu normalnego. Wiek jest słabo skorelowany z innymi zmiennymi numerycznymi, ale najsilniej z ilością poprzednich rozmów. Nie widać dużej zależności ze stopniem edukacji. Widać natomiast z dwoma szczególnymi wartościami pracy - student i emeryt. Podobnie single są młodsi od osób zamężnych i rozwiedzionych.
