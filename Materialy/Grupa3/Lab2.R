@@ -9,9 +9,9 @@ data <- titanic_imputed
 chisq.test(table(data$class, data$survived))
 
 #p-value < 0.05 - można przyjąć, że zmienne zależne
-
-x <- cut(rnorm(10000), c(-Inf,-2, -1, -0.5, 0, 0.5, 1, 2, Inf))
-y <- cut(rnorm(10000), c(-Inf,-2, -1, -0.5, 0, 0.5, 1, 2, Inf))
+set.seed(123)
+x <- cut(rnorm(10000), c(-Inf, -1, -0.5, 0, 0.5, 1, Inf))
+y <- cut(rnorm(10000), c(-Inf, -1, -0.5, 0, 0.5, 1, Inf))
 chisq.test(table(x, y))
 
 # p-value > 0.05 - Nie ma podstaw by powiedzieć, że są zależne
