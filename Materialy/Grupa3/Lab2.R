@@ -99,11 +99,12 @@ createDummyFeatures(new_var_2)
 
 #PCA
 
-data <- na.omit(createDummyFeatures(titanic_imputed))
+data <- createDummyFeatures(titanic_imputed)
+#data <- as.data.frame(scale(data))
 
-data_pca <- princomp(~., data[,-5])
+data_pca <- prcomp(data[,-5], scale. = TRUE, center = TRUE)
 summary(data_pca)
-data_pca$loadings[,1]
-
+data_pca$x
+plot(data_pca)
 
 
