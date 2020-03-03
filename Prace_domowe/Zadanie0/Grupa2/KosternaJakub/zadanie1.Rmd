@@ -1,0 +1,122 @@
+---
+title: "Wstęp do uczenia maszynowego - lab 1"
+author: "Jakub Kosterna"
+date: "February 25, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Odczyt
+
+```{r readingData}
+setwd("/home/samba/kosternaj/Desktop/06ML/bank")
+data <- read.csv("bank.csv", sep = ';')
+```
+
+Zobaczmy czy wszystko poszło zgodnie z planem.
+
+```{r whatsThat}
+library(DT)
+datatable(data)
+```
+
+Wiwat! Jest Ok
+
+# 2. Analiza
+
+## 2.1)
+
+Przyjrzyjmy się kolumnie "duration" - czasu w sekundach ostatniej konsultacji.
+Wpierw zweryfikujmy rozkład zmiennej
+
+```{r z1, message = F}
+library(ggplot2)
+duration <- data$duration
+
+ggplot(data, aes(x = duration)) +
+  geom_histogram()
+
+print(paste("Mediana:", median(duration)))
+print(paste("Średnia:", mean(duration)))
+```
+
+Jak widać przeważa czas trwania to kilku minut. Mediana to 3 minuty, a średnia niecałe 5. Rzadko kiedy rozmowa trwa dłużej niż 10 minut. Śladowy procent konsultacji przekroczył pół godziny. Ma sens? Ma.
+
+## 2.2)
+
+Może istnieje jakaś zależność między czasem rozmowy a wiekiem rozmówcy?
+
+```{r z2a, message = F}
+ggplot(data, aes(x = age, y = duration)) +
+  geom_point() +
+  geom_smooth()
+```
+
+Chyba nic ciekawego.
+Co w kwestii stanu cywilnego?
+
+```{r z2b, message = F}
+ggplot(data, aes(x = age, y = duration)) +
+  geom_point() +
+  geom_smooth() +
+  facet_grid(data$marital)
+```
+
+Tym bardziej nic ciekawego. Za wyjątkiem faktu, że żaden singiel po 70. się nie odezwał :O
+Mnie jeszcze ciekawi jak to będzie jeżeli weźmie się pod uwagę subskrypcję lokaty terminowej
+
+```{r z2c, message = F}
+ggplot(data, aes(x = age, y = duration)) +
+  geom_point() +
+  geom_smooth() +
+  facet_grid(data$marital ~ data$y)
+```
+
+Rozwodnicy w zależności od subskrypcji z wiekiem gadają coraz krócej jeśli ją mają i coraz dłużej w przeciwnym wypadku?
+Niestety to chyba tylko kwestia małego zbioru danych.
+Ale może dla większego zbioru...
+
+```{r z2d, message = F}
+dataFull <- read.csv("bank-full.csv", sep = ';')
+
+ggplot(dataFull, aes(x = age, y = duration)) +
+  geom_point() +
+  geom_smooth() +
+  facet_grid(dataFull$marital ~ dataFull$y)
+```
+
+Analiza większego zbioru danych wykazała, że tak jak dla nie-subskrybentów zależności nie ma...
+to subskrybujący rozwodnicy z wiekiem gadają coraz krócej, a subskrybujący single - coraz dłużej!
+Czyli samotni z wiekiem potrzebują więcej i więcej drugiego człowieka, a rozwodnicy mają go coraz bardziej dość - znowu bez zaskoczeń
+
+Kolumna *campaign* mówi nam o liczbie wszystkich konsultacji danego klienta.
+Sprawdźmy czy ci którzy ostatni przeprowadzili dłuższą rozmowę, częściej komunikują się z firmą.
+
+```{r z2e, message = F}
+ggplot(data, aes(x = campaign, y = duration)) +
+  geom_jitter() +
+  geom_smooth()
+```
+
+geom_smooth mówi że delikatnie więcej konsultacji <-> krótsza ostatnia rozmowa, ale w sumie kwestia sekund, więc...
+Weźmy jeszcze pod uwagę stan cywilny
+
+```{r z2f, message = F}
+ggplot(data, aes(x = campaign, y = duration, color = marital)) +
+  geom_jitter() +
+  geom_smooth()
+```
+
+Z singlami jest coś nie tak. Sprawdźmy duży zbiór danych.
+
+```{r z2g, message = F}
+ggplot(dataFull, aes(x = campaign, y = duration, color = marital)) +
+  geom_jitter() +
+  geom_smooth()
+```
+
+... jak widać geom_smooth() potrafi zaszaleć dla zbyt małego zbioru.
+Im więcej danych, tym daleko idące wnioski z przypadku ubogiego zbioru idą w zapomnienie :-(
