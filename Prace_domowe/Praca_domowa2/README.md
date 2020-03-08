@@ -7,3 +7,7 @@ Dla zmiennych jakościowych o dużej liczbie unikalnych wartości ze zbioru Alle
 zastosuj 3 metody kodowania ze strony (http://contrib.scikit-learn.org/categorical-encoding/ (jedną, która pojawiła się na zajęciach i dwie "nowe"). Opisz wyniki.
 
 Przetestuj dla jednej kolumny numerycznej automatyczne uzupełnianie braków z użyciem jednej z metod: Nearest neighbors imputation, Multivariate feature imputation (https://scikit-learn.org/stable/modules/impute.html). Zwizualizuj wyniki (np. histogram).
+
+Rozwiązania (Jupyter Notebook/Rmd + html) proszę zgłaszać przez pull request do podfolderu z imieniem i nazwiskiem.
+
+Termin oddania: 23 III 2020 r. (do godz. 23:59)
