@@ -1,0 +1,53 @@
+---
+title: "Praca domowa ze wstępu do uczenia maszynowego nr 1"
+author: "Marceli Korbin"
+date: "8 marca 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+kredyty <- read.csv("german_credit_data_weka_dataset.csv")
+library(rpivotTable)
+library(ggplot2)
+library(dplyr)
+library(DataExplorer)
+```
+
+## Wstęp
+
+W pracy domowej przyglądam się zbiorowi danych nt. kredytów w Niemczech (dostępnemu na stronie https://www.mldata.io/dataset-details/german_credit_data/).
+
+## Przyczyna wzięcia kredytu w zależności od zatrudnienia
+
+```{r wykres1}
+rpivotTable(kredyty, cols = "present_employment", rows = "purpose", aggregatorName="Count", vals = "Value",
+            rendererName = "Col Heatmap", height=800, subtotals=FALSE)
+```
+
+Najczęściej klienci brali kredyt w celu kupna samochodu lub sprzętu RTV. Bezrobotni klienci stanowią jedyną grupę, w której radio i telewizja nie były najpopularniejszym celem skonsumowania kredytu; częściej zależało im na samochodzie lub umeblowaniu.
+
+## Rozkład kredytu według długości pożyczki i wieku kredytobiorcy
+
+```{r wykres2}
+age_dur <- kredyty %>% group_by(age, duration) %>% count()
+colnames(age_dur) <- c("age", "duration", "liczbaOsob")
+
+ggplot(age_dur, aes(x=duration, y=age)) + geom_point(aes(colour=liczbaOsob, size=liczbaOsob)) + guides(size=FALSE)
+```
+
+Kredyt zazwyczaj był brany na rok lub 2 lata, przez ludzi w wieku do 40 lat.
+
+## Wysokość kredytu względem historii kredytowej
+
+```{r wykres3}
+ggplot(kredyty, aes(x=credit_history, y=credit_amount)) + geom_boxplot() + coord_flip()
+```
+
+Z wyjątkiem dwóch grup, typowa wysokość kredytu wahała się w okolicach 2000 marek niemieckich. Większe wartości preferowali klienci biorący pierwszy kredyt lub nie spłacający na czas poprzednich kredytów z powrotem.
+
+## Raport
+
+```{r raport}
+# create_report(kredyty)
+```
