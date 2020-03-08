@@ -1,0 +1,45 @@
+---
+title: "Domowa0"
+author: "Paweł Morgen"
+date: "2/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# devtools::install_github("kassambara/ggcorrplot")
+library(ggplot2)
+library(ggcorrplot)
+library(dplyr)
+```
+
+```{r load}
+data <- read.csv('bank.csv', sep = ";")
+
+corr <- cor(select(data, balance, age, campaign , previous, duration))
+
+filter(data, education != "unknown") %>% 
+  ggplot(aes(x = balance, fill = marital)) +
+  #geom_histogram(bins = 40) +
+  geom_density(alpha = 0.4) 
+  #facet_wrap(~marital)
+
+ggplot(data, aes(y = balance, x = loan)) +
+  geom_violin() +
+  facet_wrap(~contact)
+
+ggcorrplot(corr, hc.order = TRUE,
+           type = "lower",
+           lab = TRUE,
+           lab_size = 4,
+           method="circle",
+           colors = c("tomato2", "white", "springgreen3"),
+           title="Correlogram of bank.csv",
+          ggtheme=theme_bw)
+```
+
+
+Wniosek: obecny stan konta nie jest skorelowany ze stanem cywilnym ani z wiekiem, ani z innymi zmiennymi numerycznymi.
+
+
+
