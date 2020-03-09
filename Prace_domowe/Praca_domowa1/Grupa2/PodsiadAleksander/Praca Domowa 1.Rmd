@@ -1,0 +1,216 @@
+---
+title: "Praca Domowa 1"
+author: "Aleksander Podsiad"
+date: "09.03.2020"
+output: 
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Wstęp do analizy
+
+Zbiór danych dotyczy wyników badań pod kątem chorób serca pacjentów z Cleveland.
+
+## Opis zmiennych
+
+* age -	integer -	age of patient
+* sex -	integer -	1=male; 0=female
+* cp -	integer -	chest pain type: 1=typical angina; 2=atypical angine; 3=non-anginal pain; 4=asymptomatic
+* trestbps -	integer -	resting blood pressure (mm Hg)
+* chol -	integer -	serum cholestrol (mg/dl)
+* fbs -	integer -	fasting blood sugar: 1 if > 120 mg/dl; 0 otherwise
+* restecg -	integer -	resting electrocardiographic results: 0=normal; 1=having ST-T wave abnormality; 2=showing probable or definite left        ventricular hypertrophy
+* thalach -	integer -	maximum heart rate achieved
+* exang -	integer -	exercise induced angina: 1=yes; 0=no
+* oldpeak -	float -	ST depression induced by exercise relative to rest
+* slope -	integer -	the slope of the peak exercise ST segment: 1=upsloping; 2=flat; 3=downsloping
+* ca -	integer -	number of major vessels (0-3) colored by flourosopy
+* thal -	integer -	3=normal; 6=fixed defect; 7=reversable defect
+* num -	integer -	predicted attribute; 0=HEART DISEASE; 1=NO HEART DISEASE
+
+## Summary
+
+Ładowanie pakietów i wstępna eksploracja danych:
+
+```{r}
+library(DataExplorer)
+library(dplyr)
+library(ggplot2)
+data <- read.csv("heart_disease_dataset.csv")
+summary(data)
+```
+
+Summary wykazuje niepokojące wartości dla thal i ca. Są to zmienne dyskretne, więc zostaną zastąpione przez modę (nie jest dużo rekordów z brakami danych). Następnie wyczyszczę tabelę i poprawię zmienne dyskretne, dla których określanie rozkładów i średnich nie ma sensu.
+
+```{r}
+data[data$ca < 0, "ca"] <- 0
+data[data$thal < 0, "thal"] <- 3
+
+data1 <- data
+
+data <- data %>%
+  mutate(sex = case_when(
+    sex == 1 ~ "male",
+    sex == 0 ~ "female")) %>% 
+  mutate(cp = case_when(
+    cp == 1 ~ "typical angina",
+    cp == 2 ~ "atypical angine",
+    cp == 3 ~ "non-anginal pain",
+    cp == 4 ~ "asymptomatic")) %>% 
+  mutate(restecg = case_when(
+    restecg == 0 ~ "normal",
+    restecg == 1 ~ "ST-T wave abnormality",
+    restecg == 2 ~ "ventricular hypertrophy")) %>% 
+  mutate(exang = case_when(
+    exang == 1 ~ "yes",
+    exang == 0 ~ "no")) %>%  
+  mutate(slope = case_when(
+    slope == 1 ~ "upsloping",
+    slope == 2 ~ "flat",
+    slope == 3 ~ "downsloping")) %>% 
+  mutate(thal = case_when(
+    thal == 3 ~ "normal", 
+    thal == 6 ~ "fixed defect", 
+    thal == 7 ~ "reversable defect")) %>% 
+  mutate(num = case_when(
+    num == 0 ~ "HEART DISEASE", 
+    num == 1 ~ "NO HEART DISEASE")) %>% 
+  mutate(fbs = case_when(
+    fbs == 1 ~ "> 120 mg/dl",
+    fbs == 0 ~ "<= 120 mg/dl")) %>% 
+  mutate(ca = case_when(
+    ca == 0 ~ "0",
+    ca == 1 ~ "1",
+    ca == 2 ~ "2",
+    ca == 3 ~ "3"))
+```
+
+# Rozkłady zmiennych
+
+## Wiek
+
+```{r}
+ggplot(data, aes(x=age)) + 
+    geom_histogram(aes(y=..density..),    
+                   bins=24,
+                   colour="black", fill="white") +
+    geom_density(alpha=.2, fill="#FF6666")  
+
+```
+
+## Stężenie cholesterolu
+
+```{r}
+ggplot(data, aes(x=chol)) + 
+    geom_histogram(aes(y=..density..),    
+                   bins=30,
+                   colour="black", fill="white") +
+    geom_density(alpha=.2, fill="#FF6666")
+
+```
+
+## Obniżenie odcinka ST
+
+```{r}
+ggplot(data, aes(x=oldpeak)) + 
+    geom_histogram(aes(y=..density..),    
+                   bins=20,
+                   colour="black", fill="white") +
+    geom_density(alpha=.2, fill="#FF6666")
+```
+
+## Maksymalne osiągnięte tętno
+
+```{r}
+ggplot(data, aes(x=thalach)) + 
+    geom_histogram(aes(y=..density..),    
+                   bins=30,
+                   colour="black", fill="white") +
+    geom_density(alpha=.2, fill="#FF6666")
+```
+
+## Spoczynkowe ciśnienie krwii
+
+```{r}
+ggplot(data, aes(x=trestbps)) + 
+    geom_histogram(aes(y=..density..),    
+                   bins=25,
+                   colour="black", fill="white") +
+    geom_density(alpha=.2, fill="#FF6666")
+```
+
+# Wykresy dla zmiennych dyskretnych
+
+```{r}
+plot_bar(data, ncol = 2)
+```
+
+# Wykresy Q-Q
+
+```{r}
+plot_qq(data)
+```
+
+# Wykresy korelacji zmiennych
+
+Korelacja zmiennych dla niezmodyfikowanej ramki danych
+
+```{r}
+plot_correlation(data1)
+```
+
+
+
+## Korelacja zmiennych ciągłych
+
+```{r}
+plot_correlation(data, type = "continuous")
+```
+
+## Korelacja zmiennych dyskretnych
+
+```{r}
+plot_correlation(data, type = "discrete", cor_args = list("use" = "pairwise.complete.obs"), theme_config = list(legend.position = "bottom", axis.text.x = element_blank()))
+```
+
+# Wykresy skrzynkowe
+
+## Względem płci
+
+```{r}
+plot_boxplot(data, by = "sex", ncol = 2)
+```
+
+## Względem przewidywania choroby serca
+
+```{r}
+plot_boxplot(data, by = "num", ncol = 2)
+```
+
+## Względem wieku
+
+```{r}
+plot_boxplot(data, by = "age", ncol = 2)
+```
+
+# Wnioski i zależności
+
+Pakiet Data_explorer pozwala na automatyczne wygenerowanie raportu i zautomatyzowanie analizy danych (w pewnym stopniu).
+Raport jest świetnym narzędziem do rozpoczęcia analizy zbioru danych. Pozwala uchwycić najważniejsze zależności i skierować wysiłki w odpowiednią stronę. Jednak posiada on kilka wad: nie jest w stanie poprawnie rozróżnić zmiennych dyskretnych od ciągłych i zauważyć oczywistych braków/błędów w danych. Jednak przy odpowiedniej modyfikacji zbioru da się wyciągnąć pewne zależności i ciekawostki ze zbioru.
+
+Z eksploracji danych możemy wysnuć następujące wnioski:
+
+* ludzie starsi mają niższe tętno ale wyższe ciśnienie krwii
+* ludzie z chorobą serca mają wyższe ciśnienie krwii
+* ludzie bez choroby serca mają mniejsze obniżenie odcinka ST (po ćwiczeniach względem stanu spoczynku)
+* nie ma większych różnic w stanie zdrowia związanych z płcią
+* występuje zależność (korelacja) między bólem klatki piersiowej (asymptomatic) a chorobą serca
+* występuje zależność między nachyleniem odcinka ST oraz jego obniżeniem po ćwiczeniach
