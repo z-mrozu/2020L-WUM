@@ -1,0 +1,43 @@
+---
+title: "Lab 1 - WUM"
+author: "Bartosz Rożek"
+date: "2/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(reshape2)
+library(GGally)
+```
+
+
+# Rozkład gęstości
+```{r}
+df <- read.csv("/home/samba/rozekb/wum/bank.csv", sep = ";")
+ggplot(df, aes(x = df$age, y=..density..)) +
+  geom_histogram() +
+  stat_density(geom = "line")
+```
+
+# Koleracja z innymi zmiennymi ciągłymi
+```{r}
+cordf <- df[,c("age", "balance", "duration", "day")]
+cordf <- melt(round(cor(cordf),2))
+
+pairs(df[,c("age", "balance", "duration", "day")])
+
+ggplot(data = cordf, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile() + 
+  geom_text(aes(label = round(value, 1))) 
+```
+
+Jak widzimy nie ma korelacji między wiekiem a innymi zmiennymi, jedynie minimalna korelacja z saldem.
+
+# Alternatywnie
+Całe zadanie można rozwiązać korzystając z pakietu GGally
+
+```{r}
+ggpairs(df[,c("age", "balance", "duration", "day")])
+```
