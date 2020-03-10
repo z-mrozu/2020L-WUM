@@ -1,0 +1,75 @@
+---
+title: "pd0"
+author: "Marcin Łukaszyk"
+date: "2/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("ggplot2")
+data <- read.csv2("bank.csv")
+```
+
+## Podumowanie
+
+```{r , echo=FALSE}
+summary(data)
+```
+
+## Rozkład zmiennej
+
+```{r,echo=FALSE}
+p <- ggplot(data,aes(x=balance)) + geom_histogram(bins = 100)
+p
+```
+
+## Porównanie balansu do wieku
+
+
+```{r pressure, echo=FALSE}
+p <- ggplot(data, aes(x = age,y = balance,group = age)) + geom_boxplot()
+p
+```
+
+## Sprawdzenie korelacji z wykształceniem
+
+```{r, echo=FALSE}
+p <- ggplot(data, aes(x = education,y = balance,group=education)) + geom_boxplot()
+p
+```
+
+## Sprawdzenie balansu od stanu cywilnego
+
+```{r,echo=FALSE}
+p <- ggplot(data,aes(x = marital,y = balance,group = housing )) + geom_point()
+p
+```
+
+## Sprawdzenie balasu od dnia ostatniego kontaktu
+
+```{r,echo=FALSE}
+p <- ggplot(data,aes(x = pdays,y = balance,group = pdays)) + geom_point()
+p
+```
+
+Słupek na początku jest w wartości -1 i oznacza to że nie kontaktowaliśmy się wcześniej.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

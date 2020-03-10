@@ -1,0 +1,45 @@
+---
+title: "Zadanie0"
+author: "Agata Makarewicz"
+date: "2/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## Wczytanie zbioru danych
+
+
+```{r load}
+bank <- read.csv("bank.csv", sep = ";" )
+head(bank)
+```
+
+## Analiza
+
+
+```{r chunk1}
+ggplot(bank)+
+  geom_histogram(aes(age), binwidth=1)+
+  labs(title = "Rozkład wieku")+
+  theme_bw()
+
+ggplot(bank, aes(x=age, fill=education))+
+  geom_density(alpha=0.4)+
+  labs(title = "Zależnosc wieku, statusu i edukacji")+
+  facet_wrap(~marital)
+
+ggplot(bank, aes(y=age, x = loan))+
+  geom_violin()+
+  labs(title = "Zależnosc wieku, statusu i pożyczki")+
+  facet_wrap(~marital)
+
+ggplot(bank, aes(age, balance))+
+  geom_point() +
+  geom_smooth(method="lm", color="red", se=FALSE) +
+  labs(title = "Zależność wieku i balance")
+
+```
