@@ -10,7 +10,7 @@ Dodatkowe informacje:
 1.	Proszę aby zbiory danych w PD1 i projektcie 1 nie powtarzały się w perspektywie jednej osoby.
 2.	Do każdego projektu proszę przygotować: 
 - **Python** *requirements.txt* z nazwami i wersjami paczek z których korzystacie.
-- **R** zaktualizowanie bibliotek do najnowszych, sprawdzenie czy kod działa i zawarcie w skrypcie wszystkich potrzebnych importów.
+- **R** zaktualizowanie bibliotek do najnowszych, sprawdzenie czy kod działa, zawarcie w skrypcie wszystkich potrzebnych importów oraz wykonanie funckji `sessionInfo()` na koniec raportu.
 
 Szczegółowe terminy kamieni milowych sprecyzowane w harmonogramie    
 
