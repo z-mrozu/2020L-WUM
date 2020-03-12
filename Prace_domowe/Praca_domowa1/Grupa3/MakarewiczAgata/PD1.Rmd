@@ -158,7 +158,7 @@ plot7
 plot_bar(data, ggtheme = theme_bw(), ncol = 2)
 ```
 
-* Wśród klientów przeważają managerowie i tzw. niebieskie kołnierzyki.
+* Wśród klientów przeważają managerowie oraz klasa robotnicza.
 * Zdecydowaną większość kredytobiorców stanowią osoby w związku małżeńskim.
 * Większość klientów ma wykształcenie średnie.
 * Bardzo mały odesetek klientów ma zaległy kredyt.
@@ -176,16 +176,63 @@ Przejdźmy do stworzenia macierzy korelacji dla naszych danych, która pokaże n
 ```{r correlation, fig.height=10, fig.width=10}
 data$job <- fct_lump(data$job, prop = 0.1)
 data$month <- fct_lump(data$month, prop = 0.1)
-DataExplorer::plot_correlation(data[,-17], title = "Korelacje między zmiennymi")
+DataExplorer::plot_correlation(data, title = "Korelacje między zmiennymi")
 ```
 
 ## Zależności między zmiennymi
 
-Important note: this attribute highly affects the output target (e.g., if duration=0 then y='no'). Yet, the duration is not known before a call is performed. Also, after the end of the call y is obviously known. Thus, this input should only be included for benchmark purposes and should be discarded if the intention is to have a realistic predictive model.
+Na podstawie powyższej macierzy korelacji możemy wywnioskować, że w analizowanym zbiorze danych prawie wcale nie ma zależności. Widzimy jedynie, że: 
+
+* job_management dość mocno koreluje z education_tertiary, czyli osoby na stanowiskach managerskich mają wykształcenie wyższe
+* job_blue.collar koreluje z education_primary, czyli osoby z klasy robotniczej mają wykształcenie podstawowe
+* month_may koreluje z housing_yes, czyli osoby mające kredyt hipoteczny biorą zwykle pożyczki w maju, na przykład na wakacje (?)
+* zależnie od stanu cywilnego, widać niewielką zależność od wieku (nie ma żadnego singla po 70!)
+
+```{r age, fig.height=4, fig.width=8}
+age1 <- ggplot(data, aes(x = age, y=marital)) +
+  geom_point() 
+
+age2 <- ggplot(data, aes(x=age, fill=marital))+
+  geom_density(alpha=0.4)
+
+grid.arrange(age2, age1, ncol=2)
+
+```
+
+* zmienna duration (czas trwania rozmowy) dość mocno wpływa na y, czyli naszą zmienną celu. Krótko mówiąc, im dłuższa rozmowa, tym częściej klient decyduje się na lokatę długoterminową. I na odwrót.
+
+```{r y, fig.height=4, fig.width=8}
+y1 <- ggplot(data, aes(x=duration, fill=y))+
+  geom_density(alpha=0.4)
+
+ y2 <- ggplot(data, aes(x = y, y = duration)) +
+  geom_point() +
+  geom_smooth()
+ grid.arrange(y1, y2, ncol=2)
+```
+
+* poutcome (efekt poprzedniej kampanii) może być zależny od pdays (liczby dni od ostaniego kontaktu z klientem)
+
+```{r dens, fig.width=8, fig.height=4}
+dens1 <- data %>%
+  filter(data$poutcome %in% c("success", "failure")) %>%
+  ggplot(aes(x = duration, fill = poutcome)) +
+  geom_density(alpha=0.4)
+
+data2 <- data %>%
+  filter(data$poutcome %in% c("success", "failure"))
+dens2 <- 
+   ggplot(data2, aes(x = poutcome, y = duration)) +
+  geom_point() +
+  geom_smooth()
+
+grid.arrange(dens1, dens2, ncol=2)
+```
+
 
 ## Automatyczny raport
 
-```{r report, echo = TRUE, results = 'hide', eval=FALSE}
+```{r report, echo = TRUE, results = 'hide'}
 DataExplorer::create_report(data)
 ```
 
