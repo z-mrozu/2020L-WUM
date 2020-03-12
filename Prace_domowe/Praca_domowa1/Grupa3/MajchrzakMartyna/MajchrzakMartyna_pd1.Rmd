@@ -14,7 +14,6 @@ library(dplyr)
 library(ggplot2)
 
 #załadowanie i przygotowanie danych
-
 data<-read.csv("../data/heart_disease_weka_dataset.csv")
 
 ```
