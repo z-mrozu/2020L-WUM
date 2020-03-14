@@ -1,0 +1,179 @@
+---
+title: "PD1"
+author: "Zuzanna Mróz"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Potrzebne paczki
+# install.packages(c("DataExplorer", "ggplot2", "dplyr"))
+```
+
+[Dane](https://www.mldata.io/dataset-details/heart_disease/) zawierają informacje o chorobach serca (i ogółem stanie serc) u pacjentów z Cleveland.
+
+```{r}
+# wczytanie
+data <- read.csv("heart_disease_dataset.csv")
+head(data)
+```
+Pierwszy rzut oka na tabelkę.
+
+```{r}
+summary(data)
+```
+I drugi rzut oka na tabelkę. Z tych podsumowań widać trochę dokładniej dane liczbowe niż z wykresów, które będą poniżej, i już na tym etapie widać niektóre śmieszne dane jak bardzo duża różnica między minimum ca i thal w porównaniu do pierwszego kwartyla, mediany i nawet maximum.
+
+Z opisu na stronie:
+
+Dane ciągłe:
+
+* age	-	age of patient
+* trestbps -	resting blood pressure (mm Hg)
+* chol	-	serum cholestrol (mg/dl)
+* thalach	-	maximum heart rate achieved
+* oldpeak	-	ST depression induced by exercise relative to rest
+
+Dyskretne:
+
+* sex	-	1=male; 0=female
+* cp	-	chest pain type: 1=typical angina; 2=atypical angine; 3=non-anginal pain; 4=asymptomatic
+* fbs	-	fasting blood sugar: 1 if > 120 mg/dl; 0 otherwise
+* restecg	-	resting electrocardiographic results: 0=normal; 1=having ST-T wave abnormality; 2=showing probable or definite left ventricular hypertrophy
+* exang	-	exercise induced angina: 1=yes; 0=no
+* slope	-	the slope of the peak exercise ST segment: 1=upsloping; 2=flat; 3=downsloping
+* ca	-	number of major vessels (0-3) colored by flourosopy
+* thal	-	3=normal; 6=fixed defect; 7=reversable defect
+* num	-	predicted attribute; 0=HEART DISEASE; 1=NO HEART DISEASE
+
+Tak więc dziwne ujemne wyniki w ca i thal wyglądają na błędy.
+
+Teraz coś na co lepiej się patrzy czyli wykresy rozkładów:
+```{r}
+# załadowanie DataExplorera i ggplota 
+# robi się dosyć automagicznie
+library(DataExplorer)
+library(ggplot2)
+plot_density(data)
+```
+```{r}
+# automagiczność 2: electric boogaloo
+plot_bar(data)
+```
+
+Jak widać explorer potraktował niektóre dane dyskretne jako dane ciągłe, żeby było wszystko ładniej widać przekodujemy je więc teraz na tekst:
+
+```{r, message=FALSE, warning=FALSE}
+# dplyr
+library("dplyr")
+data %>% mutate(sex=recode(sex, 
+                         `1`="male",
+                         `0`="female")) %>%
+  mutate(cp=recode(cp, 
+                   `1`="typical angina",
+                   `2`="atypical angina",
+                   `3`='non-anginal pain',
+                   `4`="asymptomatic")) %>%
+  mutate(fbs=recode(fbs, 
+                   `1`="> 120 mg/dl",
+                   `0`="< 120 mg/dl")) %>%
+  mutate(restecg=recode(restecg, 
+                   `1`="ST-T wave abnormality",
+                   `2`="left ventricular hypertrophy",
+                   `0`='normal')) %>%
+  mutate(exang=recode(exang, 
+                   `1`="yes",
+                   `0`="no")) %>%
+  mutate(slope=recode(slope, 
+                   `1`="upsloping",
+                   `2`="flat",
+                   `3`='downsloping')) %>%
+  mutate(ca=recode(ca, 
+                   `0`="0",
+                   `1`="1",
+                   `2`="2",
+                   `3`='3',
+                   `-100000`="unknown")) %>%
+  mutate(thal=recode(thal, 
+                   `3`="normal",
+                   `6`="fixed defect",
+                   `7`="reversable defect",
+                   `-100000`="unknown")) %>%
+  mutate(num=recode(num, 
+                   `1`="NO HRT DISEASE",
+                   `0`="HRT DISEASE")) -> data2
+
+# sex	-	1=male; 0=female
+# cp	-	chest pain type: 1=typical angina; 2=atypical angine; 3=non-anginal pain; 4=asymptomatic
+# fbs	-	fasting blood sugar: 1 if > 120 mg/dl; 0 otherwise
+# restecg	-	resting electrocardiographic results: 0=normal; 1=having ST-T wave abnormality; 2=showing probable or definite left ventricular hypertrophy
+# exang	-	exercise induced angina: 1=yes; 0=no
+# slope	-	the slope of the peak exercise ST segment: 1=upsloping; 2=flat; 3=downsloping
+# ca	-	number of major vessels (0-3) colored by flourosopy
+# thal	-	3=normal; 6=fixed defect; 7=reversable defect
+# num	-	predicted attribute; 0=HEART DISEASE; 1=NO HEART DISEASE
+```
+
+
+Dane ciągłe:
+
+```{r}
+# ładniejsze wykresy 1
+plot_density(data2)
+```
+
+Jak widać teraz wszystko wygląda ładniej i czytelniej
+
+* age - głównie ludzie w przedziale 40-65~, z czego większość w okolicach 60
+* chol - większość w przedziale 200-300 mg/dl, cokolwiek to znaczy
+* oldpeak	-	wygląda trochę jak rozkład wykładniczy z większością przypadków w zakresie 0-1
+* thalach	-	szczyt koło 160
+* trestbps -	szczyt koło 130
+
+Dyskretne:
+```{r}
+# ładniejsze wykresy 2: electric boogaloo
+plot_bar(data2)
+```
+
+* sex	-	2x więcej mężczyzn
+* cp	-	"chest pain type": w większości asymptomatyczny, cokolwiek to znaczy
+* fbs	-	"fasting blood sugar": większość > 120 mg/dl
+* restecg	-	"resting electrocardiographic results": w większości normalne albo "showing probable or definite left ventricular hypertrophy"
+* exang	-	"exercise induced angina": 2x więcej wyników negatywnych niż pozytywnych
+* slope	-	"the slope of the peak exercise ST segment": zdecydowna mniejszość "downsloping", pozostałe porównywalnie
+* ca	-	"number of major vessels (0-3) colored by flourosopy": w większości 0
+* thal	-	w większości brak defektów lub "naprawialne"
+* num	-	podobna ilość pacjentów z przewidywaną chorobą serca jak i bez niej, trochę więcej z
+
+Na koniec została tabela z korelacjami:
+```{r}
+# automagiczność 3: correlatic boogaloo
+plot_correlation(data)
+```
+```{r, warning=FALSE, message=FALSE}
+# automagiczność 3: correlatic boogaloo
+plot_correlation(data2)
+```
+
+Tabela korelacji danych zarówno przed przeróbką jak i po. Więcej widać z nieprzerobionych danych, więc skupimy się na niej.
+
+* z wiekiem najbardziej koreluje thalach, czyli "maximum heart rate achieved". Im człowiek starszy tym ma mniejsze ciśnienie?
+* z nm, czyli to czy ktoś ma chorobę serca czy nie, najbardziej korelują:
+  + oldpeak - ST depression induced by exercise relative to rest, 
+  + cp - chest pain type: 1=typical angina; 2=atypical angine; 3=non-anginal pain; 4=asymptomatic
+  + exang - exercise induced angina: 1=yes; 0=no
+  + (ujemnie) thalach	-	maximum heart rate achieved
+* thalach albo koreluje ujemnie z resztą funkcji, albo wcale
+* najbardziej skorelowana zmienna to oldpeak i slope (pomijając te całkowicie ujemne korelacje z dolnego wykresu dla zmiennych typu sex.female & sex.male)
+
+```{r}
+# create_report(data, output_file = "report.html")
+# create_report(data2, output_file = "report_poprawione.html")
+```
+
+
+Co do create_report - jest całkiem fajne, bo robi to co zostało zrobione powyżej automatycznie, tylko samo też nie zawsze sensownie rozdziela na zmienne dyskretne i ciągłe. report.html to report z niezmienionych danych a report_poprawione.html z obrobionych. Na obrobionych co prawda słabo widać korelacje. Jeszcze gorzej widać jednak wykresy korelacji na samym dole, które są ledwo czytelne.
+
