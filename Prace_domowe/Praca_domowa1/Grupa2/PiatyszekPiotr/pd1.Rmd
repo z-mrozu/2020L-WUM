@@ -1,0 +1,72 @@
+---
+title: "WUM PD 1"
+author: "Piotr Piątyszek"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.width = 10)
+knitr::opts_chunk$set(fig.height = 8)
+knitr::opts_chunk$set(warning  = FALSE)
+knitr::opts_chunk$set(message  = FALSE)
+```
+
+# Ładowanie danych
+```{r, echo=TRUE}
+library(dplyr)
+library(ggplot2)
+library(DataExplorer)
+data <- read.csv("./bank_marketing_dataset.csv")
+```
+
+# Struktura ramki
+```{r}
+
+plot_intro(data)
+```
+
+# Rozkład zmiennych kategorycznych
+```{r}
+plot_bar(data)
+```
+
+# Rozkład zmiennych numerycznych
+```{r}
+plot_density(data)
+```
+
+# Macierz korelacji dla zmiennych numerycznych
+```{r}
+plot_correlation(data, type="continuous")
+```
+
+# Macierz korelacji dla wszystkich zmiennych
+```{r}
+plot_correlation(data, type="all")
+```
+
+Zauważmy, że część wysokich wyników dla zmiennych kategorycznych wynika z tego, że zmienne przyjmują niską liczbę wartości, w szczególności 2 lub 3.
+
+# Przeanalizujmy wybrane zależności zmiennych
+
+## Zmienne previous i pdays
+```{r}
+ggplot(data, aes(x = previous, y = pdays)) +
+  geom_jitter(width=0.5, height=0)
+
+```
+Pomimo wysokiego wskaźnika korelacji, trudno tutaj znaleźć zależność obu zmiennych.
+
+## Zmienne poutcome i pdays
+```{r}
+ggplot(data, aes(x = poutcome, y = pdays)) +
+  geom_boxplot()
+```
+
+Można zauważyć, że jeśli ostatnia rozmowa odbyła się niedawno, to jest znacznie bardziej pradopodobne odniesienie sukcesu.
+
+## Automatyczny raport
+
+DataExplorer posiada funkcję generującą automatyczne raporty. Ma ona swoja wady, wykresy często są nieczytelne i przedstawiają tylko podstawowe wykresy. Ale stanowi to doskonałe narzędzie to wstępnej analizy i naprowadzenia nas na następne cele.
+
