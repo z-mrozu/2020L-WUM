@@ -12,10 +12,11 @@ monks <- monks$data
 head(monks)
 
 # model
-classif_task = makeClassifTask(id = "lvr", data = monks, target = "class")
+classif_task <- makeClassifTask(id = "lvr", data = monks, target = "class")
 # listowanie learnerow ze wsparciem dla prawdopodobieństw
 listLearners(properties = "prob")$class
 # listowanie zbioru hiperparametrów
+getLearnerParamSet("classif.randomForest")
 
 classif_lrn <- makeLearner("classif.ranger", par.vals = list(num.trees = 500, mtry = 3), predict.type = "prob")
 
@@ -25,7 +26,7 @@ helpLearnerParam(classif_lrn)
 getHyperPars(classif_lrn)
 
 # audyt modelu
-cv <- makeResampleDesc("CV", iters = 5)
+cv <- makeResampleDesc("CV", iters = 7)
 r <- resample(classif_lrn, classif_task, cv, measures = list(auc), models = TRUE)
 r$models
 AUC <- r$aggr
@@ -39,5 +40,17 @@ listMeasures(obj = "classif")
 
 model <- r$models[[1]]
 
+model
+
 # BARDZO WAZNA UWAGA O KOLEJNOSCI ARGUMENTOW
 p <- predict(model, newdata = monks)
+p
+
+m <- sample(1:nrow(monks), 0.7*nrow(monks))
+monks_train <- monks[m,]
+monks_test <- monks[-m,]
+
+classif_task <- makeClassifTask(id = "lvr", data = monks_train, target = "class")
+classif_lrn <- makeLearner("classif.ranger", par.vals = list(num.trees = 500, mtry = 3), predict.type = "prob")
+model <- train(classif_lrn, classif_task)
+predict(model, newdata = monks_train)
