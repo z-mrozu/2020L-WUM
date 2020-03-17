@@ -16,3 +16,5 @@ Dial by your location
         
 Meeting ID: 620 780 652
 Find your local number: https://zoom.us/u/abpTtzkTnq
+
+Oczywiście zajęcia zaczynają się o 8:15, ale zoom rozumie tylko pełne lub połowy godziny.
