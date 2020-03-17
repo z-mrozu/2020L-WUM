@@ -1,0 +1,130 @@
+---
+title: "Praca domowa 1"
+author: "Jakub Wiśniewski"
+date: "3/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning  = FALSE)
+knitr::opts_chunk$set(message  = FALSE)
+
+
+```
+
+### Dane 
+Dane pochodzą z OpemML100, jest to zbiór https://www.openml.org/d/29 . Jest ciekawy do eksploracji, ponieważ ma zmienne kategoryczne i ciągłe, o różnych rozkładach, oraz kilka missing values. 
+```{r, include=FALSE}
+library(dplyr)
+library(DataExplorer)
+library(ggplot2)
+library(DT)
+df <- read.csv("dataset_29_credit-a.csv")
+```
+## 1. Eksploracja Danych 
+
+### 1.1 Typy, struktura danych
+```{r}
+str(df)
+```
+```{r}
+DT::datatable(df)
+```
+
+Kolumny A2 i A14 mają levele, a według mnie wyglądają na wartości ciągłe. Powodem są wartości brakujące. Zmieńmy je na NA.
+```{r}
+df$A2[df$A2 == "?"] <- NA
+df$A14[df$A14 == "?"] <- NA
+
+df$A2 <-  as.numeric(df$A2)
+df$A14 <- as.numeric(df$A14)
+
+str(df[,c(2,14)])
+```
+
+Spójrzmy na to, jak wyglądają poszczególne statystyki w zbiorze.
+```{r}
+DataExplorer::introduce(df)
+```
+Jak widzimy, nie ma zbyt wielu missing values. 
+```{r}
+DataExplorer::plot_missing(df)
+```
+
+
+### 1.2 Rozkłady kolumn
+Nasze Kolumny, które mają rozkłady dyskretne, prezentują sie tak:
+```{r}
+DataExplorer::plot_bar(df)
+```
+
+Zmienne ciągłe nie mają rozkładów normalnych. Jedyną zmienną, która chociaż troszkę przypomina normalny, to zmienna A2   
+```{r}
+DataExplorer::plot_histogram(df)
+```
+   
+## 3. Zaawansowana Analiza  
+   
+Sprawdźmy, jak bardzo różni się zmienna A2 od rozkładu normalnego . Widzimy, że na "ogonach" odbiega on znacznie od rozkładu normalnego.
+```{r}
+DataExplorer::plot_qq(df$A2)
+```
+
+Niektóre dane są ze sobą skorelowane. Przykładowo zmienne ciągłe zdają się być ze sobą skorelowane na poziomie 0.3-0.5. Dodatkowo, niektóre zmienne kategoryczne są swoim przeciwieństwem, to znaczy, że jeżeli jedna wystąpi, to druga będzie skorelowana z nią na poziomie od -0.8 do nawet -1. 
+```{r}
+DataExplorer::plot_correlation(na.omit(df))
+```
+
+
+```{r}
+DataExplorer::plot_boxplot(df, by = "class")
+```
+
+```{r}
+DataExplorer::plot_scatterplot(df[,c(2,3,8,11,14,15)], by= "A2")
+```
+
+Niestety nie jesteśmy w stanie się dowiedzieć co oznaczają dane zmienne i tym samym nadać naszym eksploracjom sens. Spróbujmy jednak stworzyć kilka wykresów, które pozwolą troszkę lepiej zrozumieć co dzieje się w naszych danych. 
+
+```{r}
+ggplot(df, aes(A2, A3, color = class)) + geom_point()
+```
+
+Zwróćmy uwagę na poniższy wykres. Wiemy, że klasa `+` i klasa `-` to albo przyznanie albo nie przyznanie kredytu. Możemy dzięki temu postawić tezę, że A15 to ilość pieniędzy w banku. Miałoby to sens, gdyż outliery mają głównie kolor niebieski.
+```{r}
+ggplot(df, aes(A2, A15, color = class)) + geom_point()
+```
+
+Biorąc pod uwagę obserwacje zmiennej A15 większe niż 6 tysięcy, możemy potwierdzić nasze przypuszczenia, że wysokie wartości A15 skutkują przyznaniem kredytu. 
+```{r}
+ggplot(df[df$A15 > 6000,], aes(A15, fill = class)) + geom_density()
+```
+
+```{r}
+ggplot(df, aes(x = class, y = A15)) + geom_boxplot()
+```
+
+W przypadku zmiennej A8 obserwacje klasy `+` mają dłuższy i grubszy ogon, a więcej klasy `-` jest przy zerze.
+```{r}
+ggplot(df, aes(A8, fill = class)) + geom_density(alpha = 0.5)
+```
+
+Podobnie jest w przypadku A11
+```{r}
+ggplot(df, aes(A11, fill = class)) + geom_density(alpha = 0.5)
+```
+
+Natomiast A14 zdaje sie nie mieć dużego przełożenia na class. 
+```{r}
+ggplot(df, aes(A14, fill = class)) + geom_density(alpha = 0.5)
+```
+
+## 4. Automatyczny raport
+```{r, include= FALSE}
+create_report(df, y = "class")
+```
+
+Automatyczny raport to świetne narzędzie. Potrafi bardzo przyspieszyć pracę. Niestety dużo w nim wykresów, które nie dają nam wszystkich informacji. Przykładowo wykresy zmiennych dyskretnych nie pokazują nam nic ciekawego. Analiza PCA nie daje nam informacji które zmienne najlepiej wyjaźniają wariancję, zamiast tego nazywa zmienne PC1, PC2, itp. Do wykresów mogłyby być również dodane kolory.
+
+
