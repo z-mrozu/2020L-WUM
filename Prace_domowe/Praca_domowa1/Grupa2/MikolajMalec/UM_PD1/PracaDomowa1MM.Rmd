@@ -1,0 +1,165 @@
+---
+title: "Heart disease"
+author: "Mikołaj Malec"
+date: "3/7/2020"
+output: html_document
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, include=FALSE}
+library(rpivotTable)
+library(corrplot)
+library(dplyr)
+library(psych)
+library(gpairs)
+library(plyr)
+
+#ładowanie danych
+path <- "/Users/mikolajmalec/Desktop/UM_PD1"
+
+loadeddata <- read.csv2( paste0( path, "/heart_disease_weka_dataset.csv"), sep = ",")
+
+#przekształcanie na dane numerycze (num_data) i z faktorami (final_data)
+
+num_data <- mutate_all(loadeddata, function(x) as.numeric(as.character(x)))
+
+final_data <-num_data
+names(final_data) <- c("age", "sex","chest pain","blood pressure","cholestrol","sugar",
+                       "electrocardiographic","heart rate","angina","ST depression","slope","flourosopy","defect","HEART DISEASE")
+
+final_data$age <- num_data$age
+final_data$sex <- revalue( as.character( num_data$sex), c( "0" = "female", "1" = "male"))
+final_data$`chest pain` <- revalue( as.character( num_data$cp), c("1"="typical angina", "2"="atypical angine", "3"="non-anginal pain", "4"="asymptomatic"))
+final_data$sugar <- revalue( as.character( num_data$fbs), c( "0" = "low", "1" = "high"))
+final_data$electrocardiographic <- revalue( as.character( num_data$restecg), c( "0" = "normal", "1" = "abnormality", "2" = "probable or definite"))
+final_data$angina <- revalue( as.character( num_data$exang), c( "0" = "no", "1" = "yes"))
+final_data$slope <- revalue( as.character( num_data$slope), c( "1" = "upsloping", "2" = "flat", "3" = "downsloping"))
+final_data$flourosopy <- as.character( num_data$ca)
+final_data$defect <- revalue( as.character( num_data$thal), c( "3" = "normal", "6"="fixed defect","7"="reversable defect"))
+final_data$`HEART DISEASE` <- revalue( as.character( num_data$num), c( "0" = "yes", "1" = "no"))
+
+names(num_data) <- names(final_data)
+
+#"1=HEART DISEASE; 0=NO HEART DISEASE"
+rev_data <- num_data
+rev_data$`HEART DISEASE` <- (num_data$`HEART DISEASE` -1) *(-1)
+```
+
+## Introduction
+
+Data comes from V.A. Medical Center, Long Beach and Cleveland Clinic Foundation.
+
+Dataset is subset of original data and it contains 14 attributes:
+
+1. age 
+
+2. sex
+
+3. chest pain 		(type of chest pain: typical angina, atypical angina, non-anginas pain, asymptomatic)
+
+4. blood pressure 	(resting blood pressure (mm Hg))
+
+5. cholesterol 		(serum cholesterol (mg/dl))
+
+6. sugar			(fasting blood sugar: high if > 120 mg/dl; low otherwise)
+
+7. electrocardiographic	(resting electrocardiographic results: normal, having ST-T wave abnormality, showing probable or definite left ventricular hypertrophy)
+
+8. heart rate		(maximum heart rate achieved)
+
+9. angina			(exercise induced angina: yes/no)
+
+10. ST depression	(ST depression induced by exercise relative to rest)
+
+11. slope			(the slope of the peak exercise ST segment: up-sloping, flat, down-sloping)
+
+12. fluoroscopy		(number of major vessels (0-3) colored by fluoroscopy)
+
+13. defect			(normal, fixed defect, reversible defect)
+
+14. HEART DISEASE	(predicted attribute: yes/no)
+
+Data set contains no missing values and has 297 observations.
+```{r}
+head(final_data,3)
+```
+
+## Data distribution
+
+```{r}
+#wizualizacja kolumn
+par( mfrow = c(3,3))
+for (i in 1:9){
+  barplot( table( final_data[,i]), main = names(final_data)[i])
+}
+for (i in 10:14){
+  barplot( table( final_data[,i]), main = names(final_data)[i])
+}
+
+par( mfrow = c(3,2))
+for (i in c(1,4,5,8,10)){
+  boxplot( final_data[,i], horizontal = TRUE, main = names(final_data)[i])
+}
+```
+
+### Commentary on selected attributes
+
+Data contains 2 times more man than women, also more than 50% of patients are in the age between 45 and 65 and there are no patients with age below 29. This means that this is not representative sample for whole population, but it’s better to think that they represent people, who came to hospital with health problem and they were tested if they had heart disease.
+
+160 patients were predicted to have heart disease to 137 patients, which weren't.
+
+More than 25% have ST depression equal to 0.
+
+50% of the patients have blood pressure higher than 130, which is indicator of high blood pressure and should be consulted with the doctor for medications.
+
+According to MedicalNewsToday, serum cholesterol for males and females over 20 should be in range 125-200 mg/dL, above 75% of observations have serum cholesterol above 200 mg/dL.
+
+## Multi-dimensional distribution
+
+This heat map shows distribution of male / female and with predicted / not predicted heart disease. Female patients, if they come to hospital for diagnose, are more likely to be diagnosed with heart disease than males patents. My hypothesis is that men are coming to hospital, even if they are not sure if they have a disease and women only if they are sure they have a disease.
+
+You can drag labels from left to right column (recommended one at a time) to see distribution on specific attribute.
+
+```{r}
+#pivot table
+
+rpivotTable( final_data,
+             cols = c("sex","HEART DISEASE"),
+             rendererName = "Heatmap",
+             aggregatorName = "Count")
+```
+
+## Correlation
+
+```{r}
+
+#zwiazki miedzy parami
+corrplot.mixed(cor(rev_data), tl.col="black", tl.pos = "lt", 
+               lower = "shade", upper = "shade", diag = "l")
+```
+
+The best indicators, on wich doctors diagnosed patients with heart disease, are heart defect, fluoroscopy, ST depression, if exercise induced angina, heart rate, type of chest pain (they have predicted correlation over 0.4 or under -0.4). This don’t means that they are cause or others aren’t important. It means that they are the factors that doctors are most concern about. It’s worth to mention that fasting blood sugar aren’t correlated to anything. Below there is closer look on these best indicators.
+
+```{r warning=FALSE}
+#scaterplot matrix
+gpairs( rev_data[,c(3,8,9,10,12,13,14)],
+        upper.pars = list( scatter="ci"),
+        lower.pars = list( scatter="stats"), 
+        outer.rot = c(90,0),
+        scatter.pars = list(pch=19),
+        outer.labels = "none")
+```
+
+## Conclusion
+
+From this data it can be concluded, that doctors diagnose patients with heart disease if patients: 
+
+1. have normal defect
+2. fluoroscopy coloured 0 major vessels
+3. have low ST depression
+4. don’t have angina
+5. have high heart rate
+6. don’t have asymptomatic chest pain.
