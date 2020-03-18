@@ -1,0 +1,90 @@
+---
+title: "Praca domowa ze wstępu do uczenia maszynowego nr 1"
+author: "Marceli Korbin"
+date: "8 marca 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+kredyty <- read.csv("german_credit_data_weka_dataset.csv")
+atrybuty <- read.csv("attributes_german_credit_data.csv", header=T)
+library(rpivotTable)
+library(ggplot2)
+library(dplyr)
+library(DataExplorer)
+```
+
+## Wstęp
+
+W pracy domowej przyglądam się zbiorowi danych nt. kredytów w Niemczech (dostępnemu na stronie https://www.mldata.io/dataset-details/german_credit_data/). Dane znajdują się w pliku _german\_credit\_data\_weka\_dataset.csv_, a ich opis w dodatkowym pliku _attributes\_german\_credit\_data.csv_, do którego w dalszej części pracy domowej będę odnosić się w ramach opisu zmiennych.
+
+## Przyczyna wzięcia kredytu w zależności od zatrudnienia
+
+### Opis zmiennych _purpose_ i _present\_employment_
+
+```{r opis1, echo = FALSE}
+as.character(atrybuty[4, 3])
+as.character(atrybuty[7, 3])
+```
+
+### Wykres
+
+```{r wykres1}
+rpivotTable(kredyty, cols = "present_employment", rows = "purpose", aggregatorName="Count", vals = "Value",
+            rendererName = "Col Heatmap", height=800, subtotals=FALSE)
+```
+
+### Wnioski
+
+Najczęściej klienci brali kredyt w celu kupna samochodu lub sprzętu RTV. Bezrobotni klienci stanowią jedyną grupę, w której radio i telewizja nie były najpopularniejszym celem skonsumowania kredytu; częściej zależało im na samochodzie lub umeblowaniu.
+
+## Rozkład kredytu według długości pożyczki i wieku kredytobiorcy
+
+### Opis zmiennych _duration_ i _age_
+
+```{r opis2, echo = FALSE}
+as.character(atrybuty[2, 3])
+as.character(atrybuty[13, 3])
+```
+
+### Wykres
+
+```{r wykres2}
+age_dur <- kredyty %>% group_by(age, duration) %>% count()
+colnames(age_dur) <- c("age", "duration", "liczbaOsob")
+
+ggplot(age_dur, aes(x=duration, y=age)) + geom_point(aes(colour=liczbaOsob, size=liczbaOsob)) + guides(size=FALSE)
+```
+
+### Wnioski
+
+Kredyt zazwyczaj był brany na rok lub 2 lata, przez ludzi w wieku do 40 lat.
+
+## Wysokość kredytu względem historii kredytowej
+
+### Opis zmiennej _credit\_history_
+
+```{r opis3, echo = FALSE}
+as.character(atrybuty[3, 3])
+```
+
+### Wykres
+
+```{r wykres3}
+ggplot(kredyty, aes(x=credit_history, y=credit_amount)) + geom_boxplot() + coord_flip()
+```
+
+### Wnioski
+
+Z wyjątkiem dwóch grup, typowa wysokość kredytu wahała się w okolicach 2000 marek niemieckich. Większe wartości preferowali klienci biorący pierwszy kredyt lub nie spłacający na czas poprzednich kredytów z powrotem.
+
+## Raport
+
+Raport znajduje się w osobnym pliku pt. _report.html_. Nie udało mi się znaleźć sposobu na zamieszczenie jego treści wewnątrz tego dokumentu, co jestem skłonny zaliczyć jako ograniczenie narzędzia. Można ustawić elementy raportu (wykresy) oraz argumenty do przekazania do nich, ale trudno zmienić ich dane, szczególnie w wypadku wykresów analizy głównych składowych i korelacji.
+
+Poniżej przebieg kompilacji.
+
+```{r raport}
+create_report(kredyty, config=configure_report(add_plot_prcomp = FALSE))
+```
