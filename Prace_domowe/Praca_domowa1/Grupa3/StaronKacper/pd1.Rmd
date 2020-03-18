@@ -1,0 +1,152 @@
+---
+title: "pd1"
+author: "Kacper Staroń"
+date: "9 marca 2020"
+output: 
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(DataExplorer)
+library(ggplot2)
+library(dplyr)
+
+data <- read.csv("C:\\Users\\staro\\Desktop\\Semester4\\WUM\\heart_disease_dataset.csv")
+
+data_cont <- select(data, age, trestbps, chol, thalach, oldpeak)
+```
+
+# Zbiór danych
+
+Poniżej prezentowana jest wstępna eksploracja [zbioru danych](https://www.mldata.io/dataset-details/heart_disease/) dotyczących chorób serca u pacjentów szpitala w Cleveland pochodzącego z większego zbioru z 1998 roku.
+
+Poniżej znajdują się opisy wszystkich wartości w zbiorze danych.
+
+|Nazwa |	Typ  | Opis |
+|--- | --- | --- |   
+|age |	integer |	age of patient |
+|sex |	integer |	1=male; 0=female
+|cp |	integer |	chest pain type: 1=typical angina; 2=atypical angine; 3=non-anginal pain; 4=asymptomatic |
+|trestbps |	integer |	resting blood pressure (mm Hg) |
+|chol |	integer |	serum cholestrol (mg/dl) |
+|fbs |	integer |	fasting blood sugar: 1 if > 120 mg/dl; 0 otherwise |
+|restecg |	integer |	resting electrocardiographic results: 0=normal; 1=having ST-T wave abnormality; 2=showing probable |or definite left ventricular hypertrophy |
+|thalach |	integer |	maximum heart rate achieved |
+|exang |	integer |	exercise induced angina: 1=yes; 0=no |
+|oldpeak |	float |	ST depression induced by exercise relative to rest |
+|slope |	integer |	the slope of the peak exercise ST segment: 1=upsloping; 2=flat; 3=downsloping |
+|ca |	integer |	number of major vessels (0-3) colored by flourosopy |
+|thal |	integer |	3=normal; 6=fixed defect; 7=reversable defect |
+|num |	integer |	predicted attribute; 0=HEART DISEASE; 1=NO HEART DISEASE |
+
+# Overview
+
+```{r summary}
+summary(data)
+```
+
+# Rozkłady
+
+## Gęstości zmiennych ciągłych
+
+
+```{r pressure, echo=FALSE}
+ggplot(data, aes(x=age)) +
+  geom_density(fill="white")+
+  geom_vline(aes(xintercept=mean(age)), color="blue",
+             linetype="dashed")+
+  labs(title="Age density curve",x="Age(years)", y = "Density")+
+  theme_classic()
+```
+
+```{r trestbps, echo=FALSE}
+ggplot(data, aes(x=trestbps, color=sex)) +
+  geom_density(fill="white")+
+  geom_vline(aes(xintercept=mean(trestbps)), color="blue",
+             linetype="dashed")+
+  labs(title="trestbps density curve",x="trestbps(mm Hg)", y = "Density")+
+  theme_classic()
+```
+
+
+```{r chol, echo=FALSE}
+ggplot(data, aes(x=chol)) +
+  geom_density(fill="white")+
+  geom_vline(aes(xintercept=mean(chol)), color="blue",
+             linetype="dashed")+
+  labs(title="chol density curve",x="chol(mg/dl)", y = "Density")+
+  theme_classic()
+```
+
+```{r thalach, echo=FALSE}
+ggplot(data, aes(x=thalach)) +
+  geom_density(fill="white")+
+  geom_vline(aes(xintercept=mean(thalach)), color="blue",
+             linetype="dashed")+
+  labs(title="thalach density curve",x="thalach", y = "Density")+
+  theme_classic()
+```
+```{r oldpeak, echo=FALSE}
+ggplot(data, aes(x=oldpeak)) +
+  geom_density(fill="white")+
+  geom_vline(aes(xintercept=mean(oldpeak)), color="blue",
+             linetype="dashed")+
+  labs(title="oldpeak density curve",x="oldpeak", y = "Density")+
+  theme_classic()
+```
+
+##Histogramy
+
+```{r hist, echo=FALSE}
+DataExplorer::plot_histogram(data_cont)
+```
+
+
+##Barploty
+
+```{r bar, echo=FALSE}
+DataExplorer::plot_bar(data)
+```
+
+##Boxploty
+
+```{r box, echo=FALSE}
+DataExplorer::plot_boxplot(data, by = "sex")
+```
+```{r qq, echo=FALSE}
+DataExplorer::plot_qq(data)
+```
+
+
+#Korelacje
+
+```{r cor1, echo=FALSE}
+DataExplorer::plot_correlation(data[, -1])
+```
+
+##Korelacje zmiennych ciągłych
+```{r cor2, echo=FALSE}
+DataExplorer::plot_correlation(data_cont[, -1])
+```
+
+##Zależności
+Wykresy wzajemnych relacji między trzema parametrami o najWiększej dodatniej korelacji z indykatorem wystąpienia choroby serca:
+
+
+```{r z1, echo=FALSE}
+
+
+plot(data$oldpeak, data$exang)
+plot(data$oldpeak, data$cp)
+plot(data$cp, data$exang)
+```
+
+
+
+

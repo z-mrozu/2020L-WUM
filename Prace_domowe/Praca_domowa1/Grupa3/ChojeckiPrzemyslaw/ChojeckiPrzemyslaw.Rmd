@@ -1,0 +1,152 @@
+---
+title: "Praca domowa 1"
+author: "Przemysław Chojecki"
+date: "8 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+
+library(ggplot2)
+library(dplyr)
+library(DataExplorer)
+```
+
+```{r read}
+cards <- read.csv("german_credit_data_weka_dataset.csv")
+```
+
+## Niemieckie dane bankowe
+Dane zawierają informacje o użytkownikach systemu bankowego. Poza podstawowymi jak wiek, zarobki, kredyty i ich cele i wielkości najważniejszą kolumną jest `customer_type`, która jest przewidzianą zdolnością kredytową rozumianą binarnie: "dobra" i "zła". Ta kolumna jest naszym targetem.\
+Przyjrzyjmy się tym danym.\
+
+```{r show}
+head(cards, 3)
+summary(cards)
+```
+\
+Widzimy, że na szczęście nie posiadamy tutaj żadnych braków danych. To dobrze, dzięki temu nie musimy ich sztucznie uzupełniać.\
+Są też negatywne wiadomości. Wiele z kolumn jest typu `factor`, a to znaczy, że w czasie przyszłej analizy, a potem modelowania każdy z nich zamieni się na wiele kolumn.\
+
+
+
+## Kilka ciekawych zaleznosci
+Jak rozkłada się wiek w ramach dobrej/złej zdolności kredytowej.\
+```{r density_type, echo=FALSE}
+data <- cbind(cards$age, cards$customer_type) %>% data.frame
+colnames(data) <- c("age", "type")
+data$type <- ifelse(data$type==1, "Good", "Bad")
+data %>% 
+  ggplot(aes(x=age, color = type)) + 
+  geom_density(alpha=0.4, aes(fill=type))
+```
+\
+Możemy wnioskować, że różnice są niewielkie w poszczególnych grupach i raczej wiek na zdolność kredytową ma mały wpływ.\
+
+
+
+Jak rozklada się długość kredytu w grupach zdolności kredytowej.\
+```{r density_duration}
+data <- cbind(cards$duration, cards$customer_type) %>% data.frame
+colnames(data) <- c("duration", "type")
+data$type <- ifelse(data$type==1, "Good", "Bad")
+data %>% 
+  ggplot(aes(x=duration, color = type)) + 
+  geom_density(alpha=0.4, aes(fill=type))
+```
+\
+Tutaj widzimy zdecydowaną przewagę krórkookresowych kredytów w grupie wysoko ocenianych kredytobiorców.\
+
+
+Jak rozklada się wielkość pożyczki w grupach zdolności kredytowej.\
+```{r density_CA}
+data <- cbind(cards$credit_amount, cards$customer_type) %>% data.frame
+colnames(data) <- c("Wielkosc_Pozyczki", "type")
+data$type <- ifelse(data$type==1, "Good", "Bad")
+data %>% 
+  ggplot(aes(x=Wielkosc_Pozyczki, color = type)) + 
+  geom_density(alpha=0.4, aes(fill=type)) +
+  scale_x_continuous(breaks=c(0, 1500, 5000, 10000, 15000))
+```
+\
+Małe pożyczki są OK, ale kredytobiorcy większych pożyczek są gorzej oceniani. Być może więkrze pożyczki są częściej niespacane?\
+
+
+Jak dużo jest pożyczek odpowiedniej wielkości (w sumie).\
+```{r ilosc_pozyczek}
+ggplot(cards) +
+  geom_histogram(aes(x=credit_amount)) +
+  scale_x_continuous(breaks=c(0, 1500, 5000, 10000, 15000))
+```
+\
+Jest bardzo duża liczba małych pożyczek co może powodować problemy w uczeniu i późniejszym przewidywaniu dla dużych.\
+
+
+
+
+## Narzedzie `DataExplorer`
+```{r plot_boxplot}
+plot_boxplot(cards, by = "customer_type")
+```
+\
+Na tym wykresie możemy zauważyć, że różnice między grupami zdolności kredytowej są przede wszystkim na kolumnach `credit_amount` oraz `duration`, gdzie użytkownicy ze słabą zdolnością kredytową mają większą wariancję. Teoretycznie możenmy zauważyć różnice na boxplocie `installment_rate`, ale nie uznałbym jej z góry za istotną, gdyż jest to różnica tylko w medianie. Jednakże z kontekstu możemy się domyślać, że kolumna ta może mieć wpływ na zdolność kredytową. Przyjrzyjmy się więc jej bliżej.\
+
+```{r histogram_istallment_rate}
+tmp <- cards
+tmp$customer_type <- ifelse(tmp$customer_type==1, "Good", "Bad")
+ggplot(tmp, aes(x=installment_rate, color=customer_type)) +
+  geom_histogram(fill="white", position="dodge")+
+  theme(legend.position="top")
+```
+\
+Na tym dokładniejszym wykresie widzimy, że jednak niema większej zależności między tymi zmiennymi. Są podoble ilorazowo wielkości w kazdej z nich.\
+
+
+### Korelacja
+Gdybyśmy naiwnie wykonali korelację(tak jak robi to narzędzie do automatycznych raportów) obrazek byłby nieczytelny:\
+```{r nieczytelna_korelacja}
+plot_correlation(cards)
+```
+\
+Co jest spowodowane dużą ilością zmiennych typu `factor` i każdorazowo zamienianych na taką ilość kolumn, ile jest różnych rodzai faktora. Niestety, ręczna zamiana `factor`ów na liczby również jest bez sensu, gdyż z korelacja bierze mniej pod uwagę różnicę w danych między $1$, a $2$ , niż różnicę między $1$, a $3$. Dletego jedynym wyjściem w tej sytuacji jest pozbycie się paru kolumn, lub zainwestowanie w większy monitor.
+
+
+### Automatyczny raport
+```{r raport_dziala, eval=FALSE}
+create_report(cards, config = configure_report(add_introduce = FALSE,
+                                               add_plot_intro = FALSE,
+                                               add_plot_str = FALSE,
+                                               add_plot_missing = FALSE,
+                                               add_plot_histogram = FALSE,
+                                               add_plot_density = TRUE,
+                                               add_plot_qq = FALSE,
+                                               add_plot_bar = TRUE,
+                                               add_plot_correlation = FALSE,
+                                               add_plot_prcomp = FALSE,
+                                               add_plot_boxplot = TRUE,
+                                               add_plot_scatterplot = TRUE, 
+                                               plot_density_args = list(geom_density_args = list(alpha=0.4, aes = aes(fill=customer_type, color = customer_type)))))
+```
+
+\
+Ten nie wiem czemu, ale nie działa:
+```{r raport_nie_dziala, eval=FALSE}
+create_report(cards, config = configure_report(add_introduce = FALSE,
+                                               add_plot_intro = FALSE,
+                                               add_plot_str = FALSE,
+                                               add_plot_missing = FALSE,
+                                               add_plot_histogram = FALSE,
+                                               add_plot_density = TRUE, 
+                                               add_plot_qq = FALSE,
+                                               add_plot_bar = TRUE,
+                                               add_plot_correlation = FALSE,
+                                               add_plot_prcomp = FALSE,     
+                                               add_plot_boxplot = TRUE,     
+                                               add_plot_scatterplot = TRUE, 
+                                               plot_density_args = list(geom_density_args = list(alpha=0.4, aes = aes(fill=customer_type, color = customer_type))),
+                                               plot_boxplot_args = list(by = "customer_type")))
+```
+
+#### Problemy automatycznego raportu
+Idea bardzo fajna i dużo customizacji, jednak wciąż za mało, żeby zastąpić standardowe ploty. Na przykład nie mogłem dodać argumentu do boxplota(tak jak napisałem wyżej). Poza tym nie mogę zmieniać ramki danych do poszczególnych plotów, co jest zrozumiałe, lecz mimo wszystko taka opcja jest przydatna na przykłąd do zrobienia macierzy korelacji dla czytelności na mniejszej ilości kolumn, która wygenerowana przez automatyczny raport jest po prostu nieczytelna z powodu zbyt dużej ich ilości.
