@@ -1,0 +1,239 @@
+---
+title: "Praca domowa 1"
+author: "Agata Makarewicz"
+date: "9 03 2020"
+output: html_document
+  # html_document:
+  #   df_print: paged
+  #   toc: true
+  #   toc_float: true
+  #   number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(ggplot2)
+library(DataExplorer)
+library(tidyverse)
+library(gridExtra)
+```
+
+## Wprowadzenie
+
+Poniższa analiza eksploracyjna dotyczy [zbioru danych](https://www.mldata.io/dataset-details/bank_marketing/) zawierającego informacje na temat kampanii marketingowej portugalskiego banku.
+
+
+```{r data1}
+# wczytanie zbioru danych 
+data <- read.csv("bank_marketing_dataset.csv")
+knitr::kable(head(data), caption = "Tab.1. Fragment ramki danych")
+```
+
+Zobaczmy najpierw co oznaczają poszczególne zmienne:
+
+- 1 - age - wiek
+- 2 - job - rodzaj zawodu
+- 3 - marital - stan cywilny
+- 4 - education - wykształcenie (edukacja)
+- 5 - default - ma niespłacony kredyt?
+- 6 - balance - bilans klienta
+- 7 - housing - czy ma kredyt hipoteczny? 
+- 8 - loan - czy ma kredyt osobisty? 
+- 9 - contact - jak się kontaktowano (komórka, telefon)
+- 10 - month - w jakim miesiącu ostatni kontakt
+- 11 - day - w jakim dniu miesiąca ostatni kontakt
+- 12 - duration - ile sekund trwała rozmowa z klientem 
+- 13 - campaign - ile razy kontaktowano się z klientem podczas bieżącej kampanii
+- 14 - pdays - ile dni temu ostatnio kontaktowano się z klientem podczas poprzedniej kampanii (999 - wcześniej nie kontaktowano się z klientem)
+- 15 - previous - ile razy nawiązywano kontakt z klientem przed aktualną kampanią 
+- 16 - poutcome - efekt poprzedniej kampanii
+- 17 - y - czy klient założył lokatę terminową?
+
+Na początek zobaczmy krótkie podsumowanie naszych danych (miary statystyczne).
+
+
+```{r data2, fig.height=10, fig.width=10}
+#head(data)
+knitr::kable(summary(data), caption = "Tab.2. Statystyki danych")
+```
+
+Już z tego wstępnego podsumowania naszych danych możemy wyciągnąć pewne wnioski. 
+
+* Zmienna duration - mediana wynosi 185 sekund, co oznacza, że połowa rozmów trwa mniej niż 3 minuty. Trzeci kwartyl jest równy 329 - stąd tylko 25% rozmów trwa dłużej niż 5,5 minuty. Zobaczmy zatem rozkład tej zmiennej na poniższym wykresie skrzynkowym - faktycznie nieliczne rozmowy trwają około 10-15 minut a tylko pojedyncze trwają dłużej (co ciekawe, maksymalna wartość to ponad 50 min!)
+
+```{r boxplot_duration, fig.height=4}
+  
+   ggplot(data, aes(x="duration", y=duration))+
+   geom_boxplot(outlier.colour="black", outlier.shape=16,
+              outlier.size=2, notch=FALSE)+
+   coord_flip()
+
+```
+
+* Zmienne pdays oraz previous mają wszystkie 3 kwartyle takie same (odpowiednio -1 i 0). Oznacza to, że w ponad 75% przypadków nie kontaktowano się z danym klientem przed aktualną kampanią. (?) Ciężko jest tutaj zinterpretować wartość -1 zmiennej pdays skoro brak kontaktu oznaczany jest liczbą 999.
+
+```{r pdays_previous_boxplot, fig.height=4, fig.width=8}
+
+pdays_plot <- ggplot(data, aes(x="pdays", y=pdays))+
+   geom_boxplot(outlier.colour="black", outlier.shape=16,
+              outlier.size=2, notch=FALSE)+
+   coord_flip()
+ 
+previous_plot <- ggplot(data, aes(x="previous", y=previous))+
+   geom_boxplot(outlier.colour="black", outlier.shape=16,
+              outlier.size=2, notch=FALSE)+
+   coord_flip()
+
+grid.arrange(pdays_plot,previous_plot, ncol=2)
+
+# plot_boxplot(data, by="y")
+```
+
+## Rozkłady zmiennych
+
+Zacznijmy od sprawdzenia struktury naszych danych. 
+
+```{r str}
+str(data)
+```
+
+Mając powyższe podsumowanie łatwo rozpoznajemy zmienne ciągłe i kategoryczne.
+
+### Rozkłady zmiennych ciągłych
+
+```{r continuous,fig.height=4, fig.width=8}
+plot1 <- ggplot(data, aes(x=data$age)) +   
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue") + 
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Age", y = "Density")
+
+plot2 <- ggplot(data, aes(x=data$balance)) +   
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue") + 
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Balance", y = "Density")
+
+plot3 <- ggplot(data, aes(x=data$campaign)) +   
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue") + 
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Campaign", y = "Density")
+
+plot4 <- ggplot(data, aes(x=data$day)) +   
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue") + 
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Day", y = "Density")
+
+plot5 <- ggplot(data, aes(x=data$duration)) +   
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue") + 
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Duration", y = "Density")
+
+plot6 <- ggplot(data, aes(x=data$pdays)) +   
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue") + 
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Pdays", y = "Density")
+
+plot7 <- ggplot(data, aes(x=data$previous)) +   
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue") + 
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Previous", y = "Density")
+
+grid.arrange(plot1, plot2, ncol=2)
+grid.arrange(plot3, plot4, ncol=2)
+grid.arrange(plot5, plot6, ncol=2)
+plot7
+```
+
+* Najwięcej klientów banku jest w przedziale wiekowym 30-35 lat.
+* Saldo nie jest zbyt wysokie, wykres zaburzają znacznie odstające obserwacje.
+* Kontaktowano się zwykle maksymalnie 3 razy.
+* Rozkład dni jest bardzo zróżnicowany, nie ma wyraźnego trendu, możliwe że ma on również związek z dniami tygodnia, niestety tego nie jestesmy w stanie zweryfikować.
+* Czas trwania rozmowy analizowaliśmy już wyżej - zwykle nie trwa zbyt długo.
+* Liczba dni od ostatniego kontaktu w poprzedniej kampanii również została już wstępnie przeanalizowana, tutaj widzimy jednak dodatkowo minimalne "skoki" w okolicy 3, 6 oraz 12 miesięcy.
+* Poprzednie próby kontaktu równiez już analizowaliśmy - powyższy rozkład nie wniósł nic nowego.
+
+## Rozkłady zmiennych dyskretnych
+
+```{r distribution, fig.height=10, fig.width=10}
+plot_bar(data, ggtheme = theme_bw(), ncol = 2)
+```
+
+* Wśród klientów przeważają managerowie oraz klasa robotnicza.
+* Zdecydowaną większość kredytobiorców stanowią osoby w związku małżeńskim.
+* Większość klientów ma wykształcenie średnie.
+* Bardzo mały odesetek klientów ma zaległy kredyt.
+* W przybliżeniu 60% klientów ma kredyt hipoteczny.
+* Znaczna większość klientów nie ma pożyczki (80-90%).
+* Dominującym sposobem kontaktu (o ile jest znany) jest telefon komórkowy.
+* Przeważają miesiące wiosenne/letnie - maj, lipiec, sierpień - co prawdopodobnie spowodowane jest wakacjami. Dość spory odsetek stanowi listopad - tu powodem mogą być zbliżające się święta.
+* Wcześniejsze kampanie (o ile ich wynik jest znany), raczej nie odnosiły sukcesu wśród klientów.
+* Około 10% kontaktowanych osób zakłada lokatę długoterminową.
+
+## Korelacje między zmiennymi 
+
+Przejdźmy do stworzenia macierzy korelacji dla naszych danych, która pokaże nam między którymi zmiennymi być moze istnieją jakieś ciekawe zależności. Kolumny "month" oraz "job" to wielopoziomowe zmienne typu factor, które mogą sprawić, że macierz będzie nieczytelna, dlatego te kategorie, które występują najrzadziej w tych zmiennych połączymy w jedną kategorię - "other". (Pełna macierz zawarta zostanie w automatycznym raporcie DataExplorer tworzonym na końcu dokumentu.)
+
+```{r correlation, fig.height=10, fig.width=10}
+data$job <- fct_lump(data$job, prop = 0.1)
+data$month <- fct_lump(data$month, prop = 0.1)
+DataExplorer::plot_correlation(data, title = "Korelacje między zmiennymi")
+```
+
+## Zależności między zmiennymi
+
+Na podstawie powyższej macierzy korelacji możemy wywnioskować, że w analizowanym zbiorze danych prawie wcale nie ma zależności. Widzimy jedynie, że: 
+
+* job_management dość mocno koreluje z education_tertiary, czyli osoby na stanowiskach managerskich mają wykształcenie wyższe
+* job_blue.collar koreluje z education_primary, czyli osoby z klasy robotniczej mają wykształcenie podstawowe
+* month_may koreluje z housing_yes, czyli osoby mające kredyt hipoteczny biorą zwykle pożyczki w maju, na przykład na wakacje (?)
+* zależnie od stanu cywilnego, widać niewielką zależność od wieku (nie ma żadnego singla po 70!)
+
+```{r age, fig.height=4, fig.width=8}
+age1 <- ggplot(data, aes(x = age, y=marital)) +
+  geom_point() 
+
+age2 <- ggplot(data, aes(x=age, fill=marital))+
+  geom_density(alpha=0.4)
+
+grid.arrange(age2, age1, ncol=2)
+
+```
+
+* zmienna duration (czas trwania rozmowy) dość mocno wpływa na y, czyli naszą zmienną celu. Krótko mówiąc, im dłuższa rozmowa, tym częściej klient decyduje się na lokatę długoterminową. I na odwrót.
+
+```{r y, fig.height=4, fig.width=8}
+y1 <- ggplot(data, aes(x=duration, fill=y))+
+  geom_density(alpha=0.4)
+
+ y2 <- ggplot(data, aes(x = y, y = duration)) +
+  geom_point() +
+  geom_smooth()
+ grid.arrange(y1, y2, ncol=2)
+```
+
+* poutcome (efekt poprzedniej kampanii) może być zależny od pdays (liczby dni od ostaniego kontaktu z klientem)
+
+```{r dens, fig.width=8, fig.height=4}
+dens1 <- data %>%
+  filter(data$poutcome %in% c("success", "failure")) %>%
+  ggplot(aes(x = duration, fill = poutcome)) +
+  geom_density(alpha=0.4)
+
+data2 <- data %>%
+  filter(data$poutcome %in% c("success", "failure"))
+dens2 <- 
+   ggplot(data2, aes(x = poutcome, y = duration)) +
+  geom_point() +
+  geom_smooth()
+
+grid.arrange(dens1, dens2, ncol=2)
+```
+
+
+## Automatyczny raport
+
+```{r report, echo = TRUE, results = 'hide'}
+DataExplorer::create_report(data)
+```
+
+Funkcja create_report z pakietu DataExplorer pozwala na bardzo szybkie tworzenie raportów podsumowujących zbiór danych, znacznie przyspieszając pracę. W łatwy sposób generuje się dużą liczbę wykresów, co ułatwia wstępną analizę zbioru danych. Niestety, kiedy nasza ramka danych składa się z wielu zmiennych / kolumn, wykresy stają się bardzo mało czytelne, wręcz bezużyteczne. Przy podstawowych ustawieniach, grafiki nie są estetyczne i mogą służyć jedynie do wstępnego rozeznania struktury i zależności w zbiorze, stanowić punkt wyjścia do dalszej eksploracji. W dodatku, nie mamy możliwości modyfikacji argumentów oraz parametrów funkcji generujących poszczególne wykresy tak, aby uczynić raport bardziej czytelnym. Brakuje również podsumowania miar statystycznych dla poszczególnych zmiennych. 

@@ -1,0 +1,18 @@
+name,type,description
+age,integer,Age of client: numerical value
+job,string,"Type of job: admin., blue-collar, entrepreneur, housemaid, management, retired, self-employed, services, student, technician, unemployed, unknown"
+marital,string,"Marital status: divorced, married, single, unknown"
+education,string,"Level of education: primary, secondary, tertiary, unknown"
+default,string,"Has credit in default: no, yes, unknown"
+balance,integer,Average yearly balance in Euro: numerical value
+housing,string,"Has housing loan: no, yes, unknown"
+loan,string,"Has personal loan: no, yes, unknown"
+contact,string,"Communication type: unknown, telephone, cellular"
+day,integer,Day of the month: numerical value between 1 and 31
+month,string,"Month of the year: jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec"
+duration,float,Last contact duration: numerical value in seconds
+campaign,integer,Number of contacts made: numerical value
+pdays,float,"Number of days passed since client was last contacted from a previous campaign: numerical value, -1 indicates client was not previously contacted"
+previous,integer,Number of contacts performed before this campaign and for this client: numerical value
+poutcome,string,"Outcome of previous marketing campaign: unknown, other, failure, success"
+y,string,"Predictor class: yes, no"
