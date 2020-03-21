@@ -39,7 +39,7 @@ data("Pima.te")
 class(Pima.te$type)
 
 tree <- rpart(type~., Pima.te)
-pred_tree <- predict(tree)
+pred_tree <- predict(tree, Pima.te)
 head(pred_tree)
 class_tree <- round(pred_tree[ ,2])
 # class_tree <- pred_tree[ ,2] > 0.5
@@ -53,6 +53,8 @@ library(pROC)
 roc_obj <- roc(Pima.te$type, pred_tree[,2])
 auc(roc_obj)
 
+#mltools::auc_roc()
+#DALEX::loss_one_minus_auc()
 
 model_glm <- glm(type~., Pima.te, family = "binomial")
 model_glm
