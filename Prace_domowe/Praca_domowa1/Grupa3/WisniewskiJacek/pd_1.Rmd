@@ -1,0 +1,93 @@
+---
+title: "Praca domowa 1"
+author: "Jacek Wiśniewski"
+date: "10/03/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+library(DataExplorer)
+library(ggplot2)
+library(scales)
+library(tidyverse)
+library(mlr)
+library(forcats)
+library(DALEX)
+data <- read.csv("C:/Users/jwisn/OneDrive/Dokumenty/2020L-WUM/Prace_domowe/Praca_domowa1/Grupa3/WisniewskiJacek/bank_marketing_weka_dataset.csv")
+```
+
+## Wstęp
+
+W tej pracy przeprowadziłem wstępną analizę zbioru:
+https://www.mldata.io/dataset-details/bank_marketing/
+dotyczącego kampanii marketingowej pewnego portugalskiego banku.
+
+## Analiza
+
+Zacznę od przyjrzenia się podstawowemu podsumowaniu danych, stworzonych przy pomocy funkcji summary.
+
+```{r}
+knitr::kable(summary(data))
+```
+
+Ciekawą informacją, którą można wyczytać z powyższego zestawienia, jest to, że zarówno kolumna pdays (dni od ostaniego kontaktu z klientem), jak i previous (liczba poprzednich kontaktów z tym klientem) ma wszystkie 3 kwartyle takie same (odpowiednio -1 i 0). Oznacza to, że w ponad 75% przypadków komunikacja z klientem zakończyła się po pierwszym kontakcie.
+
+W dalszej analizie skorzystamy z pakietu DataExplorer.
+
+```{r}
+DataExplorer::plot_density(data)
+DataExplorer::plot_bar(data)
+```
+
+
+Na rozkładach gęstości widzimy, że na rozkłady kolumn takich jak balance czy campaign mają spory wpływ duże odstające wartości (outlier'y). Przy dalszej analizie tych kolumn wypadałoby odfiltrować skrajne wartości lub zastosować przedziały wartości.
+
+Ze względu na wielopoziomowość kolumny job i month, zanim przejdę do dalszej analizy danych, połączę wartości w tych kolumnach żeby osiągnąć większą czytelność na wykresach.
+
+```{r fig.height=10, fig.width=10}
+data$job <- fct_lump(data$job, prop = 0.1)
+data$month <- fct_lump(data$month, prop = 0.1)
+DataExplorer::plot_correlation(data[, -17])
+```
+
+Z wykresu korelacji możemy wyczytać, że poutcome (rezultat kampanii) może być zależny od pdays (dni od ostaniego kontaktu z klientem). Oprócz tego, wykres sugeruje, że kolumny pdays i previous mogą kodować podobną informację.
+
+```{r}
+data %>%
+  filter(data$poutcome %in% c("success", "failure")) %>%
+  ggplot(aes(x = duration, color = poutcome)) +
+  geom_density()
+```
+
+Z analizy rozkładu kolumny duration (długość rozmowy) możemy przypuszczać, że długość rozmowy może mieć wpływ na wynik kampanii.
+
+```{r}
+chisq.test(table(data$duration, data$poutcome))
+```
+
+Test Chi-kwadrat potwierdza zależność tych danych.
+
+Dalej sprawdzimy, czy wcześniejsze przypuszczenie o zależności kolumn pdays i poutcome jest prawdziwe.
+
+```{r}
+data %>%
+  filter(data$poutcome %in% c("success", "failure")) %>%
+  ggplot(aes(x = pdays, color = poutcome)) +
+  geom_density()
+```
+
+```{r}
+chisq.test(table(data$pdays, data$poutcome))
+```
+
+Wykres gęstości oraz test chi-kwadrat potwierdzają tezę.
+
+## Raport DataExplorer
+
+```{r echo=TRUE}
+#DataExplorer::create_report(data)
+```
+
+Raport DataExplorer w łatwy sposób generuje dużą liczbę wykresów, co ułatwia wstępną analizę zbioru danych. Niestety przy dokładniejszej eksploracji widać w tej funkcji braki w parametrach. Dodatkowo, część wykresów nie przekazuje żadnej pożytecznej informacji co zaciemnia obraz całego raportu.

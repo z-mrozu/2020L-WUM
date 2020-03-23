@@ -1,0 +1,171 @@
+---
+title: "Praca Domowa I"
+author: "Paulina Przybyłek"
+date: "9 marca 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(warning  = FALSE)
+knitr::opts_chunk$set(message  = FALSE)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+#install.packages("DataExplorer")
+library(DataExplorer)
+```
+
+## Wprowadzenie
+
+Zajmiemy się analizą zbioru Heart Disease, który można pobrać ze strony https://www.mldata.io/dataset-details/heart_disease/. Słowem wstępu, zbiór zawiera dane zebrane od 303 pacjentów ze szpitala z Cleveland i przedstawia je w postaci 14 artybutów dla każdego z nich (m.in. wiek, płeć, ciśnienie krwi, tętno).
+
+Na początek spójrzmy jak wygląda zbiór po wczytaniu go:
+
+```{r data}
+data <- read.csv("heart_disease_dataset.csv") %>% as.data.table()
+knitr::kable(head(data), caption = "Tab.1. Fragment ramki danych")
+```
+
+Zanim przejdziemy do analizy tego zbioru warto wiedzieć dokładnie co zabiera jaka kolumna i jakich wartości mamy się spodziewać.
+
+- age - wiek pacjenta
+
+- sex - płeć, 1 = mężczyzna, 0 = kobieta
+
+- cp - rodzaj bólu w klatce piersiowej: 1 = typowa dławica piersiowa; 2 = atypowa dławica piersiowa; 3 = ból bezdławicowy; 4 = bezobjawowy
+
+- trestbps - spoczynkowe ciśnienie krwi (mm Hg)
+
+- chol - cholestrol w surowicy (mg / dl)
+
+- fbs - poziom cukru we krwi na czczo: 1, jeżeli > 120 mg / dl; 0 w przeciwnym razie
+
+- restecg - spoczynkowe wyniki EKG: 0 = normalne; 1 = z nieprawidłową falą ST-T; 2 = wykazujący prawdopodobny lub wyraźny przerost lewej komory
+
+- thalach - osiągnięte maksymalne tętno
+
+- exang - dusznica (bół dławicowy) wywołana wysiłkiem fizycznym: 1 = tak; 0 = nie
+
+- oldpeak - ST depression wywołana wysiłkiem w stosunku do odpoczynku
+
+- slope - nachylenie piku ćwiczenia odcinka ST: 1 = skok w górę; 2 = płaski; 3 = obniżanie prędkości
+
+- ca - liczba głównych naczyń (0–3) zabarwionych metodą fluoroskopii
+
+- thal - 3 = normalny; 6 = naprawiona wada; 7 = wada odwracalna
+
+- num - wartość przewidywana na podstawie innych danych (poprzez klasyfikację ML), 0 = choroba serca, 1 = brak choroby serca
+
+## Analiza Danych
+
+### Statystyki
+
+Wiemy już jaki mamy zbiór i jakie zawiera on dane, więc przyjrzyjmy się im teraz dokładniej. Zacznijmy od sprawdzenia typów danych.
+
+```{r types}
+str(data)
+```
+
+Mamy kilka danych kategorycznych i ciągłych, co może być ciekawe przy eksploracji. Teraz sprawdźmy statystyki podsumowujące dla naszych danych - musimy się przygotować na to, że jest to 14 kolumn i możliwe jest, iż nic nie zauważymy. Dodatkowo, nudne będą statystyki dla kolumn, które przyjmują tylko 0 albo 1, ale sprawdźmy to. 
+
+```{r statistics}
+knitr::kable(summary(data), caption = "Tab.2. Statystyki danych")
+```
+
+W **Tab.2.** mamy zawarte nasze statystyki, może nie od razu, ale rzuca się w oczy minimum równe -100 000 przy kolumnie ca i thal, a z poprzedniego punktu wiemy, że nie przyjmują one takich wartości. Co to może oznaczać? Prawdopodobnie braki danych w tych kolumnach, albowiem na stronie, z której możemy pobrać zbiór, wspomniane jest, że takie braki występują. Przywróćmy odpowiedni typ brakującym danym, czyli nadajmy im wartości NA.
+
+```{r NA_values, echo = TRUE}
+data$ca <- if_else(data$ca < 0, NA_integer_, data$ca) 
+data$thal <- if_else(data$thal < 0, NA_integer_, data$thal)
+```
+
+```{r statistics2}
+# spróbujmy zamienić nasze brakujące zmienne na NA
+knitr::kable(summary(data), caption = "Tab.3. Statystyki danych przy uwzględnieniu braków danych")
+```
+
+Przy ponownym wywołaniu statystyk na zbiorze pojawiła się kolejna wartość - liczba NA w danej kolumnie. Jak widać liczba missing values, to jest brakujących wartości, jest niewielka (co widać też, na wykresie poniżej).
+
+```{r, plot_NA_values}
+plot_missing(data)
+```
+
+### Rozkłady zmiennych i korelacje między nimi
+
+Wykorzystajmy pakiet DataExplorer w celu obejrzenia naszych zmeinnych ciągłych i kategorycznych. Pakiet sam wybrał jakie kolumny uznaje za zmienne ciągłe a jakie za dyskretne.
+
+```{r distribution, echo = TRUE}
+plot_bar(data, ggtheme = theme_bw(), title = "Rozkłady zmiennych dyskretnych")
+plot_histogram(data, ggtheme = theme_bw(), title = "Rozkłady zmiennych ciągłych")
+```
+
+Ważnym jest, aby patrząc na zmienne nie porównywać wykresów między sobą, gdyż mają inne wartości na osiach! Przyglądając się rozkładom możemy wyciągnąć już pierwsze wnioski. Między innymi:
+
+- około dwa razy więcej mężczyzn niż kobiet było pacjentami
+
+- przeważnie są to pacjenci w wieku między 50 a 60 lat
+
+- najczęściej bóle w klatce są bez dodatkowych objawów
+
+- zdecydowana więkość pacjentów ma poziom cukru poniżej 120 mg / dl
+
+- wynik EKG z nieprawidłową falą ST-T jest rzakością
+
+- ból dławicowy wywołany wysiłkiem fizycznym pojawił się u mniejszej liczby pacjentów
+
+W ten sposób możemy porównywać dane między sobą z jednej kategorii (kolumny). Jednak samo to wiele już mówi o pacjentach. Jak jednak wiemy w przypadku choroby wiele czynników jest od siebie zależnych. Przyjrzyjmy się więc korelacji zmiennych z naszego zbioru.
+
+```{r correlation, echo = TRUE}
+plot_correlation(na.omit(data), title = "Korelacje między zmiennymi")
+```
+
+Możemy zauważyć, że num i thal mają współczynnik 0.53, co nie dziwi, gdy 7 (najwyższa wartość w thal) oznacza posiadaną wadę serca (chociaż odwracalną), więc korelacja powinna być w miarę duża. Natomiast thalach ma korelacje ujemne z kilkoma innymi zmiennymi - co nie powinno dziwić, że maksymalnie osiągane tętno jest mniejsze przy jakiś innych problemach zdrowotnych, a szczególnie przy chorobie serca (num). Ale na przykład maksymalne tętno nie zależy od cholesteroru. Taki wykres korelacji jest dobrym ukazaniem ciekawych zależności, które potem można przedstawić na oddzielnych wykresach.
+
+### Zależności między zmiennymi
+
+Wiedząc co koreluje ze sobą i jak, możemy zobaczyć oddzielne wykresy, dla przykładu przyjrzyjmy się zmiennej oznaczającej wiek i jak inne zmienne się względem niej zachowują. Chcoiaż na macierzy korelacji age nie wzubał zainteresowania to i tak zawsze ludzie zastanawiają się czy będąc starszymi będą przyciągać choroby jak magnes. DLatego spójrzmy na wykresy poniżej, które przedstawiają podziały na konkretne grupy wiekowe i wizualizację zmiennych dla nich.
+
+```{r, echo = TRUE}
+plot_boxplot(data, by = "age", title = "Wykresy skrzypcowe w zależności od wieku pacjenta", ncol = 3L, ggtheme = theme_bw(), geom_boxplot_args = list("outlier.color" = "darkred"))
+```
+
+Jak można zauważyć osoby do 48 roku życia mają 0 wartości ca. Dopiero po jego przekroczeniu ten wskaźnik zaczyna wzrastać. Cholesterol z wiekiem też robi się podwyższony, a maksymalne tętno maleje, a spoczynkowe ciśnienie krwi zwrasta. Natomiast dla zmiennych thal, restecg trudno coś odczytać. Jednak już mając takie wnioski możemy się domyślać, że starsze osoby są bardziej narażone na choroby serca. Zobaczmy, czy przewidywane wartości num też się z tym zgodzą.
+
+```{r, echo = TRUE}
+ggplot(data, aes(as.factor(num), age, fill = num))+
+  geom_violin(position = "dodge", draw_quantiles = c(0.25, 0.5, 0.75), color = "darkred", adjust = 0.7, show.legend = FALSE) +
+  labs(title = "Zależność między wiekiem a chorobami serca", x = "num") + 
+  theme_bw()
+```
+
+Przypominając, 0 = choroba serca, 1 = brak jej. Przyglądając się wykresowi powyżej, nie da się powiedzieć, że w jakimś wieku nie choruje się na serce. Co w sumie powinniśmy wiedzieć z macierzy korelacji, że nie zachodzi tu zależność, jednak gdybyśmy jej nie widzieli, a dokonali powiązań wieku z cholesterolem, ciśnieniem itp. to chcielibyśmy zobaczyć wykres zachorowań na sercew danym wieku.
+
+Skoro przeglądamy zależności to może pora przestać bawic się w detektywa a wziąć ciekawe dane z macierzy korelacji i to właśnie je pokazać. 
+
+```{r, echo = TRUE}
+ggplot(data, aes(oldpeak, thalach))+
+  geom_point() +
+  geom_smooth(method="lm", color="red", se=FALSE) +
+  labs(title = "Zależność między ST depression wywołaną wysiłkiem w \nstosunku do odpoczynku a maksymalnie osiąganym tętnem") + 
+  theme_bw()
+
+ggplot(data, aes(age, ca))+
+  geom_point(position =  position_jitter(h = 0.1), alpha = 0.5) +
+  geom_smooth(method="lm", color="red", se=FALSE) +
+  labs(title = "Zależność między wiekiem a ilością zabarwionych naczyń") + 
+  theme_bw()
+```
+
+Dwa powyższe wykresy pokazują już jakąś korelację zmiennych (odpowiednio ujemną i dodatnią) o których wydaje mi się, że zostało już powiedziane. Tytuły i znajomość medycznych określeń samodzielnie tłumaczą wykres. Aby nie rozpisywać się - jak widać, tętno maleje przy ST depression, a osoby w starszym wieku mają wieksze szanse na nowotwór (albo inne schorzenia wykryte przy RTG). Musimy jednak pamiętać, że jeśli chodzi o wiek, to większość pacjentów była w wieku ponad 50, więc ilość danych do młodych osób jest nieporównywalna i nie wiadomo czy oni mniej chorowali i dlatego ich nie ma w danych, więc można z tego założyć, że starci mają więcej problemów zdrowotnych z sercem, albo może byli leczeni w innym miejscu. Każda analiza stawia kolejne ciekawe pytania do których można szukać odpowiedzi.
+
+Podsumowując, można badać więcej zależności i ciekawostek, które znajdują się w zbiorze, jednak w tej pracy domowej zostały przedstawione jedynie przykłady analizy i wyodrębnione aspekty. Swiadomie nie zajęliśmy się wartościami NA, było ich tylko 6, teoretycznie można było je uzupełnić medianą, albo wykorzystać inny sposób ML, lecz na wzgląd na mała ilość tych danych pozostwione zostały w spokoju.
+
+## Automatyczny raport z wykorzystaniem DataExplorer
+
+```{r include= FALSE}
+create_report(data, y = "age")
+```
+
+Na pewno wykorzystanie automatycznego raportu przyśpiesza pracę z analizą danych - nie jest ona jednak dokładna. Raport zawiera wiele wykresów i na tym można by skończyć (chociaż plusem jest możliwość wyboru jakich wykresów nie chcemy w raporcie), niektóre tłumaczą się same, a inne jednak wymagałyby opisu albo lepszego zorganizowania danych, aby czytelnik na pierwszy rzut oka wiedział co wykres chce mu powiedzieć. Wszystkie kolumny zostały uznane za ciągłe, a wiemy z poprzedniej analizy, że zbiór zawiera dane dyskretne także. Jak dla mnie raport się trochę rozjeżdża na stronie i nie jest mówiąc wprost "ładny" (mowa też o wykresach, które można lepiej dopracować samemu a nie automatycznie). Jednak zawiera dużo informacji, wstępną analizę, przedstawienie korelacji i rozkładów i nawet typów danych, co sama przedstawiałam po kolei w raporcie. Minusem jest kolorystyka, szczególnie w QQ plot by age bardzo zbliżone kolory, które nachodzą do siebie utrudniają odczyt danych. Dodatkowo analiza PCA nazywa zmienne P1, P2... potem przedstawia je w dla każdej z Pi grup oddzielnie, co sprawiło, że dłuzej się przyglądałam danym, aby zrozumieć co mamy przedstawione. Osobiście wolałabym inną formę, bardziej czytelniejszą, która przekazywalaby konkretne informacje o zbiorze, które mozna by wykorzystać.
