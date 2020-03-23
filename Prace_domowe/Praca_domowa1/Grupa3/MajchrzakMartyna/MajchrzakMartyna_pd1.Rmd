@@ -1,0 +1,99 @@
+---
+title: "Praca domowa 1"
+author: "Martyna Majchrzak"
+date: "9 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# biblioteki
+library(DataExplorer)
+library(dplyr)
+library(ggplot2)
+
+#załadowanie i przygotowanie danych
+data<-read.csv("../data/heart_disease_weka_dataset.csv")
+
+```
+## Dataset
+
+Information about patients from the Cleveland hospital being diagnosed with heart disease.
+
+Columns:
+
+
+- age	- age of patient
+
+- sex	-	1=male; 0=female
+
+- cp	-	chest pain type: 1=typical angina; 2=atypical angine;  3=non-anginal pain; 4=asymptomatic
+
+- trestbps	-	resting blood pressure (mm Hg)
+
+- chol	-	serum cholestrol (mg/dl)
+
+- fbs	-	fasting blood sugar: 1 if > 120 mg/dl; 0 otherwise
+
+- restecg	-	resting electrocardiographic results: 0=normal; 1=having ST-T wave abnormality; 2=showing probable or definite left ventricular hypertrophy
+
+- thalach	-	maximum heart rate achieved
+
+- exang	-	exercise induced angina: 1=yes; 0=no
+
+- oldpeak	-	ST depression induced by exercise relative to rest
+
+- slope	-	the slope of the peak exercise ST segment: 1=upsloping; 2=flat; 3=downsloping
+
+- ca	-	number of major vessels (0-3) colored by flourosopy
+
+- thal	-	3=normal; 6=fixed defect; 7=reversable defect
+
+- [target] num - 0-HEART DISEASE, 1-NO HEART DISEASE)
+
+
+```{r}
+head(data)
+summary(data)
+```
+
+## Data Explorer
+
+#### Density 
+```{r}
+DataExplorer::plot_density(data, title="All")
+DataExplorer::plot_density(data%>%filter(num==0), title="Heart disease")
+DataExplorer::plot_density(data%>%filter(num==1), title="No heart disease")
+
+```
+
+Patients with heart disease are much more common to have non-anginal chest pain (3), where patients without hearts disease often have asymptomatic chest pain (4).
+
+#### Boxplots
+
+```{r}
+DataExplorer::plot_boxplot(data, by = "num")
+```
+
+Patients with heart disease have slighty maximum heart rate achieved (thalach) than those without.
+
+```{r}
+DataExplorer::plot_boxplot(data, by = "sex")
+```
+
+Women have slighty higher maximum heart rate achieved (thalach) and cholesterol (ch) than man, 
+```{r}
+DataExplorer::plot_boxplot(data, by = "age")
+```
+
+Resting blood pressure (trestbps) is increasing with age, but maximum heart rate (thalach) dicreases.
+```{r}
+DataExplorer::plot_qq(data)
+```
+
+#### Correlation
+
+```{r}
+DataExplorer::plot_correlation(data[,-1])
+```

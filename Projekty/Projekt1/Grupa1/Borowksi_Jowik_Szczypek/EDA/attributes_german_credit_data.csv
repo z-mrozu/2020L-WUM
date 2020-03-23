@@ -1,0 +1,22 @@
+name,type,description
+checking_account_status,string,"Status of existing checking account (A11: < 0 DM, A12: 0 <= x < 200 DM, A13 : >= 200 DM / salary assignments for at least 1 year, A14 : no checking account)"
+duration,integer,Duration in month
+credit_history,string,"A30: no credits taken/ all credits paid back duly, A31: all credits at this bank paid back duly, A32: existing credits paid back duly till now, A33: delay in paying off in the past, A34 : critical account/ other credits existing (not at this bank)"
+purpose,string,"Purpose of Credit (A40 : car (new), A41 : car (used), A42 : furniture/equipment, A43 : radio/television, A44 : domestic appliances, A45 : repairs, A46 : education, A47 : (vacation - does not exist?), A48 : retraining, A49 : business, A410 : others)"
+credit_amount,float,
+savings,string,"Savings in accounts/bonds (A61 : < 100 DM, A62 : 100 <= x < 500 DM, A63 : 500 <= x < 1000 DM, A64 : >= 1000 DM, A65 : unknown/ no savings account"
+present_employment,string,"A71 : unemployed, A72 : < 1 year, A73 : 1 <= x < 4 years, A74 : 4 <= x < 7 years, A75 : .. >= 7 years"
+installment_rate,float,Installment Rate in percentage of disposable income
+personal,string,"Personal Marital Status and Sex (A91 : male : divorced/separated, A92 : female : divorced/separated/married, A93 : male : single, A94 : male : married/widowed, A95 : female : single)"
+other_debtors,string,"A101 : none, A102 : co-applicant, A103 : guarantor"
+present_residence,float,Present residence since
+property,string,"A121 : real estate, A122 : if not A121 : building society savings agreement/ life insurance, A123 : if not A121/A122 : car or other, not in attribute 6, A124 : unknown / no property"
+age,float,Age in years
+other_installment_plans,string,"A141 : bank, A142 : stores, A143 : none"
+housing,string,"A151 : rent, A152 : own, A153 : for free"
+existing_credits,float,number of existing credits at this bank
+job,string,"A171 : unemployed/ unskilled - non-resident,A172 : unskilled - resident,A173 : skilled employee / official,A174 : management/ self-employed/highly qualified employee/ officer"
+dependents,integer,Number of people being liable to provide maintenance for
+telephone,string,"A191 : none, A192 : yes, registered under the customers name"
+foreign_worker,string,"A201: yes, A202: no"
+customer_type,integer,"Predictor Class: 1=Good, 2=Bad"
