@@ -1,0 +1,149 @@
+---
+title: "Kamień milowy 1 - Raport"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+<p>&nbsp;</p>
+
+# 1. Wprowadzenie
+
+Do projektu 1 wybraliśmy zbiór danych _Cervical Cancer_ zawierający dane 835 pacjentek szpitala w Caracas, dotyczący zachorowalności na raka szyjki macicy.
+
+<p>&nbsp;</p>
+
+## 1.1. Dane Podstawowe
+
+Zbiór ma 835 wierszy i 36 kolumn, z czego 12 opisuje zmienne ciągłe, a reszta kategoryczne. Większość rekordów posiada pewne braki w danych, w całym zbiorze jest ich ponad 2500, przy całkowitej liczbie obserwacji równej 23380.
+<p>&nbsp;</p>
+```{r include=FALSE}
+library(DataExplorer)
+library(ggplot2)
+library(dplyr)
+library(ggridges)
+library(tidyverse)
+library(visdat)
+library(knitr)
+library(mice)
+library(png)
+library(grid)
+
+data <- read.csv("nowotwor.csv")
+data_imputed <- read.csv("Filled_data.csv")
+
+# Zmiana na factory wartości bool
+
+data$Smokes <- as.factor(data$Smokes)
+data$Hormonal.Contraceptives <- as.factor(data$Hormonal.Contraceptives)
+data$IUD <- as.factor(data$IUD)
+data$STDs <- as.factor(data$STDs)
+data$STDs.condylomatosis <- as.factor(data$STDs.condylomatosis)
+data$STDs.vaginal.condylomatosis <- as.factor(data$STDs.vaginal.condylomatosis)
+data$STDs.vulvo.perineal.condylomatosis <- as.factor(data$STDs.vulvo.perineal.condylomatosis)
+data$STDs.syphilis <- as.factor(data$STDs.syphilis)
+data$STDs.pelvic.inflammatory.disease <- as.factor(data$STDs.pelvic.inflammatory.disease)
+data$STDs.genital.herpes <- as.factor(data$STDs.genital.herpes)
+data$STDs.molluscum.contagiosum <- as.factor(data$STDs.molluscum.contagiosum)
+data$STDs.HIV <- as.factor(data$STDs.HIV)
+data$STDs.Hepatitis.B <- as.factor(data$STDs.Hepatitis.B)
+data$STDs.HPV <- as.factor(data$STDs.HPV)
+data$Dx.Cancer <- as.factor(data$Dx.Cancer)
+data$Dx.CIN <- as.factor(data$Dx.CIN)
+data$Dx.HPV <- as.factor(data$Dx.HPV)
+data$Dx <- as.factor(data$Dx)
+data$Hinselmann <- as.factor(data$Hinselmann)
+data$Schiller <- as.factor(data$Schiller)
+data$Citology <- as.factor(data$Citology)
+data$Biopsy <- as.factor(data$Biopsy)
+```
+<p>&nbsp;</p>
+```{r echo=TRUE, results="asis"}
+
+knitr::kable(head(data[,c(1:6)]), align = "c")
+```
+
+<p>&nbsp;</p>
+
+```{r echo=TRUE, fig.align="Center", fig.height=10, fig.width=15}
+
+plot_intro(data, ggtheme = theme_bw(base_size = 20))
+
+```
+<p>&nbsp;</p>
+
+```{r echo=TRUE, fig.align="Center", fig.height=10, fig.width=20}
+
+DataExplorer::plot_bar(data, ggtheme = theme_bw(base_size = 20), nrow = 3, ncol = 3)
+
+```
+<p>&nbsp;</p>
+
+Niektóre zmienne kategoryczne występują tylko jako 0 lub NA. Uznaliśmy, iż nie wnoszą one żadnych informacji do zbioru, więc postanowiliśmy je usunąć. Podobnie postąpiliśmy ze zmiennymi, gdzie było jedynie kilka obserwacji pozytywnych. Dzięki temu zredukowaliśmy wymiar danych do 28 z początkowych 36 wymiarów. 
+
+```{r include=FALSE}
+data <- data[,c(-15, -22)]
+
+# Przygladam sie dziwnym przypadkom (choroba występuje u 1-4 osób)
+
+data %>% filter(data$STDs.Hepatitis.B == 1)
+data %>% filter(data$STDs.pelvic.inflammatory.disease == 1)
+data %>% filter(data$STDs.genital.herpes == 1)
+data %>% filter(data$STDs.molluscum.contagiosum == 1)
+data %>% filter(data$STDs.HPV == 1)
+data %>% filter(data$STDs.vaginal.condylomatosis == 1)
+
+# Wydaje mi się że możemy usunąć kolumny żeby model nie uczył się głupot
+
+data <- data[,c(-22, -18, -19, -20, -23, -15)]
+
+```
+<p>&nbsp;</p>
+
+## 1.2 Rozkłady zmiennych ciągłych
+
+<p>&nbsp;</p>
+
+```{r echo=FALSE, fig.align="Center", fig.height=12, fig.width=12}
+
+DataExplorer::plot_qq(data[,c(1:4)], ggtheme = theme_bw(base_size = 20), nrow = 4, ncol = 2)
+DataExplorer::plot_density(data[,c(1:4)], ggtheme = theme_bw(base_size = 20), nrow = 2, ncol = 2)
+
+
+```
+
+
+
+# 2. Uzupełnianie brakujących danych
+
+
+Braki w danych postanowiliśmy uzupełnić przy pomocy biblioteki _MICE_. Udostępnia one wiele sposobów imputacji danych, do zmiennych ciągłych zastosowaliśmy metodę _Predictive mean matching_ (pmm), natomiast do zmiennych dyskretnych _Logistic regression_(logreg). Przy zmiennych dotyczących chorób wenerycznych, uznaliśmy, że brak danych też może być jakąś informacją, dlatego je zachowaliśmy.
+
+```{r echo=FALSE, fig.align="Center", fig.height=12, fig.width=12}
+vis_miss(data)
+```
+
+
+Największe braki, sięgające 90% są w danych dotyczących ostatniej diagnozy choroby wenerycznej. Uznaliśmy, że także te informacje mogą mieć wpływ na ostateczny model.
+
+<p>&nbsp;</p>
+
+```{r echo=FALSE, fig.align="Center", fig.height=12, fig.width=12}
+g <- md.pattern(data, rotate.names = TRUE)
+```
+
+# 3. Analiza uzupenionych danych
+
+```{r}
+Dx.CancerVSDx.HPV <- table(data_imputed$Dx.Cancer, data_imputed$Dx.HPV) %>% as.data.frame()
+ggplot(Dx.CancerVSDx.HPV, aes(Var1, Var2)) + geom_tile(aes(fill = log(Freq)), colour = "green") + scale_fill_gradient(low = "green",high = "red") + geom_text(aes(label = Freq), color="black", size=4) + labs(x = "Dx.Cancer",y = "Dx.HPV")
+STDs.condylomatosisVSSTDs.vulvo.perineal.condylomatosis <- table(data_imputed$STDs.condylomatosis, data_imputed$STDs.vulvo.perineal.condylomatosis) %>% as.data.frame()
+ggplot(STDs.condylomatosisVSSTDs.vulvo.perineal.condylomatosis, aes(Var1, Var2)) + geom_tile(aes(fill = log(Freq)), colour = "green") + scale_fill_gradient(low = "green",high = "red") + geom_text(aes(label = Freq), color="black", size=4) + labs(x = "STDs.condylomatosis",y = "STDs.vulvo.perineal.condylomatosis")
+ggplot(data_imputed, aes(x = Age, y = Num.of.pregnancies, group = Num.of.pregnancies, fill = Num.of.pregnancies)) +
+  geom_density_ridges() +
+  theme_bw(base_size = 20) +
+  scale_fill_continuous(type = "viridis") +
+  theme(legend.position = "none")
+
+```
