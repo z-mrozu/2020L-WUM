@@ -1,20 +1,3 @@
-Szymon Maksymiuk is inviting you to a scheduled Zoom meeting.
+Konsultacje wtorek 9:15 - 10:00
 
-Topic: WUM LAB
-Time: Mar 17, 2020 08:00 AM Warsaw
-
-Join Zoom Meeting
-https://zoom.us/j/620780652
-
-Meeting ID: 620 780 652
-
-One tap mobile
-,,620780652# US Toll
-
-Dial by your location
-         US Toll
-        
-Meeting ID: 620 780 652
-Find your local number: https://zoom.us/u/abpTtzkTnq
-
-Oczywiście zajęcia zaczynają się o 8:15, ale zoom rozumie tylko pełne lub połowy godziny.
+https://zoom.us/j/222716537?pwd=eUVCL1ExMS8vRDk1TEZpVGFJNkRLUT09
