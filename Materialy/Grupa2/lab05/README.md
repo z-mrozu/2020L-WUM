@@ -10,4 +10,5 @@ Meeting ID: 274 018 511
 
 19:00 **Omówienie PD3 i innych kwestii organizacyjnych**
 - Proszę zalegające grupy o wrzucenie plików z KM1 projektu pierwszego na repo do dzisiaj (24.03.2020) do 23:59.
+
 19:10 **Konsultacje**
