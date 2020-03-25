@@ -1,3 +1,3 @@
-Konsultacje wtorek 9:15 - 10:00
+Konsultacje wtorek 18:15-19:00
 
-https://zoom.us/j/222716537?pwd=eUVCL1ExMS8vRDk1TEZpVGFJNkRLUT09
+https://zoom.us/j/940714960?pwd=NHpUSXJPb3lqYTNZWGxNd0liU2NtUT09
