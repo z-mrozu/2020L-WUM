@@ -1,0 +1,239 @@
+---
+title: "Praca Domowa 1"
+author: "Piotr Sieńko"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    css: style.css
+    code_folding: hide
+---
+
+
+# 1. Wstępna Eksploracja
+
+```{r message=FALSE, include=FALSE}
+library(DataExplorer)
+library(dplyr)
+library(ggplot2)
+library(ggridges)
+```
+<p>&nbsp;</p>
+Do eksploracji wybrałem zbiór danych o kredytach ("https://www.mldata.io/dataset-details/german_credit_data/"). Ma on 1000 pozycji oraz 21 zmiennych, z czego zdecydowana większość jest kategoryczna. Zostały one na samym początku zamienione na typ factor, aby podstawowe statystyki były czytelniejsze.
+<p>&nbsp;</p>
+```{r echo=TRUE}
+# Data import
+data_imported <- read.csv("/home/piotr/Pobrane/german_credit_data_weka_dataset.csv", sep = ",", stringsAsFactors = FALSE)
+
+
+```
+
+```{r warning=FALSE, include=FALSE}
+# From categorical to factor
+data_imported$customer_type[data_imported$customer_type == 1] <- "Good" 
+data_imported$customer_type[data_imported$customer_type == 2] <- "Bad" 
+
+```
+
+```{r}
+
+data_imported$checking_account_status <- as.factor(data_imported$checking_account_status)
+data_imported$credit_history <- as.factor(data_imported$credit_history)
+data_imported$purpose <- as.factor(data_imported$purpose)
+data_imported$savings <- as.factor(data_imported$savings)
+data_imported$present_employment <- as.factor(data_imported$present_employment)
+data_imported$personal <- as.factor(data_imported$personal)
+data_imported$other_debtors <- as.factor(data_imported$other_debtors)
+data_imported$property <- as.factor(data_imported$property)
+data_imported$other_installment_plans <- as.factor(data_imported$other_installment_plans)
+data_imported$housing <- as.factor(data_imported$housing)
+data_imported$job <- as.factor(data_imported$job)
+data_imported$telephone <- as.factor(data_imported$telephone)
+data_imported$foreign_worker <- as.factor(data_imported$foreign_worker)
+data_imported$customer_type <- as.factor(data_imported$customer_type)
+data_imported$present_residence <- as.factor(data_imported$present_residence)
+data_imported$existing_credits <- as.factor(data_imported$existing_credits)
+data_imported$dependents <- as.factor(data_imported$dependents)
+data_imported$installment_rate <- as.factor(data_imported$installment_rate)
+
+summary(data_imported)
+DataExplorer::plot_bar(data_imported, ggtheme = theme_bw(base_size = 10))
+```
+<p>&nbsp;</p>
+Do przedstawienia rozkładów zmiennych ciągłych użyłem funkcji z pakietu DataExplorer
+<p>&nbsp;</p>
+```{r, fig.height=5, fig.width=10, fig.align="center"}
+Density <- plot_density(data_imported[,c(13, 5, 21)], ggtheme = theme_bw(base_size = 20))
+
+```
+
+```{r, fig.height=5, fig.width=10, fig.align="center"}
+QQ_plots <- plot_qq(data_imported[,c(13, 5, 21)], ggtheme = theme_bw(base_size = 20))
+
+```
+
+Wyraźnie widać, iż rozkłady zmiennych ciągłych są dalekie od rozkładu normalnego.
+<p>&nbsp;</p>
+# 2. Zależności między zmiennymi 
+<p>&nbsp;</p>
+Z powodu dużej liczby zmiennych kategorycznych, wykres korelacji wydaje się być mało czytelny. Mimo to, udało się znaleźć interesujące zależności, które zostały dokładniej opisane w późniejszych rozdziałach.
+<p>&nbsp;</p>
+```{r, fig.height=10, fig.width=12, fig.align="center"}
+plot_correlation(data_imported)
+```
+<p>&nbsp;</p>
+## 2.1 Zależności między zmiennymi, a ratingiem klienta
+<p>&nbsp;</p>
+Analizując zmienne ciągłe, okazało się, że "złymi" klientami są częściej osoby młodsze, posiadające długoterminowe kredyty. 
+```{r fig.height=8, fig.width=10, fig.align="center"}
+Boxplot1 <- plot_boxplot(data_imported[,c(13, 2, 5, 21)], by = "customer_type", binary_as_factor = FALSE,
+                           theme_config = theme(axis.title.y = element_blank(),
+                                                axis.title.x = element_blank()),
+                                                ggtheme = theme_bw(base_size = 20))
+```
+<p>&nbsp;</p>
+Piramida wieku potwierdza fakt, że największy odsetek złych klientów stanowią osoby w okolicach 25 roku życia.
+<p>&nbsp;</p>
+```{r, fig.height=8, fig.width=10, fig.align="center"}
+ggplot(data_imported, aes( x = age, color = customer_type, fill = customer_type)) +
+  geom_bar(data = subset(data_imported, customer_type == "Good")) + 
+  geom_bar(data = subset(data_imported, customer_type == "Bad"), aes(y=..count..*(-1))) + 
+  coord_flip() +
+  theme_bw(base_size = 20) +
+  ylab("Count")+
+  xlab("Age") +
+  labs(fill = "Customer type") +
+  guides(color = FALSE)
+```
+<p>&nbsp;</p>
+Historia kredytowa miała dosyć niespodziewany wpływ na rating klienta. Osoby które nie miały kredytów, lub spłaciły je w pełni, były często uznawane za złych klientów. Jeśli ktoś zwlekał ze spłatą, lub miał kredyt w innym banku (critical account), był zazwyczaj uznawany za dobrego klienta.
+<p>&nbsp;</p>
+```{r, fig.height=10, fig.width=20, fig.align="center"}
+
+data_history <- data_imported %>% group_by(credit_history, customer_type) %>% summarise(n = n())
+
+ggplot(data_history, aes(x = credit_history, y = n, fill = customer_type)) +
+  geom_col(position = position_dodge()) +
+  scale_x_discrete(labels = c("No credits", "Paid back", "Existing Credit", "Delay in paying off", "Critical account"))+
+  theme_bw(base_size = 30) +
+  xlab("Credit history") +
+  ylab("Count") +
+  labs(fill = "Customer type")
+```
+<p>&nbsp;</p>
+Ocena danego klienta była również związana z wielkością środków zgromadzonych na koncie. Pomijając osoby nie posiadające konta, można zauważyć, że im więcej pieniędzy, tym mniej osób z danej grupy ma negatywny rating.
+<p>&nbsp;</p>
+```{r, fig.height=10, fig.width=20, fig.align="center"}
+data_checking <- data_imported %>% group_by(checking_account_status, customer_type) %>% summarise(n = n())
+
+ggplot(data_checking, aes(x = checking_account_status, y = n, fill = customer_type)) +
+  geom_col(position = position_dodge()) +
+  scale_x_discrete(labels = c("< 0 DM", "0 <= x < 200 DM", ">= 200 DM", "No account"))+
+  theme_bw(base_size = 30) +
+  xlab("Checking account") +
+  ylab("Count") +
+  labs(fill = "Customer type")
+```
+<p>&nbsp;</p>
+## 2.2 Inne zależności
+<p>&nbsp;</p>
+Kredyty długoterminowe są z reguły wyższe. Dodatkowo, odsetek "złych" kredytów wzrasta z ich wysokością i długością.
+<p>&nbsp;</p>
+```{r, fig.height=12, fig.width = 15 , fig.align="center"}
+
+ggplot(data_imported, aes(y = credit_amount, x = duration, color = customer_type)) +
+  geom_point(size = 4, alpha = 0.5) + 
+  geom_smooth(method = "loess", formula = y ~x , linetype = 2, color = "royalblue", alpha = 0.3) +
+  theme_bw(base_size = 30) +
+  theme(legend.position = "top") +
+  labs(title = "Zależność między długością kredytu, a jego wysokością") +
+  xlab("Duration") +
+  ylab("Credit Amount") +
+  labs(color = "Customer type")
+```
+<p>&nbsp;</p>
+```{r, fig.align="center", fig.height=12, fig.width=15, message=FALSE, warning=FALSE}
+
+data_duration <- data_imported[, c("duration", "credit_amount", "age", "customer_type")]
+data_duration[data_duration$duration < 15, "d_group"] <- "0-15"
+data_duration[data_duration$duration >= 15 & data_duration$duration < 30, "d_group"] <- "15-30"
+data_duration[data_duration$duration >= 30 & data_duration$duration < 45, "d_group"] <- "30-45"
+data_duration[data_duration$duration >= 45 & data_duration$duration < 60, "d_group"] <- "45-60"
+data_duration[data_duration$duration >= 60, "d_group"] <- "60"
+
+
+ggplot(data_duration, aes(y = d_group, x = credit_amount, group = d_group, fill = stat(-x)))+
+  geom_density_ridges_gradient(scale = 0.9) +
+  scale_fill_viridis_c(name = "Wartość kredytu") +
+  theme_bw(base_size = 30) +
+  theme(legend.position = "none") + 
+  ylab("Credit duration in months") +
+  xlab("Credit amount")
+```
+<p>&nbsp;</p>
+Dzieląc kredyty ze względu na ich cel, można zauważyć 2 wyróżniające się podgrupy. Kredyty o niskiej wartości, przeznaczone na przekwalifikowanie i wydatki domowe, oraz kredyty powiązane z celami biznesowymi i zakupem używanych samochodów, których średnie są wyższe niż innych grup. Dodatkowo, kredyty na zakup nowych samochodów, telewizji i mebli, mają wiele wartości odstających.
+<p>&nbsp;</p>
+```{r, fig.align="center", fig.height=10, fig.width=20, message=FALSE, warning=FALSE}
+data_imported$age_group <-  cut(data_imported$age, seq(19, 75, length.out = 8))
+data_sorted <- data_imported[data_imported$purpose != "A410", ]
+
+ggplot(data_sorted, aes(x = reorder(purpose, credit_amount), y = credit_amount, group = purpose)) +
+  geom_boxplot() +
+  stat_summary(fun.y = mean, geom = "point", shape = 8, size = 8, color = "darkred", fill = "darkred") +
+  scale_x_discrete(labels = c("Retraining", "Domestic", "Television", "Repairs", "Car(new)", "Furniture", "Education", "Business", "Car(used)")) +
+  theme_bw(base_size = 30) +
+  theme(axis.title.x = element_blank()) +
+  ylab("Credit amount") +
+  labs(title = "Zależność między celem kredytu, a jego wartością")
+```
+<p>&nbsp;</p>
+Dzieląc klientów pod względem zatrudnienia, łatwo zauważyć, że grupa bezrobotnych dzieli się na osoby młode oraz osoby w wieku przedemerytalnym i samych emerytów. Wraz ze wzrostem umiejętności rośnie również dominanta wieku. 
+<p>&nbsp;</p>
+```{r, fig.align="center", fig.height=10, fig.width=18, message=FALSE, warning=FALSE}
+ggplot(data_imported, aes(y = job, x = age, group = job, fill = stat(-x))) +
+  geom_density_ridges_gradient(scale = 0.9) +
+  scale_fill_viridis_c() +
+  scale_y_discrete(labels = c("unemployed", "unskilled employee", "skilled employee", "highly qualifed employee")) +
+  theme_bw(base_size = 30) +
+  theme(legend.position = "none", axis.title.y = element_blank()) + 
+  xlab("Age") +
+  labs(title = "Rozkład wieku w podziale na zatrudnienie / kwalifikacje")
+```
+<p>&nbsp;</p>
+
+Osoby wynajmujące mieszkania są średnio młodsze od posiadaczy własnych mieszkań, lub osób które dostały je za darmo.
+<p>&nbsp;</p>
+```{r, fig.align="center", fig.height=10, fig.width=15, message=FALSE, warning=FALSE}
+
+ggplot(data_imported, aes(y = age, x = housing, group = housing)) +
+  geom_boxplot() +
+  theme_bw(base_size = 25) +
+  stat_summary(fun.y = mean, geom = "point", shape = 8, size = 8, color = "darkred", fill = "darkred") +
+  theme(axis.title.x = element_blank()) +
+  scale_x_discrete(labels = c("Rent", "Owner", "For free"))+
+  ylab("Age") +
+  labs(title = "Związek między wiekiem, a rodzajem mieszkania")
+```
+<p>&nbsp;</p>
+Bank z reguły nie miał zapisaych numerów telefonów osób, które zaciągnęły niskie kredyty.
+<p>&nbsp;</p>
+
+```{r, fig.align="center", fig.height=10, fig.width=15, message=FALSE, warning=FALSE}
+
+ggplot(data_imported, aes(y = credit_amount, x = telephone, group = telephone, fill = credit_amount)) +
+  geom_boxplot() +
+  stat_summary(fun.y = mean, geom = "point", shape = 8, size = 8, color = "darkred", fill = "darkred") +
+  theme_bw(base_size = 25) +
+  theme(axis.title.x = element_blank()) +
+  ylab("Credit amount") +
+  scale_x_discrete(labels = c("Not registered", "Registered"))+
+  labs(title = "Posiadanie numeru telefonu klienta, a wielkość kredytu")
+
+  
+  
+```
+
+# 3. Ograniczenia raportu generowanego przez _DataExplorer_
+
+Funkcja _create_report_ z pakietu _DataExplorer_ pozwala na bardzo szybkie tworzenie raportów podsumowujących zbiór danych. Niestety, w przypadku, kiedy nasza ramka danych składa się z wielu zmiennych (szczególnie gdy są to zmienne kategoryczne), wykresy stają się bardzo mało czytelne, czy wręcz bezużyteczne. Przy podstawowych ustawieniach, grafiki nie są estetyczne i mogą służyć jedynie do szybkiego poznania zbioru. Brakuje również podsumowania miar statystycznych dla poszczególnych zmiennych.
+
