@@ -1,0 +1,29 @@
+---
+title: "Praca domowa 2"
+author: "Martyna Majchrzak"
+date: "21 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("mlr")
+data<-read.csv("./Prace_domowe/Praca_domowa2/Grupa3/MajchrzakMartyna/allegro-api-transactions.csv")
+data<-read.csv("../data/allegro-api-transactions.csv")
+```
+
+# Kodowanie zmiennych kategorycznych
+
+## Zmienna it_location
+
+```{r}
+# Sprawdźmy ile ma poziomów mają zmienne kategoryczne
+str(data)
+
+createDummyFeatures(data, target = )
+```
+
+Zakodujemy zmienną main_category za pomocą 
+# Uzupełnianie braków
+
+
