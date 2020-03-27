@@ -1,0 +1,134 @@
+---
+title: "Milestone 1"
+author: "Paweł Morgen, Zuzanna Mróz, Aleksander Podsiad"
+date: "17/03/2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+source("load&preprocessing.R")
+source("plot_corrgraph.R")
+```
+
+# Krótkie słowo wstępu
+
+W zbiorze danych *german credit data* znajdują się dane na temat kredytobiorców, klasyfikowanych na podstawie różnych cech (wiek, zatrudnienie, typ miejsca zamieszkania itp.) jako *dobrzy* bądź *źli* klienci. Poniżej zaprezentowano wyniki eksploracji powyższych danych.
+
+# Eksploracja jednowymiarowa
+
+## Rozkład czasu trwania kredytu
+
+```{r}
+ggplot(data2, aes(x=duration)) + 
+  geom_histogram(aes(y=..density..),
+                 bins = 40,
+                 colour="black", fill="white") +
+  geom_density(alpha=.2, fill="#FF6666")
+```
+
+Obserwacje: 
+
+ * widać wyraźnie, że niektóre czasy trwania kredytu są znacznie popularniejsze.
+ * najwięcej jest kredytów jedno i dwuletnich.
+
+
+## Rozkład wieku klientów
+
+```{r}
+ggplot(data2, aes(x=age)) + 
+  geom_histogram(aes(y=..density..),
+                 bins = 29,
+                 colour="black", fill="white") +
+  geom_density(alpha=.2, fill="#FF6666")
+```
+
+Obserwacje: 
+
+ * rozkład jest dodatnio skośny ze względu na możliwość brania kredytu dopiero od pewnej granicy wiekowej.
+ * młodsze osoby częściej biorą kredyty.
+ 
+
+## Rozkład wysokości kredytu
+
+```{r}
+ggplot(data2, aes(x=credit_amount)) + 
+  geom_histogram(aes(y=..density..),
+                 bins = 29,
+                 colour="black", fill="white") +
+  geom_density(alpha=.2, fill="#FF6666")
+```
+
+Obserwacje: 
+
+ * rozkład jest dodatnio skośny z długim ogonem.
+ * luczie częściej biorą "małe" kredyty.
+
+## Wykresy słupkowe zmiennych dyskretnych
+
+```{r}
+plot_bar(data2, ncol = 1) 
+```
+
+# Eksploracja związków między zmiennymi
+
+## Graf korelacji zmiennych
+
+```{r corrgraph}
+plot_corrgraph(as.data.frame(lapply(select(data2, -customer_type), as.numeric)), cutoff = 0.2, 
+               main = "Visualization of correlations in german credit dataset")
+```
+
+Krawędź się rysuje, gdy korelacja między zmiennymi jest nie mniejsza niż 0.2 (co do modułu). 
+Widzimy wzajemne związki wśród zmiennych `property`, `duration`, `credit_amount`, `job`, `telephone` oraz wśród zmiennych `age`, `present_employment` oraz `present_residence`. Przyjrzyjmy się temu bliżej.
+
+## Korelacje wszystkich zmiennych
+
+![](cut_corr_matrix_1.png)
+
+Obserwacje:
+
+ * Zmienne `credit_amount` i `duration` są silnie (0.62) skorelowane. Nie dziwi nas to, ponieważ z reguły im kredytów na większe kwoty udziela się na dłuższy czas spłaty. 
+ * Widzimy, że jeśli zmienna `credit_amount` zależy od `job`. Jest to związane ze zdolnością kredytową:
+ 
+```{r credit-job}
+ggplot(data2, aes(x = job, y = credit_amount)) + 
+  geom_violin() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+  labs(title = "Credit amount vs job type")
+```
+ 
+ * Zmienna `telephone` jest pewnym wyznacznikiem zmienych `credit_amount`oraz `job` - zwłaszcza dla wartości *highly qualified* i *unemployed*. Ponownie nas to nie dziwi - im większy kredyt (`credit mount`) i zarobki (związane z `job`) tym większa szansa na to, że ktoś posiada telefon.
+ * Niektóre wartości zmiennej `property` (związane z nieruchomościami) są związane z wartościami zmiennej `housing` oraz `credit_amount`.
+
+## Podsumowanie korelacji
+
+Ogólnie, powyższe związki wynikają w większości z tego, że każdy z nich traktuje o pewnej własności (`telephone`, `housing`, `property`), które są związane ze stanem konta i ze zdolnością kredytową. Im więcej ktoś posiada, tym chętniej bank udziela kredytu na większe kwoty.
+
+```{r corrmatrixes}
+plot_correlation(data2[,c("age", "present_employment", "present_residence")],
+                      theme_config = theme(axis.text.x= element_text(angle = 30, hjust = 1),
+                                           axis.title = element_blank()),
+                      title = "Correlation matrix for variables: \n age, present_employment, present_residence")
+```
+
+Korelacja pomiędzy zmienną `present_employment` a `age` jest samotłumaczalna - im człowiek starszy, tym więcej miał czasu na pracę. Podobnie z `age` i `present_resident`. 
+
+## Zależności zmiennych od celu kredytu
+
+```{r}
+data3 <- data2 %>% select(age, credit_amount, duration, purpose)
+plot_boxplot(data3, by = "purpose", ncol = 3)
+```
+
+Obserwacje:
+
+ * co ciekawe klienci biorą niższe kredyty na nowe samochody niż na używane.
+ * widać tu wyraźnie korelację wysokości i czasu trwania kredytu.
+
