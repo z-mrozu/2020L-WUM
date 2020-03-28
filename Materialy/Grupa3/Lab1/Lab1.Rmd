@@ -1,0 +1,104 @@
+---
+title: "WUM - LAB1"
+author: "Szymon Maksymiuk"
+date: "25 02 2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+# Bike Sharing Demand dataset
+
+Użyjemy danych z serwisu Kaggle. Są one dostępne do pobrania pod linkiem: https://www.kaggle.com/c/bike-sharing-demand/data
+
+```{r}
+data <- read.csv("data.csv")
+head(data)
+```
+
+Na początek przyjrzyjmy się podstawowym statystykom związanym z naszymi danymi. Zamieniamy wartości kategoryczn na typ factor.
+
+```{r}
+summary(data)
+data$season <- as.factor(data$season)
+data$weather <- as.factor(data$weather)
+data$workingday <- as.factor(data$workingday)
+data$holiday <- as.factor(data$holiday )
+data$datetime <- as.POSIXct(data$datetime)
+summary(data)
+```
+
+# Rozkłady
+
+## Jedna zmienna
+
+### Histogram
+
+```{r eval = FALSE}
+x <- data$count
+p <- hist(x, breaks=10, col="red", xlab="count")
+xfit<-seq(min(x),max(x),length=40)
+yfit<-dnorm(xfit,mean=mean(x),sd=sd(x))
+yfit <- yfit*diff(h$mids[1:2])*length(x)
+lines(xfit, yfit, col="blue", lwd=2)
+```
+
+Niebieska linia symoblizuje gęstość rozkładu normalnego o średniej oraz odchyleniu standardowym naszego wektora x
+
+### Boxplot
+
+```{r}
+boxplot(data$count, xlab = "count", main = "")
+par(mfrow = c(1, 2))
+boxplot(data$temp, xlab = "temp", main = "")
+boxplot(data$atemp, xlab = "atemp", main = "")
+par(mfrow = c(1, 1))
+```
+
+### Gęstość
+
+```{r}
+plot(density((data$count)), xlab = "Count", main = "")
+plot(density((data$temp)), xlab = "temp", main = "")
+plot(density((data$atemp)), xlab = "atemp", main = "")
+barplot(table(data$season))
+barplot(table(data$weather))
+```
+
+Oczywiście wszystkie te wykresy można wykonać również w `ggplot2`. Funkcje `geom_density`, `geom_hist` oraz `geom_bar`.
+
+## Cały zbiór
+
+```{r}
+library(DataExplorer)
+DataExplorer::plot_density(data)
+DataExplorer::plot_boxplot(data, by = "count")
+DataExplorer::plot_bar(data)
+DataExplorer::plot_qq(data)
+```
+
+# Zależności
+
+```{r}
+library(ggplot2)
+plot(data[1:48,]$datetime, data[1:48,]$count, main = "", ylab = "count", xlab = "date")
+plot(data$atemp, data$windspeed)
+cat("Współczynnik korelacji liniowej dla zmiennych atemp oraz windspeed", cor(data$atemp, data$windspeed))
+```
+
+Wykres zmiennej `atemp` oraz `windspeed` wygląda niemal jak losowy rozrzut punktów co świadczy, iż te zmienne raczej nie są od siebie zależne liniowo. Potwierdza to wartość współczynnika korelacji.
+
+# Korelacje
+
+```{r}
+DataExplorer::plot_correlation(data[,-1])
+```
