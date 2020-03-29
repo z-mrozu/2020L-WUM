@@ -1,0 +1,121 @@
+---
+title: "WUM PD 2"
+author: "Piotr Piątyszek"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE)
+opts_chunk$set(cache = TRUE)
+opts_chunk$set(fig.width = 10)
+opts_chunk$set(fig.height = 8)
+opts_chunk$set(warning  = FALSE)
+opts_chunk$set(message  = FALSE)
+```
+
+# Ładowanie danych
+```{r}
+library(dplyr)
+library(mlr)
+library(mice)
+library(ggplot2)
+data <- read.csv("./allegro-api-transactions.csv")
+```
+
+# Encoding
+
+## it_location
+Kolumna `it_location` posiada 10056 unikalnych wartości. Użycie one hot encodingu spowodowało by więc powstanie ogromnej ilości kolumn. Jest to mało wydajne, ponieważ przyjmuje się, że kolumn powinno być niewiele w stosunku do wierszy i pod takim też założeniem optymalizuje się oprogramowanie. Ale co istotniejsze, to znacznie zwiększy się zużycie pamięci. Przykładowo funkcja createDummyFeatures zwraca błąd dla tej kolumny, ponieważ nie może zaalokować 32Gb pamięci. Target encoding Nie powoduje powstania żadnej nowej kolumny i nie wpływa na zużycie pamięci.
+```{r}
+data %>%
+  group_by(it_location) %>%
+  mutate(it_location_encoded = mean(price)) %>%
+  ungroup -> data_encoded
+
+# print results
+data_encoded %>%
+  select(it_location, it_location_encoded, price) %>%
+  head(n=20) %>%
+  kable
+```
+
+## main_category
+Zmienna `main_category` posiada jedynie 27 unikalnych wartości, więc one hot encoding jest bez problemu wykonywywalny. Sprawdzimy obie metody `1-of-n` i `reference`.
+```{r}
+# Tworzymy nowe kolumny obiema metodami i wyniki zapisujemy do 2 ramek
+data %>%
+  createDummyFeatures(cols="main_category", method="1-of-n") -> data_1ofn
+
+data %>%
+  createDummyFeatures(cols="main_category", method="reference") -> data_reference
+
+# Tworzymy ramknę do porównania które kolumny są w której ramce
+all_colnames <- unique(c(colnames(data_1ofn), colnames(data_reference)))
+data.frame(
+  data_1ofn = sapply(all_colnames, function(x) x %in% colnames(data_1ofn)),
+  data_reference = sapply(all_colnames, function(x) x %in% colnames(data_reference))
+) %>% kable
+```
+
+Jak widać w metodzie `refercence` jest jedna kolumna mniej, jest to kolumna odpowiadająca pierwszej wartości `main_category`. Możemy tak zrobić bez utraty danych, ponieważ ta kolumna jest równa 1 wtedy i tylko wtedy gdy pozostałe są równe 0.
+Pokażmy jeszcze początek kilku zakodowanych kolumn.
+```{r}
+data_1ofn %>% 
+  select(item_id, main_category.Komputery, main_category.Odzież..Obuwie..Dodatki, main_category.Przemysł) %>%
+  head(n=10) %>%
+  kable
+```
+
+# Uzupełnianie braków
+
+## Funkcje testujące
+```{r}
+test1 <- function(dataset) {
+  na_rows <- sample(1:nrow(dataset), size=0.1*nrow(dataset))
+  orginal <- dataset[na_rows, "it_seller_rating"]
+  dataset[na_rows, "it_seller_rating"] <- NA
+  # m = 1 ponieważ tylko raz imputujemy
+  # i błąd obliczamy dla różnych wierszy usuniętych
+  imputed <- mice(dataset, m = 1)$imp$it_seller_rating$`1`
+  # RMSE
+  sqrt(mean((orginal - imputed)^2))
+}
+
+test2 <- function(dataset) {
+  na_rows <- sample(1:nrow(dataset), size=0.1*nrow(dataset))
+  na_rows2 <- sample(1:nrow(dataset), size=0.1*nrow(dataset))
+  orginal <- dataset[na_rows, "it_seller_rating"]
+  dataset[na_rows, "it_seller_rating"] <- NA
+  dataset[na_rows2, "it_quantity"] <- NA
+  # m = 1 ponieważ tylko raz imputujemy
+  # i błąd obliczamy dla różnych wierszy usuniętych
+  imputed <- mice(dataset, m = 1)$imp$it_seller_rating$`1`
+  # RMSE
+  sqrt(mean((orginal - imputed)^2))
+}
+```
+
+## Testowanie
+```{r, message = FALSE, warning = FALSE, results='hide'}
+datanum <- data[1:50000, ] %>% select(it_quantity, it_seller_rating, price)
+set.seed(1313)
+
+test1rmse <- sapply(1:10, function(x) { test1(datanum) })
+test2rmse <- sapply(1:10, function(x) { test2(datanum) })
+```
+
+## Wyniki
+
+```{r, cache = FALSE}
+sd(test1rmse)
+sd(test2rmse)
+
+data.frame(
+  rmse = c(test1rmse, test2rmse),
+  test = c(rep("test 1", 10), rep("test 2", 10))
+) %>%
+  ggplot(aes(x = test, y=rmse)) + geom_boxplot()
+```
+
+W obu testach błąd jest bardzo wysoki, jednak w drugim teście rozrzut wartości jest znacznie wiekszy.
