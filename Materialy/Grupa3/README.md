@@ -1,3 +1,9 @@
-Konsultacje wtorek 18:15-19:00
+Szymon Maksymiuk is inviting you to a scheduled Zoom meeting.
 
-https://zoom.us/j/940714960?pwd=NHpUSXJPb3lqYTNZWGxNd0liU2NtUT09
+Topic: WUM LAB6
+Time: Mar 31, 2020 08:00 AM Warsaw
+
+Join Zoom Meeting
+https://zoom.us/j/909381696
+
+Meeting ID: 909 381 696
