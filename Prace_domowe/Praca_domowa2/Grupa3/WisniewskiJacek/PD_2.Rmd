@@ -1,0 +1,101 @@
+---
+title: "Praca Domowa 2"
+author: "Jacek Wiśniewski"
+date: "23/03/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+library(visdat)
+library(mice)
+library(mlr)
+library(tidyverse)
+library(Metrics)
+data <- read.csv("allegro-api-transactions.csv")
+```
+
+# Kodowanie zmiennych kategorycznych
+
+Na początku tej części zadania przygotuję dane do dalszej pracy oraz wykonam target encoding dla zmiennej it_location względem zmiennej price.
+
+``` {r}
+
+# Przygotowanie danych do zadania
+
+data$date <- as.Date(data$date)
+data$item_id <- as.factor(data$item_id)
+data$pay_option_on_delivery <- as.factor(data$pay_option_on_delivery)
+data$pay_option_transfer <- as.factor(data$pay_option_transfer)
+data$it_is_allegro_standard <- as.factor(data$it_is_allegro_standard)
+data$it_is_brand_zone <- as.factor(data$it_is_brand_zone)
+
+# Target Encoding dla zmiennej it_location wzgledem kolumny price
+
+tmp <- data %>% group_by(it_location) %>% dplyr::summarise(Mean = mean(price))
+data <- inner_join(data, tmp)
+data <- data[, -13]
+colnames(data)[14] <- "it_location"
+```
+
+Target encoding ma przewagę nad one-hot encoding jeśli chodzi o rozmiar danych. Target encoding nie zwiększa rozmiaru danych, kiedy one-hot dopisuje do naszych danych tyle kolumn ile poziomów ma zmienna, która nas interesuje.
+
+Dalej zajmę się funkcją createDummyFeatures.
+
+``` {r}
+# Tworzenie dummy variables dla zmiennej main_category 2 metodami
+
+data_1 <- createDummyFeatures(data, target = "price", method = "1-of-n", cols = "main_category")
+data_2 <- createDummyFeatures(data, target = "price", method = "reference", cols = "main_category")
+
+colnames(data_1)
+colnames(data_2)
+```
+
+Użyłem 2 różnych metod dla tej funkcji. Obie metody rozbijają zmienną kategoryczną na wiele kolumn. Metoda "1-of-n" tworzy tyle kolumn ile poziomów ma zmienna kategoryczna, kiedy metoda "reference" tworzy o 1 mniej. Metody są równoważne, ponieważ utrata 1 kolumny nie powoduje utraty danych (możemy sprawdzić jak powinna wyglądać brakująca kolumna wnioskując po pozostałych).
+
+# Uzupełnianie braków
+
+W dalszej części zajmę się badaniem skuteczności metody imputacji "pmm". Na początku przeprowadzę 10 pomiaróW RMSE dla danych imputowanych dla 1 kolumny. Ze względu na ograniczenia sprzętowe, zmniejszam dane o 90%.
+
+``` {r}
+data_new <- data[, c("price", "it_seller_rating", "it_quantity")]
+data_new <- data_new[sample(x = nrow(data_new), size = 0.1*nrow(data_new)),]
+rmse <- c()
+
+for (i in 1:10) {
+  data_imputed <- data_new
+  data_imputed[sample(x = nrow(data_imputed), size = 0.1*nrow(data_imputed)), "it_seller_rating"] <- NA
+  
+  imp <- mice(data_imputed, method = "pmm", m = 1, maxit = 1)
+  data_imputed <- mice::complete(imp)
+  
+  rmse <- c(rmse, rmse(data_new$it_seller_rating, data_imputed$it_seller_rating))
+}
+rmse
+sd(rmse)
+```
+
+Dla porównania przeprowadzę analogiczne badanie dla imputacji w dwóch kolumnach.
+
+``` {r}
+data_new <- data[, c("price", "it_seller_rating", "it_quantity")]
+data_new <- data_new[sample(x = nrow(data_new), size = 0.1*nrow(data_new)),]
+rmse <- c()
+
+for (i in 1:10) {
+  data_imputed <- data_new
+  data_imputed[sample(x = nrow(data_imputed), size = 0.1*nrow(data_imputed)), "it_seller_rating"] <- NA
+  data_imputed[sample(x = nrow(data_imputed), size = 0.1*nrow(data_imputed)), "it_quantity"] <- NA
+  
+  imp <- mice(data_imputed, method = "pmm", m = 1, maxit = 1)
+  data_imputed <- mice::complete(imp)
+  
+  rmse <- c(rmse, rmse(data_new$it_seller_rating, data_imputed$it_seller_rating))
+}
+rmse
+sd(rmse)
+```
+
+Zarówno wyniki rmse (miary oddalenia wyników przewidywanych od prawdziwych) jak i ich odchylenie standardowe jest większe w sytuacji, kiedy usuwamy dane w 2 kolumnach. Wynik nie powinnien być dla nas zaskakujący, ponieważ intuicyjnie spodziewaliśmy się tego, że im więcej danych dostępnych tym dokładniejsze wyniki przewidzimy.

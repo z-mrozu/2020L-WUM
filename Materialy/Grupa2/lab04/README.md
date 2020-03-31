@@ -17,4 +17,15 @@ Kolejność prezentacji:
 4. Jakub Kosterna & Marcin Łukaszyk & Mikołaj Malec - german_credit_data
 5. Maciej Paczóski & Bartosz Rożek - bank_marketing
 
-19:00 **Konsultacje**
+19:00 **Omówienie DataCamp**
+
+Link do rejestracji:  https://www.datacamp.com/groups/shared_links/d85537213b4893e61a25a513ff7cae317ee41a855e0b10ebe239aaee17cd2111
+
+Wpisujemy:
+- Imię
+- Nazwisko
+- mail **WYDZIAŁOWY**
+- hasło
+- telefonu nie trzeba
+
+19:10 **Konsultacje**
