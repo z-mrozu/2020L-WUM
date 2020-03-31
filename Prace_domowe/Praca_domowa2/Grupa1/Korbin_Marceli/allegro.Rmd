@@ -1,0 +1,138 @@
+---
+title: "Praca domowa ze wstępu do uczenia maszynowego nr 2"
+author: "Marceli Korbin"
+date: "23 marca 2020"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo=TRUE, cache=TRUE)
+library(plyr)
+library(dplyr)
+library(mlr)
+library(mice)
+library(ggplot2)
+allegro <- read.csv("https://www.dropbox.com/s/360xhh2d9lnaek3/allegro-api-transactions.csv?dl=1")
+```
+
+## Wstęp
+
+Na ramce danych _allegro_ (o portalu Allegro) będę się bawić w kodowanie zmiennych kategorycznych i uzupełnianie braków.
+
+## Część 1: kodowanie zmiennych kategorycznych
+
+### Target encoding
+
+Kolumna _it\_location_ przechowuje dane o miejscu wystawienia produktu na sprzedaż na stronie Allegro. Jest w ten sposób całkiem informatywna, ale może zajmować niepotrzebną pamięć.
+
+```{r chunk1}
+allegro1 <- allegro
+# usuńmy może czynniki, żeby się łatwiej pracowało, bo z nimi, to tak nie do końca się da takie rzeczy
+i <- sapply(allegro1, is.factor)
+allegro1[i] <- lapply(allegro1[i], as.character)
+object.size(allegro1$it_location)
+```
+
+Przekształcimy te informacje względem kolumny _price_, czyli informacji o cenie produktu. Średnią ceną scharakteryzujemy wówczas występujące lokalizacje.
+
+```{r chunk2}
+lok_ceny <- allegro1 %>% group_by(it_location) %>% summarise(srednia=mean(price, na.rm=TRUE))
+# liczymy średnie ceny produktów z występujących lokalizacji
+allegro1$it_location <- mapvalues(allegro1$it_location, from=lok_ceny$it_location, to=lok_ceny$srednia)
+# kodujemy funkcją z plyr
+```
+
+Jak to teraz wygląda?
+
+```{r chunk3}
+object.size(allegro1$it_location)
+```
+
+Kolumna _it\_location_ nie tylko zajmuje mniej pamięci, ale i daje teraz podgląd na "spodziewaną" cenę w danym miejscu. Jest to o tyle lepsze od one-hot encodingu, że zachowuje jakąś charakterystykę. A skoro mówimy o one-hot encodingu...
+
+### One-hot encoding
+
+...to go przetestujemy na kolumnie _main\_category_.
+
+```{r chunk4}
+allegro2 <- allegro
+object.size(allegro2$main_category)
+# tutaj też pozbędziemy się czynników
+i <- sapply(allegro2, is.factor)
+allegro2[i] <- lapply(allegro2[i], as.character)
+kategorie <- unique(allegro2$main_category)
+# unikalne kategorie
+kat1h <- kategorie
+for (x in 1:length(kat1h))
+  kat1h[x] <- list(kat1h[x]==kategorie)
+allegro2$main_category <- mapvalues(allegro2$main_category, from=kategorie, to=kat1h)
+# main_category staje się zbiorem list booleanów
+object.size(allegro2$main_category)
+```
+
+To był jeden sposób. Pakiet _mlr_ (nie jego zastępca _mlr3_) posiada tymczasem funkcję _createDummyFeatures_, która wykonuje one-hot encoding, ale porozsadzany na osobne kolumny, a nie upakowany w jedną. Istnieją dwie metody: _1-of-n_, po której każda kategoria ma swoją kolumnę i _reference_, tworząca o jedną kolumnę mniej - jeśli jakiś rekord nie reprezentuje żadnej kategorii z zakodowanych, to domyślnie należy do tej ostatniej (kategoria-widmo).
+
+Kodowanie w praktyce:
+
+```{r chunk5}
+# już nie psujmy czynników, bo dla tych metod akurat są one kluczowe
+allegro4 <- createDummyFeatures(allegro, method="1-of-n", cols="main_category")[1:10, -c(1:13)]
+colnames(allegro4) <- c(1:27) # nazwy kolumn musiałem zmienić, bo psuły kompilację
+head(allegro4)
+allegro4 <- createDummyFeatures(allegro, method="reference", cols="main_category")[1:10, -c(1:13)]
+colnames(allegro4) <- c(1:26)
+head(allegro4)
+```
+
+## Część 2: uzupełnianie braków
+
+Ograniczamy zbiór do trzech kolumn numerycznych _price_, _it\_seller\_rating_ i _it\_quantity_. Będziemy kilka razy wyrzucać losowe dane z listy i z powrotem je imputować metodą _norm.predict_ z pakietu _mice_. Celem jest sprawdzenie poprawności tej metody (zgodnie z propozycją w treści p.d., skorzystam z RMSE - pierwiastka błędu średniokwadratowego).
+
+Przebieg eksperymentu:  
+* 10 razy:  
+   * usuwam losowe 10% wartości it_seller_rating  
+   * imputuję (3 iteracje po 3 imputacje, razem wyjdzie 90 imputacji)  
+   * notuję miarę poprawności  
+* 10 razy:  
+   * usuwam losowe 10% wartości it_seller_rating i inne losowe 10% it_quantity  
+   * imputuję (jw., razem imputacji będziemy mieli zrobione aż 180)  
+   * notuję miarę poprawności
+
+```{r chunk6}
+allegro3 <- allegro[, c("price", "it_seller_rating", "it_quantity")]
+
+rmse1 <- c()
+rmse2 <- c()
+for (take in 1:10){
+  emptied <- sample(1:nrow(allegro3), nrow(allegro3)/10)
+  al_empty <- allegro3
+  al_empty[emptied, 2] <- NA
+  al_impute <- mice(al_empty, method="norm.predict", m=3, maxit=3)
+  al_full <- complete(al_impute, 1)
+  rmse1 <- c(rmse1, measureRMSE(allegro3$it_seller_rating, al_full$it_seller_rating))
+}
+sd(rmse1)
+for (take in 1:10){
+  emptied <- sample(1:nrow(allegro3), nrow(allegro3)/10)
+  al_empty <- allegro3
+  al_empty[emptied, 2] <- NA
+  emptied <- sample(1:nrow(allegro3), nrow(allegro3)/10)
+  al_empty[emptied, 3] <- NA
+  al_impute <- mice(al_empty, method="norm.predict", m=3, maxit=3)
+  al_full <- complete(al_impute, 1)
+  rmse2 <- c(rmse2, measureRMSE(allegro3$it_seller_rating, al_full$it_seller_rating))
+}
+sd(rmse2)
+```
+
+Jak się konkretnie różniły te miary? Nakreślę teraz dwa wykresy, pokazujące różnicę między średnią i każdą z obserwacji. W każdym wykresie oprócz punktów dodaję trzy linie symbolizujące zakres odchylenia standardowego.
+
+```{r chunk7}
+odchylenie <- function(observ) ggplot(as.data.frame(cbind(numer=1:10, dev=observ-mean(observ))),
+                                      aes(x=numer, y=dev)) + geom_point() +
+  geom_line(aes(y=0)) + geom_line(aes(y=-sd(observ))) + geom_line(aes(y=sd(observ)))
+# etap z imputacją jednej kolumny
+odchylenie(rmse1)
+# etap z imputacją dwóch kolumn
+odchylenie(rmse2)
+```
