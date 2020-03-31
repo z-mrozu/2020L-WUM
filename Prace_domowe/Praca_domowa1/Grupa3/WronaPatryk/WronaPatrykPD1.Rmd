@@ -1,0 +1,192 @@
+---
+title: "Praca domowa 1"
+author: "Patryk Wrona"
+date: "16 marca 2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+library(ggplot2)
+library(dplyr)
+```
+
+## Heart disease
+
+Zbiór 'heart disease' opisuje podzbiór danych pacjentów z 4 szpitali, a konkretnie pacjentów ze szpitala Cleveland. Dotyczy on chorób serca.
+
+## Wczytanie zbiorów danych
+
+```{r, eval = TRUE}
+hd <- read.csv("./heart_disease_dataset.csv")
+```
+
+## Usunięcie braków danych
+
+Z analizy zbioru odkryłem, że w kolumnach 'ca' oraz 'thal' znajdują się wartości o podejrzanych wartościach 100000, burzących histogramy. Potraktowałem je jako NA. 
+Usunąłem te kilka obserwacji ze zbioru danych.
+
+```{r, eval = TRUE}
+hd <- hd  %>% filter(thal >= 0, ca >= 0)
+```
+
+
+## Cechy kategoryczne -> typ factor
+
+Na początek przyjrzę się podstawowym statystykom związanym z naszymi danymi.
+Zamieniam cechy kategoryczne na typ factor.
+
+```{r}
+
+# zamieniam plec na zmienną typu factor:
+hd$sex <- as.factor(hd$sex)
+levels(hd$sex) <- c("female", "male")
+
+hd$cp <- as.factor(hd$cp)
+levels(hd$cp) <- c("typical angina",
+                   "atypical angina",
+                   "non-anginal pain",
+                   "asymptotic")
+
+hd$fbs <- as.factor(hd$fbs)
+levels(hd$fbs) <- c("<= 120 mg/dl",
+                    "> 120 mg/dl")
+
+hd$restecg <- as.factor(hd$restecg)
+levels(hd$restecg) <- c("normal",
+                        "ST-T wave abnormality",
+                        "probable or definite left ventricular hypertrophy")
+
+hd$exang <- as.factor(hd$exang)
+levels(hd$exang) <- c("no", "yes")
+
+hd$slope <- as.factor(hd$slope)
+levels(hd$slope) <- c("upsloping",
+                      "flat",
+                      "downsloping")
+
+hd$thal <- as.factor(hd$thal)
+levels(hd$thal) <- c("normal",
+                     "fixed",
+                     "reversable defect")
+
+hd$num <- as.factor(hd$num)
+levels(hd$num) <- c("HEART DISEASE",
+                    "NO HEART DISEASE")
+
+
+```
+
+
+
+## Użycie biblioteki Data Explorer
+
+Idziemy na łatwiznę i używamy Data Explorer. Jest to narzędzie pozwalające na szybki wgląd w dane i wstępne wnioski na podstawie np korelacji. Pozwala to zdecydować np. czy do metod imputacji danych można użyć regresji liniowej w przypadku skorelowanych cech statystycznych. Minusem jest automatyzacja wszystkich wykresów. Raport jest do odczytu w przeglądarce.
+
+```{r, eval = FALSE}
+
+DataExplorer::create_report(hd)
+
+```
+
+Raport jest dostępny w oddzielnym pliku 'report.html'.
+
+
+## Ciekawe wykresy z użyciem rpivotTable
+
+Różnego rodzaju anginy zwiększają p-stwo choroby serca:
+
+```{r}
+
+rpivotTable::rpivotTable( hd,
+             cols = c("sex","cp"),
+             rows = "num",
+             rendererName = "Col Heatmap",
+             aggregatorName = "Count")
+```
+
+
+
+Upsloping na eletrokardiogramie zwieksza prawdopodobienstwo choroby serca: 
+```{r}
+
+rpivotTable::rpivotTable( hd,
+             cols = c("sex","slope"),
+             rows = "num",
+             rendererName = "Col Heatmap",
+             aggregatorName = "Count")
+```
+
+
+## Wykresy kolowe dla cech jakościowych
+
+Postarałem się umieścić cechy jakościowe na wykresach kołowych.
+
+```{r}
+pie(table(hd$sex), main = "Podzial pacjentow na plec")
+```
+
+```{r}
+pie(table(hd$cp), main = "Angina")
+```
+
+
+```{r}
+pie(table(hd$fbs), main = "Cukier we krwi na czczo")
+```
+
+```{r}
+pie(table(hd$restecg), main = "Restecg")
+```
+
+```{r}
+pie(table(hd$exang), main = "Czy cwiczenia powodowaly angine")
+```
+
+```{r}
+pie(table(hd$slope), main = "Slope na elektrokardiogramie")
+```
+
+```{r}
+pie(table(hd$thal), main = "Thal")
+```
+
+
+## Histogramy ciągłych cech statystycznych
+Istnieją różne wzory na optymalną liczbę klas w histogramie. Ja zdecydowałem się wziąć trochę mniej niż sqrt(n), gdzie n jest liczbą obserwacji. Przyjąłem 15 klas.
+
+
+```{r}
+ggplot(hd, aes(hd$age)) + geom_histogram(bins = 15) +
+  ggtitle("Wiek pacjentow")
+```
+
+
+```{r}
+ggplot(hd, aes(hd$chol)) + geom_histogram(bins = 15) +
+  ggtitle("Cholesterol w surowicy w [mg/dl]")
+```
+
+```{r}
+ggplot(hd, aes(hd$thalach)) + geom_histogram(bins = 15)+
+  ggtitle("Maksymalna osiagnieta liczba uderzen serca")
+```
+
+```{r}
+ggplot(hd, aes(hd$oldpeak)) + geom_histogram(bins = 15)+
+  ggtitle("Spadek ST na elektrokardiogramie spowodowany wysilkiem fizycznym")
+```
+
+```{r}
+ggplot(hd, aes(hd$trestbps)) + geom_histogram(bins = 15) +
+  ggtitle("Spoczynkowe cisnienie krwi w [mm Hg] ")
+```
+
+
+
