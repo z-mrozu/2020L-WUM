@@ -1,0 +1,375 @@
+---
+title: "WUM - Projekt 1 - inżynieria cech, wstępne modelowanie"
+author: "Konrad Komisarczyk, Patryk Wrona"
+date: "31.03.2020"
+output:
+  html_document:
+  df_print: paged
+toc: true
+toc_float: true
+code_folding: show
+number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(pROC)
+library(caret)
+library(mice)
+library(missForest)
+set.seed(269)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+
+# Ładowanie danych i usunięcie danych nadmiarowych
+
+```{r}
+data <- read.csv("cervical-cancer_csv.csv")
+
+factorize <- function(data, indices) {
+  for (i in indices) {
+    data[[i]] <- as.factor(data[[i]])
+  }
+  data
+}
+
+data <- factorize(data, c(5, 8, 10, 12, 14:25, 29:36))
+```
+
+Możemy usunąć kolumny, o których stwierdziliśmy na poprzednim kamieniu milowym, że są nadmiarowe:
+
+
+
+```{r}
+data <- data %>%
+  select(-Smokes, 
+         -Hormonal.Contraceptives, 
+         -IUD, 
+         -STDs,
+         -Dx, 
+         -STDs.HPV, # to niekoniecznie usuwać, ale może spróbujmy
+         -STDs..Number.of.diagnosis, # bardzo podobne wartości do STDs, rożnią sie tylko w kilku miejscach, może usunąć żeby nie spowodowało to jakiegoś nadmiernego dopasowania
+         -STDs.condylomatosis, 
+         -Hinselmann, 
+         -Schiller, 
+         -Citology)
+
+colnames(data)
+```
+
+
+# Zastąpienie braków danych
+
+## Znaczące braki danych
+
+Braki danych w tych kolumnach oznaczają, że pacjentka nie miała jeszcze żadnej diagnozy. Zastępujemy je wartością `-1`.
+
+```{r}
+data$STDs..Time.since.first.diagnosis <- 
+  ifelse(is.na(data$STDs..Time.since.first.diagnosis), 
+         -1, 
+         data$STDs..Time.since.first.diagnosis)
+
+data$STDs..Time.since.last.diagnosis <- 
+  ifelse(is.na(data$STDs..Time.since.last.diagnosis), 
+         -1, 
+         data$STDs..Time.since.last.diagnosis)
+```
+
+## Porównanie metod 
+
+Porównamy dla każdej zmiennej jak sprawują się w zastępowaniu jej poszczególne metody z pakietu `mice` tworząc wykres RMSE dla nich. 
+
+Testy przeprowadzimy na sztucznie wygenerowanych brakach danych w tej części zbioru, która nie ma braków.
+
+```{r}
+cancer_cleared <- data %>% 
+  na.omit() %>% 
+  select(-Biopsy)
+```
+
+Wykorzystamy następującą funkcję do generowania wykresów dla poszczególnych zmiennych: 
+
+```{r}
+compare_methods <- function(variable) {
+  
+  # zastępujemy 10% zmiennych brakami danych
+  cancer_na <- cancer_cleared
+  cancer_na[[variable]] <- unlist(missForest::prodNA(cancer_cleared[variable], noNA = 0.1))
+  
+  
+  error_pmm <- numeric(0)
+  error_norm <- numeric(0)
+  error_mean <- numeric(0)
+  error_qua <- numeric(0)
+  error_crt <- numeric(0)
+  error_rf <- numeric(0)
+  
+  RMSD <- function(data_imputed) {
+    sqrt(mean((cancer_cleared[[variable]] - data_imputed[[variable]]) ^ 2))
+  }
+  
+  for (i in 1:6) {
+    # 1 Predictive mean matching
+    data_imputed <- mice(cancer_na, m = 2, method = "pmm", maxit = 10, printFlag = FALSE) %>% complete(2)
+    error_pmm <- c(error_pmm, RMSD(data_imputed))
+    
+    # 2  Bayesian linear regression
+    data_imputed <- mice(cancer_na, m = 2, method = "norm", maxit = 10, printFlag = FALSE) %>% complete(2)
+    error_norm <- c(error_norm, RMSD(data_imputed))
+    
+    # 3  Unconditional mean imputation
+    data_imputed <- mice(cancer_na, m = 2, method = "mean", maxit = 10, printFlag = FALSE) %>% complete(2)
+    data_imputed[[variable]] <- round(data_imputed[[variable]])
+    error_mean <- c(error_mean, RMSD(data_imputed))
+    
+    # 4  Imputation of quadratic terms
+    data_imputed <- mice(cancer_na, m = 2, method = "quadratic", maxit = 10, printFlag = FALSE) %>% complete(2)
+    # data_imputed_2$Number.of.sexual.partners <- round(data_imputed_2$Number.of.sexual.partners)
+    error_qua <- c(error_qua, RMSD(data_imputed))
+    
+    # 5 Classification and regression trees
+    data_imputed <- mice(cancer_na, m = 2, method = "cart", maxit = 10, printFlag = FALSE) %>% complete(2)
+    # data_imputed_2$Number.of.sexual.partners <- round(data_imputed_2$Number.of.sexual.partners)
+    error_crt <- c(error_crt, RMSD(data_imputed))
+    
+    # 6 Random forest imputations
+    data_imputed <- mice(cancer_na, m = 2, method = "rf", maxit = 10, printFlag = FALSE) %>% complete(2)
+    # data_imputed_2$Number.of.sexual.partners <- round(data_imputed_2$Number.of.sexual.partners)
+    error_rf <- c(error_rf, RMSD(data_imputed))
+  }
+  
+  
+  plot(error_pmm, 
+       col = "orange", 
+       main = paste0("Imputacja danych ", variable),
+       xlab = "iteration", ylab = "RMSE",
+       ylim = c(round(min(error_pmm, error_norm, error_mean, error_qua, 
+                  error_crt, error_rf),1),
+              round(max(error_pmm, error_norm, error_mean, error_qua, 
+                  error_crt, error_rf),1)))
+  lines(error_pmm, col = "orange")
+  
+  points(error_norm, col = "blue", add = TRUE)
+  lines(error_norm, col = "blue", add = TRUE)
+  
+  points(error_mean, col = "red", add = TRUE)
+  lines(error_mean, col = "red", add = TRUE)
+  
+  points(error_qua, col = "yellow", add = TRUE)
+  lines(error_qua, col = "yellow", add = TRUE)
+  
+  points(error_crt, col = "purple", add = TRUE)
+  lines(error_crt, col = "purple", add = TRUE)
+  
+  points(error_rf, col = "black", add = TRUE)
+  lines(error_rf, col = "black", add = TRUE)
+  
+  legend("topleft", 
+         legend = c("pmm", "Bayes", "mean", "quad terms", "CRT", "RF"),
+         col = c("orange", "blue", "red", "yellow", "purple", "black"),
+         lty = 1, cex = 0.6)
+  
+}
+```
+
+Sprawdzimy
+
+
+```{r}
+compare_methods("Number.of.sexual.partners")
+```
+
+Dla zmiennej Number.of.sexual.partners najlepsza metoda: **mean**.
+
+
+```{r}
+compare_methods("First.sexual.intercourse")
+```
+
+
+Dla zmiennej First.sexual.intercourse najlepsza metoda: **CRT**.
+
+
+```{r}
+compare_methods("Num.of.pregnancies")
+```
+
+
+Dla zmiennej Num.of.pregnancies najlepsza metoda: **mean**.
+
+
+```{r}
+compare_methods("Smokes..years.")
+```
+
+
+Dla zmiennej Smokes..years. najlepsza metoda: **CRT**.
+
+
+```{r}
+compare_methods("Hormonal.Contraceptives..years.")
+```
+
+
+Dla zmiennej Hormonal.Contraceptives..years. najlepsza metoda: **mean**.
+
+
+```{r}
+compare_methods("IUD..years.")
+```
+
+Dla zmiennej IUD..years.. najlepsza metoda: **mean**.
+
+
+
+## Imputacja braków danych
+
+Wykorzystamy zdobydą wiedzę o metodach, które są najlepsze do imputacji poszczególnych zmiennych. Podsumowując wszystkie metody:
+
+- Number.of.sexual.partners  ->  **mean**
+- First.sexual.intercourse  ->  **CRT**
+- Num.of.pregnancies  ->  **mean**
+- Smokes..years..  ->  **CART**
+- Hormonal.Contraceptives..years.  ->  **mean**
+- IUD..years..  ->  **mean**
+
+W związku z tym wybieramy najlepszą metodę do imputowania danych, czyli **mean**, gdyż okazała się być najlepsza w większości przypadków.
+
+```{r}
+aux <- data
+
+completeFun <- function(data, desiredCols) {
+  completeVec <- complete.cases(data[, desiredCols])
+  return(data[completeVec, ])
+}
+
+# wyrzucanie zbędnych wierszy będących NA z innych zmiennych:
+aux <- completeFun(aux, 9:25)
+
+# imputacja danych
+aux <- mice(aux, m = 2, method = "mean", maxit = 10, printFlag = FALSE) %>% complete(2)
+
+
+# zaokrąglanie, gdyż wynikiem mean jest średnia:
+aux[[2]] <- round(aux[[2]])
+aux[[3]] <- round(aux[[3]])
+aux[[4]] <- round(aux[[4]])
+aux[[5]] <- round(aux[[5]])
+aux[[7]] <- round(aux[[7]])
+aux[[8]] <- round(aux[[8]])
+
+data <- aux
+```
+
+
+
+# Encoding zmiennych kategorycznych
+
+Wszystkie zmienne kategoryczne w naszych danych mają dwa poziomy `0` i `1`. Są więc już zapisane w postaci one hot encoding. 
+
+# Wstępne modelowanie
+
+Wykorzystamy modele klasyfikacyjne dla zmiennej celu Biopsy.
+Użyjemy przykładowego algorytmu uczenia maszynowego klasyfikacji:
+- Random Forest
+
+
+## Podział danych na zbiory testowe i treningowe
+
+W zbiorze treningowym mieścimy losowych 80% obserwacji, a w zbiorze testowym losowych 20%.
+```{r}
+
+# wybranie kolumny celu(target) i wszystkich innych kolumn nie będących kolumną celu (characteristics)
+
+levels(data$Biopsy) <- c("NO", "YES")
+
+characteristics <- data %>% 
+  select(-Biopsy)
+target <- data$Biopsy
+
+# podział danych na treningowe i testowe:
+
+wiersze_treningowe <- createDataPartition(target, p = 0.8, list= FALSE)
+char_train <- characteristics[wiersze_treningowe, ] 
+target_train <- as.factor(target[wiersze_treningowe] )
+char_test <- characteristics[-wiersze_treningowe, ] 
+target_test <- as.factor(target[-wiersze_treningowe])
+```
+
+## Cross Validation
+
+```{r}
+ctrlr <- trainControl(method = "repeatedcv",
+                      classProbs = TRUE,
+                      repeats = 7,
+                      number = 7
+)
+```
+
+## Random Forest
+
+
+### Random forest - trenowanie modelu
+
+Zastosujemy algorytm Random Forest w celu klasyfikacji zmiennej celu.
+
+
+```{r}
+rfModel <- train(x = char_train,
+               y = target_train, 
+               method = "rf", 
+               ntree = 100,
+               tuneLength = 5,
+               trControl = ctrlr)
+```
+
+
+### Confusion matrix
+```{r}
+confusionMatrix(predict(rfModel, char_test), 
+                target_test,
+                positive = "YES")
+```
+
+Accuracy wynosi około 0.93. Jest to dość wysoki wynik.
+Niestety, wynika on z tego, że nasz model przewidywał tylko, że ktoś nie jest chory, co dawało mu dobre rezultaty, bo przecież większość pacjentek nie była chora. W przyszłości musimy popracować nad doborem modelu, gdyż wstępne modelowanie na ten moment nie dało oczekiwanych efektów.
+
+
+W przypadku naszego problemu diagnozujemy raka. Zakładając, że wynik naszego modelu nie byłby ostatecznym werdyktem, to istotne jest dla nas, żeby zdiagnozować w miarę możliwości wszystkie przypadki. False Positives mogą nie być dla nas takie złe, jak False Negatives. Istotną dla oceny modelu miarą zatem jest dla nas Sensitivity, czyli True Positive Rate - jaka część pacjentek chorych została zaklasyfikowana jako chore - chcemy, żeby miara była bliska 1.
+
+
+### Krzywa ROC
+
+Zbadamy teraz Receiver Operating Characteristic Curve ( ROC ) naszego modelu Random Forest:
+
+```{r}
+ROCCurve <- roc(target_test, 
+                predict(rfModel, char_test, type = "prob")[, "YES"],
+                ci = TRUE)
+
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#228B22") # forest green
+```
+
+### Area Under Curve
+
+```{r}
+auc(ROCCurve)
+```
+
+AUC rzędu 0.7-0.8 jest średnim wynikiem, ale w miarę akceptowalnym. W algorytmie Random Forest zastosowaliśmy liczbę drzew równą 100, gdyż dla kilku drzew osiągaliśmy AUC w okolicach 0.5-0.6, co nie jest satysfakcjonującym wynikiem. Ponadto, AUC 0.5 przypiuje się modelowi losowemu.
+
+
+W przyszłm punkcie kontrolnym  postaramy się w miarę możliwości zminimalizować ( jeśli nie wyeliminować) False Negatives, aby nasz model mógł diagnozować rzeczywistego raka bezbłędnie.
+
+### Session Info
+
+```{r}
+sessionInfo()
+```
+

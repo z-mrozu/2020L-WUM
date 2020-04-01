@@ -1,0 +1,141 @@
+---
+title: "PD2"
+author: "Konrad Welkier"
+date: "24 03 2020"
+output: html_document
+---
+
+Zaczniemy od załadowania odpowiednich bibliotek oraz zbioru danych, na którym będziemy pracować. Zawiera on informacje dotyczące zamówień składanych w serwisie Allegro.
+```{r, warning=FALSE, message=FALSE}
+library(mice)
+library(ggplot2)
+library(knitr)
+library(dplyr)
+library(mlr)
+data <- read.csv("https://www.dropbox.com/s/360xhh2d9lnaek3/allegro-api-transactions.csv?dl=1",encoding = "UTF-8")
+```
+# Kodowanie zmiennych kategorycznych
+
+Podczas tworzenia modelu na zbiorze, w którym występują zmienne kategoryczne należy przetworzyć je w sposób przystępny dla algorytmów uczenia maszynowego. My przeprowadzimy ten proces na dwa sposoby: wykorzystamy target encoding oraz one-hot encoding.
+
+## Target encoding
+
+Zaczniemy o przeprowadzenia "target encoding" dla kolumny "it_location", gdzie naszym celem (targetem) będzie kolumna "price".
+
+```{r message=FALSE, warning=FALSE}
+data$it_location <- tolower(data$it_location)
+mean_by_location <- data %>% group_by(it_location) %>% summarise(mean(price)) %>% as.data.frame()
+colnames(mean_by_location) <- c("it_location","it_location_encoded")
+data_encoded <- data %>% left_join(mean_by_location, by = "it_location") %>% select(-c("it_location"))
+kable(head(data_encoded[,c("date","categories","it_location_encoded")],5))
+```
+
+W przypadku "target encoding" można powiedzieć o oszczędności miejsca, ponieważ nie zostały utworzone dodatkowe kolumny, a jedynie jedna z już istniejących kolumn została zastąpiona. Jednocześnie warto zauważyć, że przeprowadzone "target encoding" nie jest optymalne, gdyż "it_location" jest ewidentnie kolumną wypełnianą ręcznie, a co za tym idzie jest w niej sporo nieścisłości i konkretne adresy są nieraz kodowe na różne sposoby. Aby pozbyć się tego problemu należałoby przeprowadzić dokładne, ale co za tym idzie czasochłonne czyszczenie danych.
+
+## One-hot encoding
+
+Wykonamy teraz kodowanie kolumny "main_category" za pomocą kodowania one-hot encoding. Działa ono inaczej niż target encoding, ponieważ tworzy tyle dodatkowych kolumn ile jest kategorii w danej kolumnie, a następnie dla każdego wiersza umieszczamy jedynkę w kolumnie odpowiadającej odpowiedniej kategorii oraz zera w pozostałych nowopowstałych kolumnach.
+
+```{r message=FALSE, warning=FALSE}
+data_one_hot_1 <- createDummyFeatures(data$main_category, method = "1-of-n")
+kable(head(data_one_hot_1[,1:5],5))
+```
+
+To samo kodowanie możemy przeprowadzić z niewielką modyfikacją. Tzn, zamiast utworzenia tylu kolumn, ile jest kategorii w interesujacej nas kolumnie, utworzymy o jedną kolumnę mnie, ponieważ wartości w niej występujące i tak będą zdefiniowane przez pozostałe nowopowstałe kolumny.
+
+```{r message=FALSE, warning=FALSE}
+data_one_hot_2 <- createDummyFeatures(data$main_category, method = "reference")
+kable(head(data_one_hot_2[,1:5],5))
+```
+
+W obu przypadkach dla one-hot-encoding zaprezentowane zostały tylko fragmenty nowo powstałych ramek danych. Wskazuje to na prawdopodobnie największą wadę tego rodzaju kodowania, a mianowicie na obszerność zajmowanej pamięci. Teoretycznie metoda "reference" tworzy jedną kolumnę mniej (w naszym przypadku jest to kolumna "Antyki i Sztuka), jednak nie jest to, przynajmniej u nas, znacząca oszczędność pamięci.
+
+# Uzupełnianie braków
+
+Na początku nasz zbiór danych ograniczymy do kolumn "price", "it_seller_rating" i "it_quantity" oraz losowych 10000 wierszy. Następnie z kolumny "it_seller_rating" usuniemy losowych 10% wartości. Wreszcie za pomocą pakietu "mice" wykonamy uzupełnienie danych - wykorzystamy metodę "pmm". Cały eksperyment powtórzymy 10 razy, a wykorzystując miarę RMSE porównamy otrzymane wyniki ze średnimi spośród danych pełnych.
+
+```{r message=FALSE, warning=FALSE, results="hide"}
+values <- NULL
+
+for (i in 1:10){
+  sample_data <- data[sample(nrow(data), 10000),c("price","it_quantity","it_seller_rating")]
+  test_data <- sample_data
+  rownames(sample_data) <- NULL
+  sample_data[as.integer(runif(length(sample_data[,1]),0,10))==5, "it_seller_rating"] <- NA
+  data_imputation <- mice(sample_data, method = "pmm", m = 3, maxit = 5)
+  data_imputed <- complete(data_imputation)
+  val_1 <- sqrt(mean(data_imputed$it_seller_rating- test_data$it_seller_rating)^2)
+  val_2 <- mean(test_data$it_seller_rating)
+  values <- rbind(values, c(val_1,val_2))
+  }
+```
+
+```{r}
+colnames(values) <- c("RMSE", "Mean")
+kable(values)
+```
+
+Jak widać różnice między wartościami otrzymywanymi, a rzeczywistymi są dość duże, ale spojrzmy jeszcze na wykresy gęstości kolumny "it_seller_rating" w obu przypadkach, dla analogicznej sytuacji jak powyżej:
+
+```{r, warning=FALSE, message=FALSE, results="hide"}
+sample_data <- data[sample(nrow(data), 10000),c("price","it_quantity","it_seller_rating")]
+test_data <- sample_data
+rownames(sample_data) <- NULL
+sample_data[as.integer(runif(length(sample_data[,1]),0,10))==5, "it_seller_rating"] <- NA
+data_imputation <- mice(sample_data, method = "pmm", m = 3, maxit = 5)
+data_imputed <- complete(data_imputation)
+plot_values <- rbind(cbind(test_data$it_seller_rating, "test"),cbind(data_imputed$it_seller_rating, "imputed"))
+colnames(plot_values) <- c("Value", "Group")
+plot_values <- as.data.frame(plot_values)
+plot_values$Value <- as.integer(plot_values$Value)
+ggplot(plot_values, aes(x = Value, color = Group)) + geom_density()
+```
+
+Okazuje się, że jednak, że rozkład gęstości zimputowanej kolumny nie odbiega jednak zbytnio od oryginału.
+
+Powtórzmy teraz cały zabieg, jednak tym razem usuniemy również losowych 10% wartości z kolumny "it_quantity".
+
+```{r message=FALSE, warning=FALSE, results="hide"}
+values2 <- NULL
+for (i in 1:10){
+  sample_data <- data[sample(nrow(data), 10000),c("price","it_quantity","it_seller_rating")]
+  test_data <- sample_data
+  rownames(sample_data) <- NULL
+  sample_data[as.integer(runif(length(sample_data[,1]),0,10))==5, "it_seller_rating"] <- NA
+  sample_data[as.integer(runif(length(sample_data[,1]),0,10))==5, "it_quantity"] <- NA
+  data_imputation <- mice(sample_data, method = "pmm", m = 3, maxit = 5)
+  data_imputed <- complete(data_imputation)
+  val_1 <- sqrt(mean(data_imputed$it_seller_rating- test_data$it_seller_rating)^2)
+  val_2 <- mean(test_data$it_seller_rating)
+  values2 <- rbind(values2, c(val_1,val_2))
+}
+```
+```{r}
+colnames(values2) <- c("RMSE", "Mean")
+kable(values2)
+```
+
+Tym razem otrzymane wartości również zdają się znacząco odbiegać od danych rzeczywistych. Sprawdźmy jednak jeszcze raz wykres gęstości, podobnie jak w pierwszej części tego rozdziału:
+
+```{r, warning=FALSE, message=FALSE, results="hide"}
+sample_data <- data[sample(nrow(data), 10000),c("price","it_quantity","it_seller_rating")]
+test_data <- sample_data
+rownames(sample_data) <- NULL
+sample_data[as.integer(runif(length(sample_data[,1]),0,10))==5, "it_seller_rating"] <- NA
+sample_data[as.integer(runif(length(sample_data[,1]),0,10))==5, "it_quantity"] <- NA
+data_imputation <- mice(sample_data, method = "pmm", m = 3, maxit = 5)
+data_imputed <- complete(data_imputation)
+plot_values <- rbind(cbind(test_data$it_seller_rating, "test"),cbind(data_imputed$it_seller_rating, "imputed"))
+colnames(plot_values) <- c("Value", "Group")
+plot_values <- as.data.frame(plot_values)
+plot_values$Value <- as.integer(plot_values$Value)
+ggplot(plot_values, aes(x = Value, color = Group)) + geom_density()
+```
+
+Można zauważyć, że tutaj również gęstości pokrywają się stąd pojawia się wniosek, że braki w kolumnie "it_quantity" nie wpłynęły znacząco na wynik przeprowadzonej imputacji. Do ostatecznego porównania przeprowadzonych dwóch rodzajów imputacji porównamy ich odchylenia standardowe.
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+print("-------------- Odchylenie standardowe")
+print(paste0("Imputacja nr 1 -----> " ,sd(values[,1])))
+print(paste0("Imputacja nr 2 -----> " ,sd(values2[,1])))
+```
+
