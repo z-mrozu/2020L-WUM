@@ -1,0 +1,100 @@
+---
+title: "Praca Domowa 2"
+author: "Ngoc Anh Nguyen"
+data: "23.03.2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+# Biblioteki i dane
+```{r}
+library(dplyr)
+library(mlr)
+library(ggplot2)
+library(mice)
+library(Metrics)
+library(parallel)
+df <- read.csv('allegro-api-transactions.csv')
+```
+
+# Kodowanie zmiennch
+
+## Target encoding
+Target encoding to zamiana każdej wartości kategorycznej na średnią zmiennej target dla tej kategorii. Pozwala na zakodowanie do zmiennej numerycznej bardzo dużej liczby poziomów.
+
+```{r}
+price_mean <- df %>% group_by(it_location) %>% summarise(price_mean = mean(price))
+# Przykładowe wartości od największych
+knitr::kable(head(price_mean %>% arrange(desc(price_mean)), n=10))
+
+# Połączenie średnich z ramkną
+df2 <- df %>% inner_join(price_mean)
+# Przykładowe wartości
+knitr::kable(head(df2 %>% select(it_location, price_mean, price), n=10))
+```
+
+## One hot encoding
+One hot encoding to metoda która dla każdego poziomu zmiennej kategorycznej tworzy osobną kolumnę która przyjmuje wartość logiczną czy dany wiersz ma tą wartość zmiennej kategorycznej.
+Funkcja createDummyFeatures posiada dwie metody "1-of-n" oraz "reference". Pierwsza opisana jest powyżej, a druga odróżnia się tym, że dla jednej wartości nie tworzy kolumny. Jest ona równa temu czy wszystkie pozostałe kolumny są zerem, dlatego nie tracimy informacji.
+```{r}
+df %>% createDummyFeatures(target="price", cols="main_category", method = "1-of-n") %>%
+  select(lp, starts_with("main_category")) %>% head %>% (knitr::kable)
+df %>% createDummyFeatures(target="price", cols="main_category", method = "reference") %>%
+  select(lp, starts_with("main_category")) %>% head %>% (knitr::kable)
+```
+
+# Imputacja
+```{r, results = "hide"}
+# Wybieramy tylko kolumny numeryczne i 10% wierszy z uwagi na czas obliczeń
+small <- df %>% select(it_quantity, it_seller_rating, price) %>% sample_frac(0.1)
+
+# Testowane metody
+mice_methods <- list("pmm", "sample", "mean", "rf")
+names(mice_methods) <- mice_methods
+
+# 10 razy zamieniamy 10% na NA i liczymy rmse
+rmse1 <- mclapply(1:10, function(n) {
+  to_replace <- sample(1:nrow(small), round(0.1*nrow(small)))
+  copy <- small
+  copy[to_replace, "it_seller_rating"] <- NA
+  lapply(mice_methods, function(method) {
+    imputed <- mice(copy, method=method, m=1)
+    rmse(complete(imputed)[to_replace, "it_seller_rating"], small[to_replace, "it_seller_rating"])
+  })
+}, mc.cores=8) %>% unlist
+
+# 10 razy zamieniamy 10% it_seller_rating i 10% it_quantity na NA i liczymy rmse
+rmse2 <- mclapply(1:10, function(n) {
+  to_replace_seller <- sample(1:nrow(small), round(0.1*nrow(small)))
+  to_replace_quantity <- sample(1:nrow(small), round(0.1*nrow(small)))
+  copy <- small
+  copy[to_replace_seller, "it_seller_rating"] <- NA
+  copy[to_replace_quantity, "it_quantity"] <- NA
+  lapply(mice_methods, function(method) {
+    imputed <- mice(copy, method=method, m=1)
+    rmse(complete(imputed)[to_replace_seller, "it_seller_rating"], small[to_replace_seller, "it_seller_rating"])
+  })
+}, mc.cores=8) %>% unlist
+```
+
+## Posumowanie
+```{r}
+results <- data.frame(rmse = c(rmse1, rmse2),
+                      experiment = c(rep("1", length(rmse1)), rep("2", length(rmse2))),
+                      method = c(names(rmse1), names(rmse2)))
+
+# RMSE zależnie od metody i eksperymentu
+ggplot(results, aes(x = method, fill=experiment, y = rmse)) + geom_boxplot() + ylab("RMSE")
+```
+
+Usunięcie wartości z drugiej kolumny nie miało istotnego wpływu na wartości RMSE który był by widoczny dla wszystkich metod. Najciekaszym wnioskiem jest fakt, że prosta metoda średniej daje najmniejszy błąd.
+
+```{r}
+results %>% group_by(method, experiment) %>% summarise(rmse_sd = sd(rmse)) %>%
+  ggplot(aes(x = method, fill = experiment, y = rmse_sd)) + geom_col(position = "dodge") + ylab("RMSE SD")
+```
+
+Odchylenie standardowe w metodach pmm i lasów losowych czyli bardziej skomplikowanych maleje gdy usuniemy też 10% z drugiej kolumny. Natomiast dla prostych metod jak średnia czy losowa próbka odchylenie standardowe istonie rośnie.
