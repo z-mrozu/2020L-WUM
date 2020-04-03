@@ -1,0 +1,290 @@
+---
+title: "Kamień milowy 2 - Raport"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+<p>&nbsp;</p>
+# Inżynieria Cech
+<p>&nbsp;</p>
+
+## Usunięcie zbędnych kolumn
+
+```{r include=FALSE}
+library(visdat)
+library(mlr)
+library(tidyverse)
+library(Boruta)
+```
+
+```{r, results="asis"}
+
+####
+# data <- nasza ramka danych z uzupełnioną częścią danych
+# data_cut <- dane z usuniętymi kolumnami które nic nie dają
+
+
+data <- read.csv(file = "Filled_data.csv")
+
+######################
+# 1. Usuwanie zbędnych kolumn
+
+# Koduje NA w reszcie danych jako -1
+data_cut <- data
+data_cut[is.na(data)] <- -1
+
+
+
+
+# Dx.cancer - Dx.HPV <- różnica w 4 rekordach
+knitr::kable(data_cut[abs(data_cut$Dx.Cancer - data_cut$Dx.HPV) != 0 ,c("Dx.Cancer", "Dx.HPV")], align = "c")
+
+data_cut <- data_cut[,c(-21)] 
+
+# Dx - koduje występowanie innych Dx - chyba, na razie zostawiam
+
+# Std.time.since.first - Std.time.since.last - różnica w 3 rekordach
+knitr::kable(data_cut[abs(data_cut$STDs..Time.since.first.diagnosis - data_cut$STDs..Time.since.last.diagnosis) != 0 ,c("STDs..Time.since.first.diagnosis", "STDs..Time.since.last.diagnosis")], align = "c")
+
+
+data_cut <- data_cut[,c(-19)]
+
+# STDs.condylomatosis - STDs.vulvo.perineal.condylomatosis - różnica w 1 rekordzie 
+# Więcej informacji jest w 1 zmiennej
+knitr::kable(data_cut[abs(data_cut$STDs.condylomatosis - data_cut$STDs.vulvo.perineal.condylomatosis) != 0 ,c("STDs.condylomatosis", "STDs.vulvo.perineal.condylomatosis")]
+, align = "c")
+
+
+
+# Usuwam IUD, Smokes, STD, Hormonal.contraceptives 
+# Dane są zakodowane w innych kolumnach
+data_cut <- data_cut[,c(-5, -7, -8, -10, -12, -15)]
+
+```
+
+<p>&nbsp;</p>
+
+## Target Encoding
+
+``` {r}
+data_cut$Num.of.pregnancies <- cut(data_cut$Num.of.pregnancies, c(-1, 1, 2, 3, 4, 5, 11))
+tmp <- data_cut %>% group_by(Num.of.pregnancies) %>% dplyr::summarise(Mean = mean(Age))
+data_cut <- inner_join(data_cut, tmp)
+data_cut <- data_cut[, -4]
+colnames(data_cut)[20] <- "Num.of.pregnancies"
+data_cut <- data_cut[,c(1,2,3,20,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19)]
+knitr::kable(head(data_cut[,4]), align = "c")
+```
+
+
+
+<p>&nbsp;</p>
+
+## One-hot Encoding
+
+```{r results="asis"}
+
+######################
+# zamiana na factory
+for (i in c(8:16)) {
+  data_cut[,i] <- as.factor(data_cut[,i])
+}
+
+data_cut <- createDummyFeatures(data_cut)
+
+knitr::kable(head(data_cut[,c(18:22)]), align = "c")
+
+
+```
+
+
+<p>&nbsp;</p>
+
+## Normalizacja 
+
+```{r}
+# Normalizacja
+
+data_cut[,c(1:7)] <- normalizeFeatures(data_cut[,c(1:7)], method = "standardize")
+
+head(data_cut[,c(1:3)])
+```
+<p>&nbsp;</p>
+
+
+# Wstępne modele
+<p>&nbsp;</p>
+## Znajdowanie znaczących zmiennych
+```{r, cache=TRUE, fig.width=7}
+
+
+# tworzę ramkę wyników
+results3 <- as.data.frame(NULL)
+
+
+######################
+# 2. Robienie wstępnego modelu
+
+# Tworzę zbiór treningowy i testowy 
+n <- sample(1:nrow(data_cut), 0.7*nrow(data_cut))
+data_cut_train <- data_cut[n,]
+data_cut_test <- data_cut[-n,]
+
+######################
+
+# Mamy 4 target variables <- Hinselmann, Schiller, Cytology, Biopsy
+
+# Hinselmann | Schiller | Citology | Biopsy
+#####################
+# Najpierw robię dla Hinselmanna
+
+data_Hinselmann_train <- subset(data_cut_train, select = -c(Schiller, Citology, Biopsy))
+data_Hinselmann_test <- subset(data_cut_test, select = -c(Schiller, Citology, Biopsy))
+
+
+boruta_out <- Boruta(Hinselmann ~ ., data = data_Hinselmann_train)
+
+boruta_out
+```
+
+
+<p>&nbsp;</p>
+
+## Hinselmann
+```{r , cache=TRUE}
+
+# tworzę ramkę wyników
+results3 <- as.data.frame(NULL)
+
+
+######################
+# 2. Robienie wstępnego modelu
+
+# Tworzę zbiór treningowy i testowy 
+n <- sample(1:nrow(data_cut), 0.7*nrow(data_cut))
+data_cut_train <- data_cut[n,]
+data_cut_test <- data_cut[-n,]
+
+######################
+
+# Mamy 4 target variables <- Hinselmann, Schiller, Cytology, Biopsy
+
+# Hinselmann | Schiller | Citology | Biopsy
+#####################
+# Najpierw robię dla Hinselmanna
+
+data_Hinselmann_train <- subset(data_cut_train, select = -c(Schiller, Citology, Biopsy))
+data_Hinselmann_test <- subset(data_cut_test, select = -c(Schiller, Citology, Biopsy))
+
+
+classif_task_1 <- makeClassifTask(id = "Hinsel", data = data_Hinselmann_train, target = c("Hinselmann"), positive = 1)
+classif_lrn_1 <- makeLearner("classif.ranger", par.vals = list(num.trees = 1000, mtry = 3), predict.type = "prob")
+
+
+# tworzymy model na zbiorze treningowym
+model_1 <- train(classif_lrn_1, classif_task_1)
+
+# sprawdzamy model na zbiorze testowym
+pred_1 <- predict(model_1, newdata = data_Hinselmann_test )
+
+
+# sprawdzamy model poprzez auc i acc
+performance(pred_1, measures = list(auc, acc, mmce))
+
+# rysujemy wykres auc
+df1 = generateThreshVsPerfData(pred_1, measures = list(fpr, tpr, mmce))
+plotROCCurves(df1) + theme_bw()
+
+results3[1,1:3] <- performance(pred_1, measures = list(auc, acc, mmce))
+colnames(results3) <- c("AUC", "ACC", "MMCE")
+```
+
+## Biopsy
+
+```{r, cache=TRUE}
+######################
+data_Biopsy_train <- subset(data_cut_train, select = -c(Hinselmann, Schiller, Citology))
+data_Biopsy_test <- subset(data_cut_test, select = -c(Hinselmann, Schiller, Citology))
+
+# Biopsy
+classif_task_4 <- makeClassifTask(id = "Biopsy", data = data_Biopsy_train, target = c("Biopsy"), positive = 1)
+classif_lrn_4 <- makeLearner("classif.ranger", par.vals = list(num.trees = 1000, mtry = 3), predict.type = "prob")
+# tworzymy model na zbiorze treningowym
+model_4 <- train(classif_lrn_4, classif_task_4)
+
+# sprawdzamy model na zbiorze testowym
+pred_4 <- predict(model_4, newdata = data_Biopsy_test)
+
+# sprawdzamy model poprzez auc i acc
+performance(pred_4, measures = list(auc, acc, mmce))
+
+# rysujemy wykres auc
+df4 = generateThreshVsPerfData(pred_4, measures = list(fpr, tpr, mmce))
+plotROCCurves(df4) + theme_bw()
+
+results3[4,1:3] <- performance(pred_4, measures = list(auc, acc, mmce))
+```
+
+# Porówanie modeli
+
+```{r setup, include=FALSE, cache=TRUE}
+
+# test dla  data_cut
+
+Result_loop <- matrix(0, ncol = 3, nrow = 4)
+Result_loop <- as.data.frame(Result_loop)
+
+for (i in 1:40){
+  
+  source("Wersja1.1.R")
+  print(results1)
+  Result_loop[1,1] <- Result_loop[1,1] + results1[1, 1]
+  Result_loop[2,1] <- Result_loop[2,1] + results1[2, 1]
+  Result_loop[3,1] <- Result_loop[3,1] + results1[3, 1]
+  Result_loop[4,1] <- Result_loop[4,1] + results1[4, 1]
+  
+}
+
+
+
+#####################
+# test dla data
+
+for (i in 1:40){
+  
+  source("Wersja2.R")
+  print(results2)
+  Result_loop[1,2] <- Result_loop[1,2] + results2[1, 1]
+  Result_loop[2,2] <- Result_loop[2,2] + results2[2, 1]
+  Result_loop[3,2] <- Result_loop[3,2] + results2[3, 1]
+  Result_loop[4,2] <- Result_loop[4,2] + results2[4, 1]
+  
+}
+
+
+colnames(Result_loop) <- c("data_cut", "full_data", "One_hot_cut")
+rownames(Result_loop) <- c("Hinselmann", "Schiller", "Citology", "Biopsy")
+
+
+#####################
+# test dla data_cut z one hot encoding
+
+for (i in 1:40){
+  
+  source("Wersja3.R")
+  print(results3)
+  Result_loop[1,3] <- Result_loop[1,3] + results3[1, 1]
+  Result_loop[2,3] <- Result_loop[2,3] + results3[2, 1]
+  Result_loop[3,3] <- Result_loop[3,3] + results3[3, 1]
+  Result_loop[4,3] <- Result_loop[4,3] + results3[4, 1]
+  
+}
+Result_loop <- Result_loop / 40
+```
+
+```{r}
+Result_loop
+
+```
