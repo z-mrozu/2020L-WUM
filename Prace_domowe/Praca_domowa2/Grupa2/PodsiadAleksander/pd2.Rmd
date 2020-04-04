@@ -1,0 +1,158 @@
+---
+title: "Praca Domowa 2"
+author: "Aleksander Podsiad"
+output: 
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(mlr)
+library(mice)
+data <- read.csv("allegro-api-transactions.csv")
+```
+
+
+# Kodowanie zmiennych kategorycznych 
+
+Liczba unikalnych wartości w kolumnie "it_location":
+
+```{r}
+length(unique(data$it_location))
+```
+
+* po użyciu one-hot encodingu zwiększa się znacząco liczba kolumn co przekłada się na gorszą optymalizaję;
+* target encoding ma przewagę nad tą metodą, ponieważ nie zwiększa rozmiaru danych;
+
+## Target encoding
+
+Target encoding dla "it_location":
+
+```{r}
+data_encoded <- data %>% group_by(it_location) %>%
+  mutate(it_location_encoded = mean(price)) %>% ungroup
+data_encoded_1 <- data_encoded %>%
+  select(it_location, it_location_encoded)
+head(data_encoded_1, n = 10)
+```
+
+## One-hot encoding pierwsza metoda
+
+One-hot encoding dla "main_category" metoda "one_of_n":
+
+```{r}
+data_oneofn <- data %>% 
+  createDummyFeatures(cols = "main_category", method = "1-of-n")
+data_oneofn_1 <- data_oneofn %>% 
+  select(-categories,-lp,-date,-item_id,-pay_option_on_delivery,-pay_option_transfer,-seller,-price,-it_is_allegro_standard,-it_is_brand_zone,-it_quantity,-it_seller_rating,-it_location)
+head(data_oneofn_1, n = 4)
+```
+
+## One-hot encoding druga metoda
+
+One-hot encoding dla "main_category" metoda "reference":
+
+```{r}
+data_reference <- data %>% 
+  createDummyFeatures(cols = "main_category", method = "reference")
+data_reference_1 <- data_reference %>% 
+  select(-categories,-lp,-date,-item_id,-pay_option_on_delivery,-pay_option_transfer,-seller,-price,-it_is_allegro_standard,-it_is_brand_zone,-it_quantity,-it_seller_rating,-it_location)
+head(data_reference_1, n = 4)
+```
+
+Różnice:
+
+* w metodzie reference jest o jedną kolumnę mniej ("main_category.Antyki.i.Sztuka"), 
+* można ją usunąć bez utraty danych (gdy w niej jest "1" to wszędzie indziej jest "0");
+
+# Uzupełnianie braków
+
+Do wyliczenia błędu użyję funkcji RMSE.
+
+```{r}
+rmse <- function(original, changed)
+{
+    diff <- original-changed
+    sqrt(mean(diff^2))
+}
+```
+
+
+```{r}
+data_cut <- data %>% sample_n(30000) %>%
+  select(it_quantity, it_seller_rating, price)
+```
+
+
+## Test pierwszy
+
+```{r,message=FALSE,warning=FALSE,results='hide'}
+wynik_1 <- vector(mode = "numeric")
+for (i in 1:10) {
+  del_rows <- sample(1:nrow(data_cut), 0.1*nrow(data_cut))
+  original <- data_cut[, "it_seller_rating"]
+  data_cut_1 <- data_cut 
+  data_cut_1[del_rows, "it_seller_rating"] <- NA
+  changed <- mice(data_cut_1, m = 1,maxit = 2)$imp$it_seller_rating$`1`
+  wynik_1 <- append(wynik_1, measureRMSE(original, changed))
+}
+```
+
+```{r}
+print(wynik_1)
+```
+
+Odchylenie standardowe w teście 1:
+
+```{r}
+sd(wynik_1)
+```
+
+
+## Test drugi
+
+```{r,message=FALSE,warning=FALSE,results='hide'}
+wynik_2 <- vector(mode = "numeric")
+for (i in 1:10) {
+  del_rows <- sample(1:nrow(data_cut), 0.1*nrow(data_cut))
+  del_rows2 <- sample(1:nrow(data_cut), 0.1*nrow(data_cut))
+  original <- data_cut[, "it_seller_rating"]
+  data_cut_1 <- data_cut 
+  data_cut_1[del_rows, "it_seller_rating"] <- NA
+  data_cut_1[del_rows2, "it_quantity"] <- NA
+  changed <- mice(data_cut_1, m = 1,maxit = 2)$imp$it_seller_rating$`1`
+  wynik_2 <- append(wynik_2, measureRMSE(original, changed))
+}
+```
+
+```{r}
+print(wynik_2)
+```
+
+Odchylenie standardowe w teście 2:
+
+```{r}
+sd(wynik_2)
+```
+
+Wykres:
+
+```{r}
+table <- as.data.frame(cbind(wynik_1,wynik_2,1:10))
+ggplot(table) + geom_line(aes(x=V3,y=wynik_1,color="wynik 1")) + geom_line(aes(x=V3,y=wynik_2,color="wynik 2")) + labs(x = "Iteracja", y = "RMSE", color = "Legenda")
+```
+
+W drugim teście wyniki są gorsze niż w pierwszym, ponieważ mamy większe braki danych.
