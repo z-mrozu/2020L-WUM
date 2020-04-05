@@ -42,4 +42,4 @@ Rozwiązanie na punkt bonusowy powinno zawierać:
 
 Rozwiązania (Jupyter Notebook/Rmd + html) proszę zgłaszać przez pull request do podfolderu z imieniem i nazwiskiem.
 
-Termin oddania: 5 IV 2020 r. (do godz. 23:59)
+Termin oddania: 6 IV 2020 r. (do godz. 23:59)
