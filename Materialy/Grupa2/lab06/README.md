@@ -5,7 +5,7 @@
 18:00 **Prezentacje projektów**
 * Każda grupa będzie miała ok. 7 minut na prezentacje + 3 minuty na ewentualne pytania.
 * Zachęcam aby mówiąca grupa oprócz udostępnienia ekranu, udostępniła swoje kamerki żeby nie mieli wrażenia że mówią tylko do siebie.
-* Swoje prezentacje proszę wrzucić do folderu Projekty/Projekt1/Grupa2/NazwiskaCzłonkóWGrupy/...
+* Swoje prezentacje proszę wrzucić (**DZISIAJ**) do folderu *Projekty/Projekt1/Grupa2/NazwiskaCzłonkóWGrupy/...*
 
 Kolejność prezentacji:
 1. Dawid Przybyliński & Jakub Pingielski - cervical-cancer
@@ -18,8 +18,11 @@ Kolejność prezentacji:
 * Miary skurteczności modeli cd: *ROC & AUC*
 * Boosting
 
-19:00 **Organizacja**
+19:10 **Organizacja**
 * DataCamp
 * Ogólne omówienie PD2
+    * liczenie RMSE
+    * normalizacja stringów
+* Co należy przygotować na KM3
 
-19:15 **Konsultacje**
+19:20 **Konsultacje**
