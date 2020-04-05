@@ -1,0 +1,295 @@
+---
+title: "WUM - Praca domowa 2"
+author: "Patryk Wrona"
+date: "30.03.2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true 
+---
+
+```{r setup, include=FALSE}
+
+library(dplyr)
+library(mlr)
+library(tidyverse)
+library(mice)
+library(forcats)
+library(missForest)
+options(warn = -1)
+set.seed(2020)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+
+
+
+# Kodowanie zmiennych kategorycznych
+
+
+
+## Target encoding
+
+Zagadnienie target encoding polega na policzeniu średniej ceny dla każdej lokacji (it_location).
+Jeśli wprowadzilibyśmy losowe szumy(czyli dodalibyśmy albo odjelibyśmy bardzo małe wartości do wynikowych cen), pomogłoby to nam uniknąć sytuacji, w której taka sama cena przyporządkowana jest więcej niż 1 lokacji. Wynik przedstawiam poniżej:
+
+```{r}
+##    LADOWANIE DANYCH
+df2 <- read.csv("https://www.dropbox.com/s/360xhh2d9lnaek3/allegro-api-transactions.csv?dl=1")
+
+
+aux <- df2 %>% 
+  group_by(it_location) %>% 
+  summarise(price_encoded = mean(price)) %>%
+  right_join(df2, by = "it_location") %>% 
+  pull(price_encoded)
+
+df2 <- df2 %>% mutate(price_encoded = aux)
+
+res <- df2  %>% select(lp, date, item_id, it_location, price_encoded) %>% head(4)
+
+res
+```
+Jak widać Warszawie zakodowało tę samą cenę 85.42340 dla wierszy 1 oraz 2.
+
+
+Dane z kolumny it_location powinny być wstępnie obrobione, wiele z nich różni się pisownią wielką lub małą literą.
+Są również i takie, które ciężej byłoby ujednolicić, więc nie zajmowałem się w tej pracy tym zagadnieniem.
+
+
+## one-hot encoding
+
+One-hot encoding polega na stworzeniu tylu kolumn ile jest klas w pewnej zmiennej typu jakościowego. Kolumny mają te same nazwy co klasy. W danym wierszu mają wartość 1 jeśli kolumna poddana one-hot encoding miała pierwotnie tę kategorię w danym wierszu, a 0 w przeciwnym przypadku.
+
+Domyślną metodą kodowania jest opisana powyżej "1-of-n", a wizualizację wyników przedstawiam poniżej:
+```{r}
+onehot <- df2$main_category %>% createDummyFeatures() 
+onehot %>% head(7)
+```
+
+
+
+Teraz wykorzystam metodę "reference", która usuwa jedną kolumnę, gdyż wynika ona z pozostałych. W usuniętej olumnie jest 1 wtedy i tylko wtedy gdy we wszystkich pozostałych są 0. Przedstawiam wynik 'reference':
+```{r}
+reference <- df2$main_category %>% createDummyFeatures(method = "reference")
+reference  %>%  head(7)
+```
+Usuneło kolumnę o nazwie "Antyki i Sztuka".
+Dobrze, że usuwa pierwszą kolumnę, bo jakby usunęło 
+ostatnią - "Zdrowie" - to **w obliczu pandemii bylibyśmy na skraju zagłady**.
+
+## Porównanie liczby kolumn
+
+```{r}
+length(colnames(onehot))
+```
+
+```{r}
+length(colnames(reference))
+```
+Zgodnie z oczekiwaniami '1-of-n' dał w rezultacie o 1 kolumnę więcej niż 'reference'.
+
+
+## Zmniejszenie liczby zmiennych kategorycznych:
+
+W wyniku one-hot encoding dostaliśmy aż 27 i 26 kolumn, możnaby wziąć 10 najczęściej występujących 'main_category', a resztę wrzucić do jednego worka - jako kolumnę 'Others'.
+
+```{r}
+lump1 <- fct_lump(df2$main_category, n = 10)
+createDummyFeatures(lump1)
+```
+Akurat 10. najczęściej występującą kategorią jest 'Zdrowie'.
+
+
+
+Możemy również usunąć kategorie o mniej niż 2% wystąpień pośród wszystkich kategorii i określić ją jako Others:
+```{r}
+lump2 <- fct_lump(df2$main_category, prop = 0.02)
+createDummyFeatures(lump2)
+```
+Dzięki powyższemu otrzymujemy znacznie mniej kolumn, co polepszy wydajność dalszych algorytmów klasyfikacji uczenia maszynowego i zabezpieczy przed overfittingiem.
+
+
+
+# Imputacja braków danych
+
+
+Rzut okiem na zakresy naszych 3 zmiennych ilościowych:
+```{r}
+range(df2$it_quantity) # 0 -> 99 999
+```
+
+```{r}
+range(df2$price)  # 0 -> 119 000
+```
+
+```{r}
+range(df2$it_seller_rating) # -1 -> 292 074
+```
+
+
+
+
+## Wybór 10% cech ilościowych
+```{r}
+aux <- df2 %>% select(it_quantity, price, it_seller_rating) %>% 
+        sample_n(nrow(df2)/10)
+```
+
+
+
+
+## 10% losowych it_seller_rating jako NA
+
+```{r}
+aux_na <- aux %>% mutate(
+  it_seller_rating = 
+    unlist(
+      prodNA(aux %>% select(it_seller_rating), noNA = 0.1)
+      )
+  ) 
+head(aux_na,15)
+```
+
+Imputacja pmm & Bayesian linear regression:
+
+```{r}
+error_pmm <- numeric(0)
+error_norm <- numeric(0)
+
+for (i in 1:10){
+
+# ->  "pmm"
+data_imputed <- mice(aux_na, m = 1, method = "pmm", maxit = 1) # 1 iteration(maxit)
+
+data_imputed_2 <- complete(data_imputed, 1) # obtain 1st imputation
+blad <- sqrt(mean((aux$it_seller_rating - data_imputed_2$it_seller_rating)^2)) # RMSD
+error_pmm <- c(error_pmm, blad)
+
+# ->  "norm" Bayesian linear regression
+data_imputed <- mice(aux_na, m = 1, method = "norm", maxit = 1) # 1 iteration(maxit)
+
+data_imputed_2 <- complete(data_imputed, 1) # obtain 1st imputation
+blad <- sqrt(mean((aux$it_seller_rating - data_imputed_2$it_seller_rating)^2)) # RMSD
+error_norm <- c(error_norm, blad)
+
+}
+
+
+```
+
+Wyniki przedstawiam na wykresie:
+
+```{r}
+plot(error_pmm,col = "orange", 
+     main = "Imputacja danych",
+     xlab = "iteration", ylab = "RMSE")
+lines(error_pmm,col = "orange")
+
+points(error_norm,col = "blue", add = TRUE)
+lines(error_norm,col = "blue", add = TRUE)
+
+legend("topleft", legend=c("pmm", "Bayes LR"),
+       col=c("orange", "blue"), lty=1, cex=0.8)
+```
+
+
+Algorytm Bayes Linear Regression okazał się być lepszy;
+mniejsze pole pod wykresem błędu RMSE.
+Działa również szybciej od Predictive Mean Matching (pmm) i można go łatwiej tuningować. Zastosowałem go z takimi samymi prametrami co pmm.
+
+
+PMM ma kilka razy wieksze odchylenie standardowe:
+
+```{r}
+sd(error_pmm)
+```
+
+```{r}
+sd(error_norm)
+```
+
+
+## 10% losowych it_quantity jako NA
+
+```{r}
+aux_na <- aux %>% mutate(
+  it_quantity = 
+    unlist(
+      prodNA(aux %>% select(it_quantity), noNA = 0.1)
+    )
+) 
+head(aux_na,15)
+```
+
+Imputacja pmm & Bayesian linear regression:
+```{r}
+error_pmm <- numeric(0)
+error_norm <- numeric(0)
+
+for (i in 1:10){
+  
+  # ->  "pmm"
+  data_imputed <- mice(aux_na, m = 1, method = "pmm", maxit = 1) # 1 iteration(maxit)
+  
+  data_imputed_2 <- complete(data_imputed, 1) # obtain 1st imputation
+  blad <- sqrt(mean((aux$it_quantity - data_imputed_2$it_quantity)^2)) # RMSD
+  error_pmm <- c(error_pmm, blad)
+  
+  # ->  "norm" Bayesian linear regression
+  data_imputed <- mice(aux_na, m = 1, method = "norm", maxit = 1) # 1 iteration(maxit)
+  
+  data_imputed_2 <- complete(data_imputed, 1) # obtain 1st imputation
+  blad <- sqrt(mean((aux$it_quantity - data_imputed_2$it_quantity)^2)) # RMSD
+  error_norm <- c(error_norm, blad)
+  
+}
+
+
+```
+
+Wyniki przedstawiam na wykresie:
+
+```{r}
+plot(error_pmm,col = "orange", 
+     main = "Imputacja - it_quantity",
+     xlab = "iteration", ylab = "RMSE")
+lines(error_pmm,col = "orange")
+
+points(error_norm,col = "blue", add = TRUE)
+lines(error_norm,col = "blue", add = TRUE)
+
+legend("bottomleft", legend=c("pmm", "Bayes LR"),
+       col=c("orange", "blue"), lty=1, cex=0.8)
+```
+
+
+Tutaj ciężko stwierdzić który algorytm okazał się być lepszy. Bayes LR miał zazwyczaj mniejszą wartość błędu.
+
+Natomiast PMM ma ponownie kilka razy większe odchylenie standardowe:
+```{r}
+sd(error_pmm)
+```
+
+```{r}
+sd(error_norm)
+```
+
+
+# Wnioski
+
+W pracy przedstawiono różne sposoby kodowania zmiennych kategorycznych. Bardzo ważne jest aby nie traktować tym algorytmem zmiennej typu jakościowego, mającej zbyt dużą liczbę klas. W przeciwnym razie może prowadzić to do overfittingu lub olbrzymim wzrostem wymiaru danych. Innym dobrym sposobem było usunięcie rzadko występujących klas i nadanie im wspólnej kategorii 'Others'. Ten sposób gwarantuje nam stałą (albo kontrolowaną) liczbę kolumn po procesie kodowania.
+
+
+Są również inne metody kodowania, nie zaprezentowane w tym projekcie. Przykładem może być **Cross-fold encoding**, który dzieli zbiór danych na k cześci (k > 1) i dla każdej kategorii A z danej części przyporządkowywuje średnią kolumny celu z innej części niż k-ta. Otrzymujmy w wyniku k razy więcej etykietek.
+
+A propos imputacji danych, algorytm Bayes LR obarczony był błędem o mniejszym odchyleniu standardowym. W użyciu był również szybszy od PMM. Niemniej jednak, mimo jego szybkości zdecydowałem się na redukcję danych do losowych 10% wierszy wejściowej ramki danych.
+
+
+Pakiet mice, z którego pochodzą powyższe algorytmy, posiada wiele innych metod godnych przetestowania. Wiele z nich dotyczą zmiennych typu binarnego, jakościowego, uporządkowanego albo nieuporządkowanego. Używana w tym projekcie metoda PMM jest algorytmem dla danych dowolnych, a Bayes LR dla danych numerycznych. 
+
+Z uwagi na dużą liczbę wierszy - około 40000, błąd RMSE z zakresu 10000 i 16000 dla danych **it_quantity oraz it_seller_rating** z szerokich zakresów, odpowiednio **(0 , 99 999) oraz (-1 , 292 074)**, jest relatywnie niski. Zatem otrzymana imputacja jest akceptowalna.
+
