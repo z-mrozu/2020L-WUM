@@ -1,0 +1,172 @@
+---
+title: "Projekt 1"
+subtitle: "Kamień milowy 1 - eksploracja danych"
+author: "Martyna Majchrzak, Agata Makarewicz, Renata Rólkiewicz"
+date: "16 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(ggplot2)
+library(DataExplorer)
+library(gridExtra)
+```
+
+## Wprowadzenie 
+
+Poniższa analiza eksploracyjna dotyczy [zbioru danych](https://datahub.io/machine-learning/breast-w#data-cl) zawierającego informacje na temat przypadków raka piersi u kobiet z Wisconsin, USA.
+
+```{r data}
+# wczytanie zbioru danych 
+data_breast <- read.csv("breast-w_csv.csv", sep=",")
+
+knitr::kable(head(data_breast), caption = "Tab.1. Fragment ramki danych")
+```
+
+Zobaczmy najpierw co oznaczają poszczególne zmienne:
+
+- 1 - Clump_Thickness	- określa czy komórki są jedno- / wielowarstwowe	
+- 2 - Cell_Size_Uniformity - jednorodność wielkości komórek
+- 3 - Cell_Shape_Uniformity	- jednorodność kształtu komórek
+- 4 - Marginal_Adhesion	- przyleganie do siebie komórek poza nabłonkiem	
+- 5 - Single_Epi_Cell_Size (Single Epithelial Cell Size)- określa, czy komórki nabłonka są znacznie powiększone
+- 6 - Bare_Nuclei	- stosunek liczby komórek otoczonych cytoplazmą do pozostałych
+- 7 - Bland_Chromatin	-	określa "teksturę" jądra
+- 8 - Normal_Nucleoli	- odkreśla czy jądra komórek są małe i ledwo widoczne czy większe i liczniejsze
+- 9 - Mitoses -	poziom aktywności mitotycznej (reprodukcji komórek)
+- 10 - Class - nasz target, informuje o tym czy rak jest złośliwy czy nie
+
+Źródło:
+
+https://sites.google.com/a/googlesciencefair.com/science-fair-2012-project-64a91af142a459cfb486ed5cb05f803b2eb41354-1333130785-87/observations
+
+```{r data2}
+knitr::kable(summary(data_breast), caption = "Tab.2. Statystyki danych")
+```
+
+## Rozkłady zmiennych
+
+Zacznijmy od sprawdzenia struktury naszych danych. 
+
+```{r str}
+str(data_breast)
+```
+
+Jedyną zmienną kategoryczną w naszych danych jest nasza zmienna celu, czyli Class.
+
+```{r target}
+# rozkład zmiennej celu
+plot_bar(data_breast)
+```
+
+Pozostałe zmienne są dyskretne (liczby od 1 do 10), zobaczmy zatem ich rokłady.
+
+```{r density, fig.height=4, fig.width=8}
+
+plot1 <- ggplot(data_breast, aes(x=data_breast$Bare_Nuclei)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Bare_Nuclei", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot2 <- ggplot(data_breast, aes(x=data_breast$Bland_Chromatin)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Bland_Chromatin", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot3 <- ggplot(data_breast, aes(x=data_breast$Cell_Shape_Uniformity)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Cell_Shape_Uniformity", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot4 <- ggplot(data_breast, aes(x=data_breast$Cell_Size_Uniformity)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Cell_Size_Uniformity", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot5 <- ggplot(data_breast, aes(x=data_breast$Clump_Thickness)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Clump_Thickness", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot6 <- ggplot(data_breast, aes(x=data_breast$Marginal_Adhesion)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Marginal_Adhesion", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot7 <- ggplot(data_breast, aes(x=data_breast$Mitoses)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Mitoses", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot8 <- ggplot(data_breast, aes(x=data_breast$Normal_Nucleoli)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Normal_Nucleoli", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot9 <- ggplot(data_breast, aes(x=data_breast$Single_Epi_Cell_Size)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Single_Epi_Cell_Size", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+grid.arrange(plot1,plot2, ncol=2)
+grid.arrange(plot3,plot4, ncol=2)
+grid.arrange(plot5,plot6, ncol=2)
+grid.arrange(plot7,plot8, ncol=2)
+plot9
+
+```
+
+```{r boxplot, fig.height=10, fig.width=10}
+plot_boxplot(data_breast, by = "Class", title="Boxploty względem Class", ncol = 3)
+```
+
+## Korelacje między zmiennymi 
+
+```{r correlation, fig.height=10, fig.width=10}
+plot_correlation(data_breast[complete.cases(data_breast),], title = "Korelacje między zmiennymi")
+
+```
+
+## Zależności między zmiennymi 
+
+```{r dependencies}
+# plot(data_breast$Cell_Size_Uniformity, data_breast$Cell_Shape_Uniformity, main = "", ylab = "Size", xlab = "Shape")
+
+ggplot(data_breast, aes(x=Cell_Size_Uniformity, y=Cell_Shape_Uniformity)) +
+  geom_point() +
+  geom_smooth()+
+   scale_x_continuous(breaks = c(1:10))
+
+ggplot(data_breast, aes(y=Cell_Shape_Uniformity,
+                        group=Cell_Size_Uniformity,
+                        x=Cell_Size_Uniformity))+
+  geom_boxplot()+
+   scale_x_continuous(breaks = c(1:10))
+
+ggplot(data_breast, aes(y=Clump_Thickness,
+                        group=Cell_Size_Uniformity,
+                        x=Cell_Size_Uniformity))+
+  geom_boxplot()+
+   scale_x_continuous(breaks = c(1:10))
+```
+
+```{r, fig.height=4, fig.width=8}
+plot_1 <- ggplot(data_breast, aes(x=Cell_Shape_Uniformity, fill=Class))+
+  geom_density(alpha=0.4)+
+   scale_x_continuous(breaks = c(1:10))
+plot_2 <- ggplot(data_breast, aes(x=Cell_Size_Uniformity, fill=Class))+
+  geom_density(alpha=0.4)+
+   scale_x_continuous(breaks = c(1:10))
+grid.arrange(plot_1, plot_2,ncol=2)
+
+```

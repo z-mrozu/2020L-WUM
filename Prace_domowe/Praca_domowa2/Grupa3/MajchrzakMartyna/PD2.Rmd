@@ -1,0 +1,278 @@
+---
+title: "Praca domowa 2"
+author: "Martyna Majchrzak"
+date: "21 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE)
+library("DataExplorer")
+library("mlr")
+library("dplyr")
+library("mlr")
+library("mlr3")
+library("mlr3learners")
+library("mice")
+library("ggplot2")
+set.seed(123)
+
+# data<-read.csv("./Prace_domowe/Praca_domowa2/Grupa3/MajchrzakMartyna/allegro-api-transactions.csv", stringsAsFactors = FALSE)
+# data<-read.csv("../data/allegro-api-transactions.csv")
+data<-read.csv("C:/Users/marty/OneDrive/Dokumenty/WUM/data/allegro-api-transactions.csv", stringsAsFactors = FALSE)
+```
+
+
+# Kodowanie zmiennych kategorycznych
+
+
+## Target encoding i one-hot encoding na zmiennej it_location
+
+```{r, cache=TRUE}
+# Sprawdźmy ile ma poziomów mają zmienne kategoryczne
+str(data)
+visdat::vis_dat(data, warn_large_data = FALSE)
+```
+
+Mamy 5 zmiennych kategorycznych: 
+
+ - date, 38953 poziomów
+ - categories,  9020 poziomóW
+ - seller, 51064 poziomów
+ - it_location, 10056 poziomów
+ - main_category, 27 poziomów
+ 
+### Target encoding
+
+```{r, cache=TRUE}
+target_mean<-data%>%
+  select(it_location,price)%>%
+  group_by(it_location)%>%
+  summarize(price_mean=mean(price))
+
+data1<-data
+
+for(i in 1:nrow(target_mean)){
+  location_vector<-data1$it_location==target_mean$it_location[[i]]
+  data1[location_vector,"it_location"]<-target_mean$price_mean[[i]]
+}
+```
+
+### One-hot encoding
+
+```{r, cache=TRUE}
+#### WERSJA 1 ####
+# data2<-data
+# n<-nrow(target_mean)
+# for(i in 1:n){
+#   location_vector<-data$it_location==target_mean$it_location[[i]]
+#   data2<-cbind(data2,location_vector)
+# }
+# colnames(data2)<-c(colnames(data),paste(rep("V",n-1),as.character(1:n-1), sep=""))
+# data2<-data2%>%select(-it_location)
+
+### WERSJA 2 ####
+# data_dummy1<-mlr::createDummyFeatures(data, 
+#                     target = "price",
+#                     method="1-of-n",
+#                     cols="it_location")
+# 
+```
+Niestety nawet używając funkcji createdummyFeatures wykonanie one-hot encodingu na zmiennej o 10056 poziomach za zajmuje za dużo czasu/pamięci.
+
+Target encoding nie wymaga tworzenia nowych (w tym przypadku 1056) kolumn.
+
+```{r, cache=TRUE, include=FALSE}
+# Porównanie efektywności - napisałam to ale zajmuje za dużo czasu niestety xd
+
+# train_set<-sample(nrow(data), 0.8 * nrow(data))
+# test_set<-setdiff(seq_len(nrow(data)), train_set)
+# 
+# ### Target Encoding
+# task1 = TaskRegr$new(id = "priceTarget", backend = data1, target = "price")
+# # algorytm regresji
+# learner1= mlr_learners$get("regr.ranger")
+# learner1$train(task1, row_ids = train_set)
+# # predykcja
+# prediction1 = learner1$predict(task1, row_ids = test_set)
+# prediction1$score(msr("regr.rmse"))
+# 
+# ### One-hot encoding
+# task2 = TaskRegr$new(id = "priceOnehot", backend = data2, target = "price")
+# # algorytm regresji
+# learner2= mlr_learners$get("regr.ranger")
+# learner2$train(task2, row_ids = train_set)
+# # predykcja
+# prediction2 = learner2$predict(task1, row_ids = test_set)
+# prediction2$score(msr("regr.rmse"))
+
+```
+
+# DummyFeatures na zmiennej main_category
+
+Funkcja createDummyFeatures stosuje dummy coding na wybranych zmiennych kategorycznych.
+
+Udostępnia dwie metody: "1-of-n" i "reference".
+
+  - "1-of-n" : dla każdego poziomu zmiennej kategorycznej powstanie nowa zmienna
+  
+  - "reference" : dla pierwszego poziomu nie tworzy się kolumny
+```{r, cache=TRUE}
+data<-read.csv("C:/Users/marty/OneDrive/Dokumenty/WUM/data/allegro-api-transactions.csv")
+
+# Method "1-of-n"
+
+data_dummy1<-mlr::createDummyFeatures(data, 
+                    target = "price",
+                    method="1-of-n",
+                    cols="main_category")
+# Method "reference"
+data_dummy2<-mlr::createDummyFeatures(data, 
+                    target = "price",
+                    method="reference",
+                    cols="main_category")
+```
+
+## Różnice w wynikach między metodami
+
+Liczba kolumn ramki po zastosowaniu metody "1-of-n"
+```{r}
+ncol(data_dummy1)
+```
+Liczba kolumn ramki po zastosowaniu metody "reference"
+```{r}
+ncol(data_dummy2)
+```
+Której brakuje?
+```{r}
+x<-colnames(data_dummy1)
+y<-colnames(data_dummy2)
+x[!(x %in% y)]
+```
+
+Przyjrzyjmy się poziomom zmiennej main_category.
+
+### Poziomy main_category z największą liczbą wystąpień
+```{r}
+
+data%>%
+  select(main_category)%>%
+  group_by(main_category)%>%
+  summarise(count=n())%>%
+  arrange(desc(count))
+```
+### Struktura factora
+```{r}
+levels(data$main_category)
+```
+
+Jak widać, ominięty został pierwszy level (czyli w tym wypadku pierwsza kategoria patrząc alfabetycznie), a nie ten 'największy' ( w tym przypadku "Dom i Ogród").
+
+# Uzupełnianie braków
+
+Usuniemy losowo braki w jednej, a następnie dwóch kolumnach z ramki danych, następnie zaimputujemy je przy użyciu średniej i porównamy wyniki za pomocą pierwiastka błędu średniokwadratowego (root-mean-square error, RMSE).
+
+## W jednej kolumnie
+```{r, cache=TRUE, message=FALSE}
+### ograniczenie do zmiennych numerycznych
+
+data_imp<-data%>%select(price, it_seller_rating, it_quantity)
+
+imputation_mice<-function(data_imp){
+  # przyjmuje: zbiór danych
+  # zwraca: miarę rmse imputacji średnią po usunięciu losowych 10% z kolumny it_seller_rating
+  
+  ### usunięcie 10% wartości z kolumn it_seller_rating
+  na_set<-sample(nrow(data_imp), 0.1 * nrow(data_imp))
+  data_imp1<-data_imp
+  data_imp1[na_set,"it_seller_rating"]<-NA
+
+  # użycie metody uzupełnienia średną z pakietu mice
+  imp1 <- mice(data_imp1, 
+                  method ="mean",
+                  m = 1, 
+                  maxit = 1)
+  data_imp1<-complete(imp1)
+  # porównanie wyników z oryginałem
+  return(measureRMSE(data_imp$it_seller_rating,data_imp1$it_seller_rating))
+}
+
+
+## Powtórzenie próby 10 razy
+scores1<-data.frame(1:10)%>%mutate(rmse=NA)
+for(i in 1:10){
+  scores1[i,"rmse"]<-imputation_mice(data_imp)
+}
+
+## Odchylenie standardowe
+sd(scores1$rmse)
+
+```
+
+## W dwóch kolumnach
+
+```{r, cache=TRUE, message=FALSE}
+imputation2_mice<-function(data_imp){
+  # przyjmuje: zbiór danych
+  # zwraca: miarę rmse imputacji średnią po usunięciu losowych 10% z kolumny it_seller_rating oraz it_quantity
+  
+  ### usunięcie 10% wartości z kolumn it_seller_rating
+  na_set1<-sample(nrow(data_imp), 0.1 * nrow(data_imp))
+  na_set2<-sample(nrow(data_imp), 0.1 * nrow(data_imp))
+  data_imp1<-data_imp
+  data_imp1[na_set1,"it_seller_rating"]<-NA
+  data_imp1[na_set2,"it_quantity"]<-NA
+  # użycie metody uzupełnienia średną z pakietu mice
+  imp1 <- mice(data_imp1, 
+                  method ="mean",
+                  m = 1, 
+                  maxit = 1)
+  data_imp1<-complete(imp1)
+  # porównanie wyników z oryginałem
+  return(measureRMSE(data_imp$it_seller_rating,data_imp1$it_seller_rating))
+}
+
+## Powtórzenie próby 10 razy
+scores2<-data.frame(1:10)%>%mutate(rmse=NA)
+for(i in 1:10){
+  scores2[i,"rmse"]<-imputation_mice(data_imp)
+}
+
+## Odchylenie standardowe
+sd(scores2$rmse)
+```
+
+## Analiza wyników imputacji
+
+Zbierzemy teraz i porównamy średnie błędy rmse z prób przeprowadzonych na zbiorach z brakami w jednej i w dwóch kolumach
+```{r}
+summary<-data.frame(type=c("one_column", "one_column",
+                           "two_columns", "two_columns"),
+                    statistic=c("mean", "sd", "mean", "sd"),
+                    value=c(mean(scores1$rmse),sd(scores1$rmse),
+                    mean(scores2$rmse),sd(scores2$rmse)))
+
+## Średnie
+ggplot(summary%>%filter(statistic=="mean"), aes(x=type, y=value))+
+  geom_col(position=position_dodge(), width=0.5)+
+  geom_label(aes(label=round(value)), position = position_dodge(0.2))+
+  theme_minimal()+
+  ggtitle("Mean of RSME")+
+  xlab("Number of columns with NA")+
+  ylab("")
+```
+
+W średnich różnica jest bardzo niewielka.
+
+```{r}
+# odchylenie standardowe
+ggplot(summary%>%filter(statistic=="sd"), aes(x=type, y=value))+
+  geom_col(position=position_dodge(), width=0.5)+
+  geom_label(aes(label=round(value)), position = position_dodge(0.2))+
+  theme_minimal()+
+  ggtitle("Standard variation of RSME")+
+  xlab("Number of columns with NA")+
+  ylab("")
+```
+
+Odchylenie standardowe jest znacząco mniejsze dla danych z brakami w dwóch kolumnach.
