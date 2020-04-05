@@ -1,0 +1,192 @@
+---
+title: "Praca domowa 2"
+author: "Agata Makarewicz"
+date: "23 03 2020"
+output: 
+  html_document:
+  #   number_section: true
+  #   df_print: paged
+  #   toc: true
+  #   toc_float: true
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(mlr)
+library(ggplot2)
+library(dplyr)
+library(missForest)
+library(mice)
+library(Metrics)
+```
+
+## Wprowadzenie
+
+Poniższy raport dokumentuje zadania wykonane przy użyciu [zbioru danych](https://www.dropbox.com/s/360xhh2d9lnaek3/allegro-api-transactions.csv?dl=1) zawierającego informacje na temat transakcji z serwisu Allegro.
+
+```{r data, echo=FALSE, cache=TRUE, fig.height=4, fig.width=6}
+# wczytanie danych
+
+# data <- read.csv("allegro-api-transactions.csv", sep=",", encoding = "UTF-8")
+
+data <- read.csv('https://www.dropbox.com/s/360xhh2d9lnaek3/allegro-api-transactions.csv?dl=1',encoding = "UTF-8")
+knitr::kable(head(data,3), caption = "Fragment ramki danych")
+```
+
+## 1) Kodowanie zmiennych kategorycznych 
+
+Jeśli w przetwarzanych przez nas danych występują zmienne kategoryczne, na przykład zmienne typu `factor`, musimy je w pewien sposób zakodować, tak, aby nasze dane można było wykorzystać przy algorytmach uczenia maszynowego. Służą do tego różne metody, dwie z nich wykorzystamy poniżej.\
+Naszym zadaniem jest przeprowadzenie kodowania zmiennej _it_location_ za pomocą `target encoding`, oraz zmiennej _main_category_ za pomocą `one-hot encoding`. 
+
+### 1.1) Target encoding
+
+Ta metoda kodowania polega na tym, że w ramach każdej z kategorii naszej zmiennej kategorycznej (najczęściej typu `factor`) liczymy średnią z kolumny `target` (zmienna celu) i zastępujemy naszą zmienną wyliczoną średnią.\
+
+Zanim przystąpimy do kodowania, możemy w prosty sposób "zmniejszyć" liczbę kategorii ujednolicając wartości zmiennej _it_location_ (ta sama miejscowość jest czasem zapisana z wielkiej i małej litery, co daje nam dwie kategorie, mimo że jest to ta sama lokalizacja).
+
+```{r minimalize, results='hide'}
+length(unique((data$it_location))) # 10056
+data$it_location <- tolower(data$it_location)
+length(unique(data$it_location)) # 7903
+```
+
+Teraz możemy przystąpić do kodowania zmiennej _it_location_.\
+
+```{r target}
+# wyliczamy średnią dla każdej kategorii it_location
+target_mean <- data%>% 
+  group_by(it_location)%>% 
+  summarise(average_price = mean(price))
+
+data <- data%>%
+  left_join(target_mean, 
+            by = c("it_location" = "it_location"))%>%
+  select(-(it_location), it_location_encoded = average_price)
+
+```
+
+```{r head1, echo=FALSE}
+knitr::kable(head(data[,!(colnames(data) %in% c("categories", "pay_option_transfer","it_is_allegro_standard", "it_is_brand_zone"))],3), caption = "Wybrane kolumny ramki danych po przeprowadzeniu target encoding")
+```
+
+### 1.2) One-hot encoding
+
+Ta metoda kodowania polega na tym, że dla każdej z kategorii naszej zmiennej tworzona jest nowa kolumna, w której mamy 0, jeśli rekord nie jest w danej kategorii oraz jedynkę, jeśli jest.\
+
+Wykonujemy tę metodę dla kolumny _main_category_ z obiema możliwymi wartościami parametru `method`: 
+
+* `1-of-n` - dla n kategorii tworzy n kolumn
+
+```{r dummy1}
+# 1-of-n
+data_1 <- createDummyFeatures(data, target = "price", method = "1-of-n", cols = "main_category") # 40 kolumn
+```
+
+```{r head2, echo=FALSE}
+knitr::kable(head(data_1[,c(14:40)], 3))
+```
+
+* `reference` - dla n kategorii tworzy n-1 kolumn (ta jedna kolumna mniej to kolumna, która ma jedynki dokładnie tam, gdzie wszystkie pozostałe nowoutworzone kolumny mają zera - stąd, jest zbędna).
+
+```{r dummy2}
+# reference
+data_2 <- createDummyFeatures(data, target="price", method="reference", cols = "main_category") # 39 kolumn
+```
+
+```{r head3, echo=FALSE}
+knitr::kable(head(data_2[,c(14:39)],3))
+```
+
+### 1.3) Porównanie metod
+
+Metoda `target encoding` ma znaczącą przewagę nad metodą `one-hot encoding`, ponieważ w pierwszej z wymienionych nie zwiększamy rozmiaru naszych danych - zmieniamy po prostu wartości w istniejącej już kolumnie, natomiast w drugiej tworzymy tyle nowych kolumn, ile jest kategorii naszej zmiennej (różnych wartości zmiennej `factor`). W przypadku pierwszej części zadania, zakodowanie w ten sposób zmiennej _it_location_ doprowadziłoby do powstania prawie 8000 nowych kolumn, co niesamowicie wydłużyłoby jakiekolwiek operacje przeprowadzane na naszych danych.
+W przypadku `target encoding` skrajnym przypadkiem  może być sytuacja, w której mamy pewną wartość zmiennej typu `factor` występującą tylko raz. W takim wypadku zamieniamy ją na odpowiadającą wartość zmiennej celu, co może nie być do końca dobrym rozwiązaniem.
+
+## 2) Uzupełnianie braków (imputacja)
+
+Czasem w przetwarzanych przez nas danych mogą wystąpić brakujące wartości i musimy umieć sobie z nimi poradzić. W naszym zbiorze takich braków nie ma, dlatego tworzymy je "ręcznie", usuwając 10% wartości z wybranej zmiennej.\
+
+Zgodnie z poleceniem w tej części zadania korzystamy tylko ze zmiennych numerycznych. Dodatkowo, ze względów wydajnościowych, zmniejszymy rozmiar przetwarzanych danych, wybierając losowo 10% obserwacji z naszego zbioru.
+
+```{r size}
+# 10% obserwacji
+set.seed(123)
+rows <- sample(nrow(data), 0.1 * nrow(data))
+data <- data[rows,]
+
+# wybór zmiennych numerycznych
+data_num <- data[,c("price", "it_seller_rating", "it_quantity")]
+```
+
+### 2.1) _it_seller_rating_
+
+Losowo usuwamy 10% wartości ze zmiennej _it_seller_rating_ i uzupełniamy je przy użyciu funkcji `mice` z metodą predykcyjnego dopasowania zmiennych - `pmm`.
+Porównujemy wyniki z danymi oryginalnymi za pomocą miary _RMSE_. 
+
+```{r impute_1, results='hide'}
+data_imp_1 <- data_num
+rmse_1 <- c()
+# 10 razy powtarzamy
+for (i in 1:10) {
+  # tworzymy losowo 10% NA
+  data_imp_1[,"it_seller_rating"] <- prodNA(data.frame(data_imp_1[,"it_seller_rating"]), noNA = 0.1)
+  # imputacja
+  imp <- mice(data_imp_1[,-1], method = "pmm", m = 1, maxit = 1)
+  data_imp_1[,-1] <- complete(imp)
+  
+  # miara RMSE
+  rmse_1 <- c(rmse_1, rmse(data_num$it_seller_rating, data_imp_1$it_seller_rating))
+}
+```
+
+### 2.2) _it_seller_rating_, _it_quantity_
+
+Losowo usuwamy 10% wartości ze zmiennej _it_seller_rating_ oraz ze zmiennej _it_quantity_ i uzupełniamy je przy użyciu funkcji `mice` z metodą predykcyjnego dopasowania zmiennych - `pmm`.
+Porównujemy wyniki z danymi oryginalnymi za pomocą miary _RMSE_. 
+
+```{r impute_2, results='hide'}
+data_imp_2 <- data_num
+rmse_2 <- c()
+# 10 razy powtarzamy
+for (i in 1:10) {
+  # tworzymy losowo 10% NA
+  data_imp_2[,"it_seller_rating"] <- prodNA(data.frame(data_imp_2[,"it_seller_rating"]), noNA = 0.1)
+  data_imp_2[,"it_quantity"] <- prodNA(data.frame(data_imp_2[,"it_quantity"]), noNA = 0.1)
+
+  # imputacja
+  imp <- mice(data_imp_2[,-1], method = "pmm", m = 1, maxit = 1)
+  data_imp_2[,-1] <- complete(imp)
+  
+  # miara RMSE
+  rmse_2 <- c(rmse_2, rmse(data_num$it_seller_rating, data_imp_2$it_seller_rating))
+}
+```
+
+### 2.3) Podsumowanie
+
+Poniżej porównane zostały wartości miary RMSE dla każdej kolejnej próby eksperymentu, dla obu części zadania (imputacji jednej i dwóch zmiennych).
+
+```{r plot_summary, echo=FALSE}
+rmse <- cbind(seq(1,10,1), rmse_1, rmse_2)
+colors <- c("it_seller_rating" = "green", "it_seller_rating & it_quantity" = "yellow")
+ggplot(as.data.frame(rmse), aes(x = seq(1,10,1))) +
+    geom_line(aes(y = rmse_1, color = "it_seller_rating"), size=1.5) + 
+    geom_line(aes(y = rmse_2, color = "it_seller_rating & it_quantity"), size=1.5)+
+    scale_x_continuous(breaks = c(1:10))+
+    labs(x = "Iteracja", y = "RMSE", color = "Legenda") +
+    scale_color_manual(values = colors)
+```
+
+Odchylenie standardowe wyniku przy imputacji _it_seller_rating_ : 
+
+```{r sd1, echo=FALSE}
+sd(rmse_1)
+```
+
+Odchylenie standardowe wyniku przy imputacji _it_seller_rating_ oraz _it_quantity_ : 
+
+```{r sd2, echo=FALSE}
+sd(rmse_2)
+```
+
+W pierwszym przypadku odchylenie standardowe oraz miara RMSE dają lepsze wyniki niż w drugim - wniosek dość oczywisty, bo w pierszym przypadku mamy więcej wartości oryginalnych. W obu przypadkach błąd naszych obliczeń jest dosyć znaczący, co oznacza niezbyt dobrą jakość zastosowanej przez nas metody imputacji.

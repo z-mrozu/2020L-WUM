@@ -1,0 +1,542 @@
+---
+title: "WUM - Projekt 1 - EDA"
+author: "Konrad Komisarczyk, Patryk Wrona"
+date: "16.03.2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+# Ładowanie danych + opis
+
+```{r}
+data <- read.csv("cervical-cancer_csv.csv")
+
+factorize <- function(data, indices) {
+  for (i in indices) {
+    data[[i]] <- as.factor(data[[i]])
+  }
+  data
+}
+
+data <- factorize(data, c(5, 8, 10, 12, 14:25, 29:36))
+```
+
+Dane to informacje o 835 pacjentkach szpitala w Wenezueli, skupiają się na diagnozie u pacjentek raka szyjki macicy. Zawierają informacje demograficzne, o stylu życia pacjentek oraz informacje o ich chorobach w przeszłości. Dane składają się z 36 kolumn, w tym 4 kolumn celu (różnych kryteriów diagnozy raka szyjki macicy). Niekóre dane mają braki, ponieważ pacjentki z powodów prywatnych mogły nie odpowiadać na wszystkie pytania.
+
+
+Dane zawierają następujące informacje o pacjentkach:
+
+* wiek      
+* liczbę partnerów seksualnych oraz wiek inicjacji seksualnej      
+* liczbę ciąż, które przeszła pacjentka       
+* czy pacjentka pali tytoń, ile pali i od kiedy       
+* czy pacjentka stosuje antykoncepcje hormonalną / wkładkę domaciczną (IUD) i od jakiego czasu       
+* informacje na temat przebytych przez pacjentkę chorób wenerycznych - które z poszczególnych chorób przebyła oraz czas od pierwszej i ostatniej diagnozy          
+* informacje o diagnozie u pacjentki w przeszłości: raka, zakażenia HPV, Cervical intraepithelial neoplasia, raka śródnabłonkowego szyjki macicy    
+
+
+```{r}
+summary(data)
+```
+
+
+
+# Analiza braków danych i nadmiarowych kolumn
+
+```{r}
+data %>% filter(Number.of.sexual.partners == 0)
+```
+
+```{r}
+data %>% filter(is.na(Number.of.sexual.partners))
+```
+
+Wszystkie pacjentki miały już jakieś kontakty seksualne.
+
+Może liczbę partnerów seksualnych u pacjentek nie udzielających na ich temat odpowiedzi warto zastąpić przez `1`, a może przez średnią dla wieku lub czasu aktywności seksualnej (wiek - wiek inicjacji seksualnej).
+
+
+```{r}
+data %>% filter(is.na(First.sexual.intercourse))
+```
+
+Brak danych w kolumnie `First.sexual.intercourse` oznacza zatem że pacjentka nie udzieliła odpowiedzi na to pytanie, a nie, że nie miała kontaktów seksualnych. Proponuję zastąpić tu brak danych Przez średni wiek inicjacji seksualnej pacjentek w danym wieku.
+
+
+
+```{r}
+a <- data %>% filter(Smokes == 0) %>% nrow()
+b <- data %>% filter(Smokes..years. == 0 & Smokes == 0) %>% nrow()
+c <- data %>% filter(Smokes..years. == 0) %>% nrow()
+a == b & b == c
+```
+
+To że pacjentka nie pali jest równoważne temu, że pali 0 lat. Może w takim razie możemy usunąć kolumnę `Smokes`.
+
+```{r}
+a <- data %>% filter(is.na(Smokes..years.)) %>% nrow()
+b <- data %>% filter(is.na(Smokes..packs.year.)) %>% nrow()
+c <- data %>% filter(is.na(Smokes..packs.year.) & is.na(Smokes..years.)) %>% nrow()
+a == b & b == c
+
+a <- data %>% filter(is.na(Smokes)) %>% nrow()
+b <- data %>% filter(is.na(Smokes) & is.na(Smokes..packs.year.)) %>% nrow()
+a == b
+```
+
+Brak danych w kolumnach `Smokes` jest równoważny brakowi w `Smokes..packs.year.` i `Smokes..years.`. 
+
+Zdecydowana większość pacjentek nie pali, może braki danych zastąpić `0` - informacją, że pacjentka nie pali.
+
+```{r}
+a <- data %>% filter(is.na(Hormonal.Contraceptives)) %>% nrow()
+b <- data %>% filter(is.na(Hormonal.Contraceptives..years.)) %>% nrow()
+c <- data %>% filter(is.na(Hormonal.Contraceptives..years.) & is.na(Hormonal.Contraceptives)) %>% nrow()
+a == b & b == c
+```
+
+Analogicznie tutaj braki danych są sobie równoważne.
+
+```{r}
+a <- data %>% filter(Hormonal.Contraceptives..years. == 0 & Hormonal.Contraceptives == 0) %>% nrow()
+b <- data %>% filter(Hormonal.Contraceptives..years. == 0) %>% nrow()
+c <- data %>% filter(Hormonal.Contraceptives == 0) %>% nrow()
+a == b & b == c
+```
+
+Oraz nie branie hormonalnych leków antykoncepcyjnych jest równoważne przyjmowaniu ich przez `0` lat. Zatem propozycja usunięcia kolumny `Hormonal.Contraceptives`.
+
+```{r}
+a <- data %>% filter(IUD..years. == 0 & IUD == 0) %>% nrow()
+b <- data %>% filter(IUD == 0) %>% nrow()
+c <- data %>% filter(IUD..years. == 0) %>% nrow()
+a == b & b == c
+
+d <- data %>% filter(is.na(IUD..years.)) %>% nrow()
+e <- data %>% filter(is.na(IUD)) %>% nrow()
+f <- data %>% filter(is.na(IUD..years.) & is.na(IUD)) %>% nrow()
+d == e & e == f
+```
+
+Analogicznie przy kolumnach mówiących o wkładkach domacicznych.
+
+```{r}
+# wykres słupkowy IUD?
+```
+
+
+Zdecydowana większość pacjentek nie używa wkładek domacicznych. Może braki danych zastąpić `0`.
+
+```{r}
+
+```
+
+Analogicznie jest z kolumnami `STDs` i `STDs..number.`.
+
+Ponadto wystąpienia braku danych we wszystkich kolumnach dotyczących przebycia chorób wenerycznych są równoważne.
+
+Co do zastąpienia braków danych we wszystkich kolumnach z rodziny `STDs` dotyczących przeycia jakiejś choroby wenerycznej, możnaby braki te zastąpić modą, czyli 0 ("nie przebyła żadnej choroby"). Jednak możemy podejrzewać, że wśród pacjentek które odmówiły odpowiedzi na te pytania był większy odsetek chorych na choroby weneryczne, tylko wstydziły się tego. Może uzależnić przebycie danej choroby wenerycznej przez pacjentkę od innych informacji o niej, np. liczby partnerów seksualnych?
+
+
+
+```{r}
+data %>% filter(Dx == 1) %>% select(Dx.Cancer, Dx.CIN, Dx.HPV)
+
+data %>% filter(Dx == 1 & Dx.Cancer == 0 & Dx.CIN == 0 & Dx.HPV == 0) %>% nrow()
+```
+
+Kolumna `Dx` jest równa 1 wtedy i tylko wtedy gdy którakolwiek z kolumn `Dx.Cancer, Dx.CIN, Dx.HPV` jest równa 1. Możemy zatem usunąć kolumnę `Dx`.
+
+
+
+```{r}
+data %>% filter(!is.na(STDs.HPV)) %>% filter(STDs.HPV != Dx.HPV) %>% select(STDs.HPV, Dx.HPV) %>% table()
+```
+
+Czym się różnią kolumny `STDs.HPV` i `Dx.HPV`? Wszystkie pacjentki mające różne dane dla tych kolumn w `Dx.HPV` mają 1, a w `STDs.HPV` 0. Wirus HPV przenosi się nie tylko drogą płciową. A nawet zakażenie niż przechodzi 50% populacji, ale często powoduje co najwyżej kurzajki. Ponadto kolumna `STDs.HPV` to odpowiedzi pacjentek, a pacjentki mogły próbować zataić informacje o diagnozie lub nie wiedzieć, że taką diagnozę miały.
+
+Proponuję usunąć jedną z tych kolumn.
+
+
+```{r}
+unfactor <- function(f) (as.numeric(levels(f))[f])
+data %>% filter(is.na(STDs)) %>% 
+  mutate(condylomatosis = unfactor(STDs.cervical.condylomatosis) + 
+           unfactor(STDs.vaginal.condylomatosis) + 
+           unfactor(STDs.vulvo.perineal.condylomatosis)) %>% 
+  filter(condylomatosis != STDs.condylomatosis)
+```
+
+Kolumna `STDs.condylomatosis` jest równoważna temu czy pacjentka miała condylomatosis (kłykciny) w którymkolwiek z wyodrębnionych miejsc ich występowania. Także możemy ją usunąć.
+
+
+```{r}
+data %>% filter(is.na(STDs..Time.since.first.diagnosis)) %>% pull(STDs) %>% table()
+```
+
+Widzimy, że występuje 8 braków danych w kolumnie `STDs..Time.since.first.diagnosis` wśród pacjentek, które przyznały się do jakiejś choroby wenerycznej. To 8 pacjentek to mogą być pacjentki, które są przekonane, że miały jakąś chorobę weneryczną, ale nie miały jej formalnie zdiagnozowanej lub pacjentki, które po prostu nie chcą podać lub nie pamietają tej daty. Pozostałe braki danych w tej kolumnie związane są z brakiem żadnej diagnozy choroby wenerycznej.
+
+Braki danych dla pacjentek bez żadnej choroby wenerycznej można zastąpić jakąś specjalną wartością zmiennej, np. wartość ujemna.
+
+
+
+```{r}
+data %>% filter(STDs..number. != STDs..Number.of.diagnosis) %>% nrow()
+data %>% filter(STDs != STDs..Number.of.diagnosis) %>% select(STDs, STDs..Number.of.diagnosis)
+```
+
+Kolumna `STDs..Number.of.diagnosis` nie jest do końca jasna. Nie jest ona tożsama z `STDs..number.`. Prawdopodobnie dotyczy ona liczby diagnoz chorób wenerycznych u pacjentki, więc pacjentka mogła mieć choroby weneryczne, które nie były formalnie zdiagnozowane oraz jednoczesną diagnozę wielu chorób.
+
+```{r}
+data %>% pull(STDs..Number.of.diagnosis) %>% table()
+data %>% filter(STDs != STDs..Number.of.diagnosis) %>% select(STDs, STDs..Number.of.diagnosis, Biopsy) %>% nrow()
+```
+
+Jedynie u 3 pacjentek liczba diagnoz jest większa od 1. Jest 8 pacjentek, które miały jakąś chorobę weneryczną, ale nie miały jej zdiagnozowanej. kolumna `STDs..Number.of.diagnosis` ma bardzo podobne wartości do `STDs`, można rozważyć usunięcie tej kolumny.
+
+
+
+
+# Analiza ilościowych cech statystycznych
+
+
+
+
+```{r}
+smoking_years <- data %>% filter(Smokes == 1) %>% pull(Smokes..years.)
+boxplot(smoking_years, main = "Years of smoking amongst smokers", horizontal=TRUE)
+median(smoking_years) # 7
+text(1, 1.3,expression(med~" = "~ 7), pos=4)
+```
+
+```{r}
+packs_per_year <- data %>% filter(Smokes == 1) %>% pull(Smokes..packs.year.)
+boxplot(packs_per_year, main = "Packs per year amongst smokers", horizontal=TRUE)
+median(packs_per_year) # 1.2
+text(1, 1.3,expression(med~" = "~ 1.2), pos=4)
+```
+
+
+```{r}
+years_of_hormonal <- data %>% filter(Hormonal.Contraceptives == 1) %>% pull(Hormonal.Contraceptives..years.)
+boxplot(years_of_hormonal, main = "Years of hormonal contraceptive", horizontal=TRUE)
+median(years_of_hormonal) # 2
+text(1, 1.3,expression(med~" = "~ 2), pos=4)
+```
+
+```{r}
+iud_years <- data %>% filter(IUD == 1) %>% pull(IUD..years.)
+boxplot(iud_years, main = "Years of intra-uterine device", horizontal=TRUE)
+median(iud_years) # 4
+text(1, 1.3,expression(med~" = "~ 4), pos=4)
+```
+
+```{r}
+sexual_partners <- na.omit(data$Number.of.sexual.partners)
+hist(sexual_partners, main = "Sexual partners", breaks = 80,
+     xlab = "Sexual partners")
+```
+
+```{r}
+ages <- na.omit(data$Age)
+hist(ages, main = "Age of patients", breaks = 80,
+     xlab = "Age")
+```
+
+```{r}
+first_sex <- na.omit(data$First.sexual.intercourse)
+hist(first_sex, main = "Age of the first sexual intercourse", breaks = 80,
+     xlab = "Age")
+```
+
+
+## Badanie palaczy i niepalaczy
+
+
+```{r}
+smokes1 <- data %>%  filter(Smokes == 1) # palacy
+smokes0 <- data %>%  filter(Smokes == 0) # niepalacy
+```
+
+Palacze maja zwykle o 1 partnera seksualnego więcej.
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Number.of.sexual.partners), breaks = 100, xlim = c(0,10),
+     main = "Palacy a partnerzy seksualni",
+     xlab = "Liczba partnerow saksualnych")
+hist(na.omit(smokes0$Number.of.sexual.partners), breaks = 50, xlim = c(0,10),
+     main = "Niepalacy a partnerzy seksualni",
+     xlab = "Liczba partnerow saksualnych")
+```
+
+Palacze częściej zachodzili w ciążę.
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Num.of.pregnancies), breaks = 10, xlim = c(0,10),
+     main = "Palacy a liczba zajsc w ciaze",
+     xlab = "Liczba ciaz")
+hist(na.omit(smokes0$Num.of.pregnancies), breaks = 10, xlim = c(0,10),
+     main = "Niepalacy a liczba zajsc w ciaze",
+     xlab = "Liczba ciaz")
+```
+     
+Palacze byli większymi weteranami antykoncepcji hormonalnej.
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Hormonal.Contraceptives..years.), breaks = 40
+     , xlim = c(0,10),
+     main = "Palacy a antykoncepcja hormonalna",
+     xlab = "Lat stosowania")
+hist(na.omit(smokes0$Hormonal.Contraceptives..years.), breaks = 100
+     , xlim = c(0,10),
+     main = "Niepalacy a antykoncepcja hormonalna",
+     xlab = "Lat stosowania")
+```
+      
+      
+      
+      
+      
+## Analiza Biopsy
+
+
+
+```{r}
+smokes1 <- data %>%  filter(Biopsy == 1) # biopsy
+smokes0 <- data %>%  filter(Biopsy == 0) # niebiopsy
+```
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Number.of.sexual.partners), breaks = 30, xlim = c(0,10),
+     main = "Biopsy a partnerzy seksualni",
+     xlab = "Liczba partnerow saksualnych")
+hist(na.omit(smokes0$Number.of.sexual.partners), breaks = 100, xlim = c(0,10),
+     main = "Nie-Biopsy a partnerzy seksualni",
+     xlab = "Liczba partnerow saksualnych")
+```
+
+Czyżby jednostajny rozkład zajśc w ciążę dla pacjentów z biopsją? :) 
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Num.of.pregnancies), breaks = 10, xlim = c(0,10),
+     main = "Biopsy a liczba zajsc w ciaze",
+     xlab = "Liczba ciaz")
+hist(na.omit(smokes0$Num.of.pregnancies), breaks = 20, xlim = c(0,10),
+     main = "Nie-Biopsy a liczba zajsc w ciaze",
+     xlab = "Liczba ciaz")
+```
+     
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Hormonal.Contraceptives..years.), breaks = 40
+     , xlim = c(0,10),
+     main = "Biopsy a antykoncepcja hormonalna",
+     xlab = "Lat stosowania")
+hist(na.omit(smokes0$Hormonal.Contraceptives..years.), breaks = 100
+     , xlim = c(0,10),
+     main = "Nie-Biopsy a antykoncepcja hormonalna",
+     xlab = "Lat stosowania")
+```
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Age),
+     breaks = 15,
+     main = "Biopsy a wiek",
+     xlab = "Lat")
+hist(na.omit(smokes0$Age),
+     main = "Nie-Biopsy a wiek",
+     xlab = "Lat")
+```
+      
+
+
+## Analiza Citology
+
+
+
+```{r}
+smokes1 <- data %>%  filter(Citology == 1) # citology
+smokes0 <- data %>%  filter(Citology == 0) # niecitology
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Number.of.sexual.partners), breaks = 20, xlim = c(0,10),
+     main = "Citology a partnerzy seksualni",
+     xlab = "Liczba partnerow saksualnych")
+hist(na.omit(smokes0$Number.of.sexual.partners), breaks = 100, xlim = c(0,10),
+     main = "Nie-Citology a partnerzy seksualni",
+     xlab = "Liczba partnerow saksualnych")
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Num.of.pregnancies), breaks = 30, xlim = c(0,10),
+     main = "Citology a liczba zajsc w ciaze",
+     xlab = "Liczba ciaz")
+hist(na.omit(smokes0$Num.of.pregnancies), breaks = 40, xlim = c(0,10),
+     main = "Nie-Citology a liczba zajsc w ciaze",
+     xlab = "Liczba ciaz")
+```
+     
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Hormonal.Contraceptives..years.), breaks = 100
+     , xlim = c(0,10),
+     main = "Citology a antykoncepcja hormonalna",
+     xlab = "Lat stosowania")
+
+hist(na.omit(smokes0$Hormonal.Contraceptives..years.), breaks = 70
+     , xlim = c(0,10),
+     main = "Nie-Citology a antykoncepcja hormonalna",
+     xlab = "Lat stosowania")
+```
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Age),
+     breaks = 20,
+     main = "Citology a wiek",
+     xlab = "Lat")
+hist(na.omit(smokes0$Age),
+     main = "Nie-Citology a wiek",
+     xlab = "Lat")
+```      
+
+## Analiza Schiller
+
+
+
+```{r}
+smokes1 <- data %>%  filter(Schiller == 1)
+smokes0 <- data %>%  filter(Schiller == 0) 
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Number.of.sexual.partners), breaks = 30, xlim = c(0,10),
+     main = "Schiller a partnerzy seksualni",
+     xlab = "Liczba partnerow saksualnych")
+hist(na.omit(smokes0$Number.of.sexual.partners), breaks = 50, xlim = c(0,10),
+     main = "Nie-Schiller a partnerzy seksualni",
+     xlab = "Liczba partnerow saksualnych")
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Num.of.pregnancies), breaks = 10, xlim = c(0,10),
+     main = "Schiller a liczba zajsc w ciaze",
+     xlab = "Liczba ciaz")
+hist(na.omit(smokes0$Num.of.pregnancies), breaks = 10, xlim = c(0,10),
+     main = "Nie-Schiller a liczba zajsc w ciaze",
+     xlab = "Liczba ciaz")
+```
+     
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Hormonal.Contraceptives..years.), breaks = 40
+     , xlim = c(0,10),
+     main = "Schiller a antykoncepcja hormonalna",
+     xlab = "Lat stosowania")
+hist(na.omit(smokes0$Hormonal.Contraceptives..years.), breaks = 100
+     , xlim = c(0,10),
+     main = "Nie-Schiller a antykoncepcja hormonalna",
+     xlab = "Lat stosowania")
+```
+      
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Age),
+     breas = 10,
+     main = "Schiller a wiek",
+     xlab = "Lat")
+hist(na.omit(smokes0$Age),
+     breaks = 8,
+     main = "Nie-Schiller a wiek",
+     xlab = "Lat")
+```
+      
+  
+## Analiza Hinselmann
+
+
+
+```{r}
+smokes1 <- data %>%  filter(Hinselmann == 1)
+smokes0 <- data %>%  filter(Hinselmann == 0) 
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Number.of.sexual.partners), breaks = 10, xlim = c(0,10),
+     main = "Hinselmann a partnerzy seksualni",
+     xlab = "Liczba partnerow saksualnych")
+hist(na.omit(smokes0$Number.of.sexual.partners), breaks = 50, xlim = c(0,10),
+     main = "Nie-Hinselmann a partnerzy seksualni",
+     xlab = "Liczba partnerow saksualnych")
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Num.of.pregnancies), breaks = 10, xlim = c(0,10),
+     main = "Hinselmann a liczba zajsc w ciaze",
+     xlab = "Liczba ciaz")
+hist(na.omit(smokes0$Num.of.pregnancies), breaks = 30, xlim = c(0,10),
+     main = "Nie-Hinselmann a liczba zajsc w ciaze",
+     xlab = "Liczba ciaz")
+```
+     
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Hormonal.Contraceptives..years.), breaks = 40
+     , xlim = c(0,10),
+     main = "Hinselmann a antykoncepcja hormonalna",
+     xlab = "Lat stosowania")
+hist(na.omit(smokes0$Hormonal.Contraceptives..years.), breaks = 100
+     , xlim = c(0,10),
+     main = "Nie-Hinselmann a antykoncepcja hormonalna",
+     xlab = "Lat stosowania")
+```
+
+```{r}
+par(mfrow=c(1,2))
+hist(na.omit(smokes1$Age),
+     main = "Hinselman a wiek",
+     breaks = 20,
+     xlab = "Lat")
+hist(na.omit(smokes0$Age),
+     main = "Nie-Hinselman a wiek",
+     xlab = "Lat")
+```
+
