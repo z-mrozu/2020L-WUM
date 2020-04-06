@@ -370,7 +370,7 @@ df2_ref <-  cbind(df2_ref, reference)
 ```
 
 
-## Train/test   75%/25% split
+## Train/test   80%/20% split
 
 I divide my sets into training and testing sets so that training could be performed on the training set and 
 
