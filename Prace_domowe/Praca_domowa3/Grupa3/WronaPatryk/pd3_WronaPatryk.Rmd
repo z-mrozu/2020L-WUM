@@ -1,0 +1,448 @@
+---
+title: "WUM - Praca domowa 3"
+author: "Patryk Wrona"
+date: "06.04.2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true 
+---
+
+```{r setup, include=FALSE}
+library(rpart)
+library(dplyr)
+library(caret)
+library(psych)
+library(forcats)
+library(glmnet)
+library(gbm)
+library(nnet)
+library(mlr)
+library(VIM)
+set.seed(44)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+
+```
+
+# Basic homework
+
+## Loading the data concerning rainfall in Australia.
+
+```{r}
+australia <- read.csv("../../australia.csv")
+
+australia$RainToday <- as.factor(australia$RainToday)
+australia$RainTomorrow <- as.factor(australia$RainTomorrow)
+levels(australia$RainToday) <- c("NO", "YES")
+levels(australia$RainTomorrow) <- c("NO", "YES")
+```
+
+
+
+## Dividing data into train & test sets
+```{r}
+# shuffling our data
+australia <- australia[ sample(nrow(australia)),]
+
+percent.80 <- round(nrow(australia)*0.8)  #  80% of number of rows
+
+train <- australia[1:percent.80,]
+test <- australia[( percent.80 + 1):nrow(australia), ]
+```
+
+We want that our 3 classification models were compared on the same folds so that we obtain a more justified reason to compare them.
+That's why I will use a reusable trainControl object.
+
+## Creating reusable trainControl object:
+
+
+```{r}
+# Creating custom indices:
+myFolds <- createFolds(train$RainTomorrow, k = 5)
+
+# Creating reusable trainControl object:
+myControl <- trainControl(
+  summaryFunction = twoClassSummary,
+  classProbs = TRUE, 
+  verboseIter = FALSE,
+  savePredictions = TRUE,
+  index = myFolds,
+  search = "grid"
+)
+```
+
+## Training of 3 classification models
+
+We will train 3 different classification models.
+I did not use randomForest/ ranger because i wanted to try out new more sophisticated models. These are:
+
+- Lasso and Elastic-Net Regularized Generalized Linear Model
+- Gradient Boosting Machine
+- Neural Network
+
+
+### "Penalized" Regression Modeling
+
+Hyperparameters I chose:
+- alpha = 1  (meaning it will be a pure lasso regression)
+- lambda = 0.0001 (size of the penalty)
+
+
+```{r}
+# "penalized" Regression Modeling
+# Lasso and Elastic-Net Regularized Generalized Linear Model
+model_glmnet <- caret::train(RainTomorrow ~ .,
+               data = train,
+               method = "glmnet",
+               trControl = myControl,
+               tuneGrid = expand.grid(alpha = 1,  # pure lasso
+                                      lambda = 0.0001),
+               verbose = FALSE)
+```
+
+### Gradient Boosting Machine
+
+
+It uses decision trees and starts the combining process at the beginning, while Random Forest combines trees at the end.
+
+
+Hyperparameters I tuned:
+- n.trees  = number of trees
+- interaction.depth = splits performed starting from a single node
+- shrinkage = learning rate
+- n.minobsinnode = number of min observations in node
+
+
+```{r}
+# Gradient Boosting Machine  "gbm"
+
+model_gbm <- caret::train(RainTomorrow ~ .,
+               data = train,
+               method = "gbm",
+               trControl = myControl,
+               tuneGrid = expand.grid(n.trees = c(10,20,30),
+                                      interaction.depth = c(3,5),
+                                      shrinkage = c(0.5, 0.8),
+                                      n.minobsinnode = c(3, 6)),
+               verbose = FALSE)
+
+# let's see which hyperparameter set were chosen as the best:
+model_gbm
+
+```
+
+
+### Regularized Neural network
+
+Hyperparameters I chose:
+ - size = 1 (number of units in hidden layer)
+ - decay = parameter for weight decay(regularization parameter to avoid over-fitting).
+
+```{r}
+# Regularized Neural Network
+model_nnet <- caret::train(RainTomorrow ~ .,
+                   data = train,
+                   method = "nnet",
+                   trControl = myControl,
+                   tuneGrid = expand.grid(size = 1,
+                                          decay = c(0.2, 2, 10,  20)), 
+                   verbose = FALSE, trace = FALSE)
+
+# let's see which hyperparameter set were chosen as the best:
+model_nnet
+```
+
+
+## Comparing 3 models
+
+Now I will compare my 3 models using metrics:
+- AUC (Area Under Curve)
+- Sensitivity
+- Specifity
+- Accuracy
+- F1-score
+
+### Listing using resamples()
+
+
+```{r}
+list_of_models <- list(glmnet = model_glmnet, 
+                       gbm = model_gbm, 
+                       nnet = model_nnet)
+res <- resamples(list_of_models) # results from multiple models
+
+```
+
+### Boxplots of estimated performance metrics
+
+Interval estimation with the confidence level = 0.95.
+
+I like statistics so I'll use boxplots to compare my 3 models:
+
+
+AUC, Sensitivity & Specifity comparison:
+
+```{r}
+# 
+bwplot(res, metric = "ROC", main = "AUC, confidence lvl = 0.95")
+```
+
+**Lasso and Elastic-Net Regularized Generalized Linear Model** is the best.
+
+```{r}
+bwplot(res, metric = "Sens", main = "Sensitivity, confidence lvl = 0.95")
+```
+
+**Lasso and Elastic-Net Regularized Generalized Linear Model** is the best.
+
+```{r}
+bwplot(res, metric = "Spec", main = "Specifity, confidence lvl = 0.95")
+```
+
+**Neural network** had the best performance. It has a highest estimation of Specifity.
+
+
+### XYPLOT
+
+For identifying if one model is consistently better than the other across all folds, or if there are situations when the inferior model produces better predictions on a particular subset of the data.
+
+
+```{r}
+res2 <- res
+res2$models <- c("glmnet", "gbm")
+xyplot(res2, metric = "ROC")
+```
+
+```{r}
+res2 <- res
+res2$models <- c("glmnet", "nnet")
+xyplot(res2, metric = "ROC")
+
+```
+
+As we can see, **glmnet** had the best AUC regardless of the subset of data, because dots are only on 'glmnet side'.
+
+
+### Accuracy & F-1 Score metrics
+
+```{r}
+p <- predict(model_glmnet, newdata = test) 
+
+conf <- table(p, test$RainTomorrow) # confusion matrix
+acc_glmnet <- sum(diag(conf))/sum(conf) # accuracy
+pr = conf[1,1]/(conf[1,1] + conf[1,2])
+re = conf[1,1]/(conf[1,1] + conf[2,1])
+f1_glmnet = harmonic.mean(c(pr,re)) # F-1 score using psych package
+list(acc_glmnet, f1_glmnet)
+```
+
+```{r}
+p <- predict(model_gbm, newdata = test)
+
+conf <- table(p, test$RainTomorrow) # confusion matrix
+acc_gbm <- sum(diag(conf))/sum(conf) # accuracy
+pr = conf[1,1]/(conf[1,1] + conf[1,2])
+re = conf[1,1]/(conf[1,1] + conf[2,1])
+f1_gbm = harmonic.mean(c(pr,re)) # F-1 score using psych package
+
+list(acc_gbm, f1_gbm)
+```
+
+```{r}
+p <- predict(model_nnet, newdata = test)
+
+conf <- table(p, test$RainTomorrow) # confusion matrix
+acc_nnet <- sum(diag(conf))/sum(conf) # accuracy
+pr = conf[1,1]/(conf[1,1] + conf[1,2])
+re = conf[1,1]/(conf[1,1] + conf[2,1])
+f1_nnet = harmonic.mean(c(pr,re)) # F-1 score using psych package
+
+list(acc_nnet, f1_nnet)
+```
+
+We can see that **gbm** (Gradient Boosting Machine) model achieved the highest Accuracy and F-1 Score. But it was very close to **glmnet** performance. Therefore, as far as metrics Accuracy & F1-Score are concerned, gbm & glmnet performed in the best way.
+
+
+### Conclusion
+
+In the majority of metrics  **glmnet** revealed to be better(or almost better) than other models. As far as the AUC is concerned, xyplot showed us that glmnet overwhelmed other models. Neural network achieved the highest average Specifity at the confidence level 0.95.
+
+
+That's why I show also an additional plot, specific to our winner:
+
+```{r}
+# Lasso plot for the winner: "Penalized" Regression Modeling
+par(mfrow=c(1, 2))
+plot(model_glmnet$finalModel, "norm",   label=TRUE)
+plot(model_glmnet$finalModel, "lambda", label=TRUE)
+```
+
+Some commantary for the above plot:
+
+
+The L1 norm is the regularization term for LASSO
+Little L1 norm signifies a lot of regularization.
+Hence, with L1 norm = 0 we have an empty model! With no features.
+With increasing the L1 norm, each feature used to logistic regression will (at a certain L1 norm value) enter the model because its coefficients would be non-zero.
+We can see how the coefficients of each feature evaluated (and which of them were penalized when the other were not) thanks to this plot.
+
+
+The plot on the right is equivalent to the left-side plot. Only the x scale changes.
+
+
+The respective labels for each feature can be attributed to each curve. Nevertheless, I did not do this because it exceeds this project's scope.
+
+
+# Additional-1-point homework 
+
+
+I'll estimate the price for 3 types of encoding & calculate RMSE and R^2 performance metrics for these models.
+
+
+## Loading data
+
+```{r}
+df2 <- read.csv("https://www.dropbox.com/s/360xhh2d9lnaek3/allegro-api-transactions.csv?dl=1")
+
+VIM::countNA(df2)  # there are 0 NA values, no imputation needed
+```
+
+
+## Getting 3 datasets after 3 types of encoding
+
+I'll consider 3 tpes of encoding used in 2nd homework:
+- lump  (insignificant main_category to 'Others')
+- one-hot
+- reference
+
+### All minor categories to Others
+
+W wyniku one-hot encoding dostaliśmy aż 27 i 26 kolumn, możnaby wziąć 10 najczęściej występujących 'main_category', a resztę wrzucić do jednego worka - jako kolumnę 'Others'.
+
+```{r}
+lump <- fct_lump(df2$main_category, n = 10)
+cdf <- createDummyFeatures(lump)
+
+# choosing only significant (giving any information) columns
+# deleting useless data such as date, item_id or category which was already encoded
+df2_lump <- df2 %>% select(-c(lp, date,seller, item_id, categories, main_category))
+
+# cbind
+df2_lump <-  cbind(df2_lump, cdf)
+
+```
+
+
+### One-hot encoding
+
+
+```{r}
+# one-hot encoding
+onehot <- df2$main_category %>% createDummyFeatures(method = "1-of-n")
+
+
+# choosing only significant (giving any information) columns
+# deleting useless data such as date, item_id or category which was already encoded
+df2_onehot <- df2 %>% select(-c(lp,seller, date, item_id, categories, main_category))
+
+# cbind
+df2_onehot <-  cbind(df2_onehot, onehot)
+```
+
+
+### Reference encoding
+
+```{r}
+# ref encoding
+reference <- df2$main_category %>% createDummyFeatures(method = "reference")
+
+
+# choosing only significant (giving any information) columns
+# deleting useless data such as date, item_id or category which was already encoded
+df2_ref <- df2 %>% select(-c(lp,seller, date, item_id, categories, main_category))
+
+# cbind
+df2_ref <-  cbind(df2_ref, reference)
+
+```
+
+
+## Train/test   75%/25% split
+
+I divide my sets into training and testing sets so that training could be performed on the training set and 
+
+```{r}
+percent.80 <- round(nrow(df2)*0.8)  #  80% of number of rows
+
+# shuffling our data:
+df2_lump <- df2_lump[ sample(nrow(df2)),]
+df2_onehot <- df2_onehot[ sample(nrow(df2)),]
+df2_ref <- df2_ref[ sample(nrow(df2)),]
+
+# Make Valid Column Names 
+colnames(df2_lump) <- make.names(colnames(df2_lump))
+colnames(df2_onehot) <- make.names(colnames(df2_onehot))
+colnames(df2_ref) <- make.names(colnames(df2_ref))
+
+# getting test & train sets:
+train_lump <- df2_lump[1:percent.80,]
+test_lump <- df2_lump[( percent.80 + 1):nrow(df2_lump), ]
+
+train_onehot <- df2_onehot[1:percent.80,]
+test_onehot <- df2_onehot[( percent.80 + 1):nrow(df2_onehot), ]
+
+train_ref <- df2_ref[1:percent.80,]
+test_ref <- df2_ref[( percent.80 + 1):nrow(df2_ref), ]
+
+```
+
+
+
+## Training recursive partitioning models
+
+```{r}
+model_lump <- rpart(price ~ ., data = train_lump)
+model_onehot <- rpart(price ~ ., data = train_onehot)
+model_ref <- rpart(price ~ ., data = train_ref)
+
+```
+
+
+## Evaluation of each model's performance
+
+LUMP:
+
+```{r}
+p <- predict(model_lump, newdata = test_lump)
+postResample(p, test_lump$price)
+```
+
+ONEHOT:
+
+```{r}
+p <- predict(model_onehot, newdata = test_onehot)
+postResample(p, test_onehot$price)
+```
+
+REFERENCE:
+
+```{r}
+p <- predict(model_ref, newdata = test_ref)
+postResample(p, test_ref$price)
+```
+
+## Conclusion
+
+
+The lower RMSE, the less error we have made while predicting.
+The higher the R-squared, the better the model fits our testing data.
+
+
+Comparing RMSE & R^2 we conclude that **LUMP** encoding had the lowest RMSE and the average R^2. On the other hand, **onehot-encoding** with the highest R^2 has unfortunately the highest RMSE. Therefore, lump model can be considered as the best model.
+
+
+I remind that the price target variable had values between 0 and 119 000.
+It means that RMSE of about 300-600 is more than acceptable. Our models knew how to learn and predict the prices.
