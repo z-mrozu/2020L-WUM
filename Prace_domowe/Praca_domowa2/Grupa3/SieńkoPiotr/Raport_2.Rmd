@@ -1,0 +1,249 @@
+---
+title: "Praca Domowa 2"
+author: "Piotr Sieńko"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    css: style.css
+    code_folding: hide
+---
+
+
+# 1. Kodowanie zmiennych kategorycznych
+<p>&nbsp;</p>
+Naszym zadaniem jest wykonanie kodowania dla zmiennej _it_location_ za pomocą _target_encoding_ oraz wykonanie _one_hot_encoding_ na zmiennej _main_category_.
+
+## 1.1 Target Encoding
+<p>&nbsp;</p>
+Metoda ta polega na zastąpieniu zmiennych kategorycznych średnią celu dla każdego kategorii. Dzięki temu uzyskujemy zmienną liczbową, co może polepszyć w niektórych przypadkach działanie naszego modelu.
+
+```{r message=FALSE}
+library(mlr)
+library(mice)
+library(visdat)
+library(ggplot2)
+library(dplyr)
+```
+
+<p>&nbsp;</p>
+```{r warning=FALSE, cache=TRUE, include=FALSE}
+data <- read.csv("allegro-api-transactions.csv")
+
+
+###################
+# 1. Target encoding dla it_location, target -> price
+
+# Najpierw obliczam średnie dla każdego levelu factora
+means <- aggregate(data[,8], by = list(data$it_location), FUN = "mean") 
+colnames(means) <- c("it_location", "avg_price")
+
+# Wyczytałem w internetach że można ewentualnie zaszumić średnie
+# means$avg_price <- means$avg_price * rnorm(length(means$avg_price), mean = 1, sd = 0.05)
+
+data_encoded <- merge(data, means, by = "it_location")
+data_encoded$it_location <- data_encoded$avg_price
+
+
+# Wyrzucamy kolumne, która dubluje teraz it_location
+data_encoded <- data_encoded[,-15]
+```
+
+W porównaniu z _one hot encoding_, ten sposób kodowania zajmuje o wiele mniej pamięci. Zamiast tworzenia kolumny dla każdego poziomu factora, mamy tyle samo kolumn, co w początkowej ramce danych. Mając na uwadze fakt, że factor _it_location_ ma kilka tysięcy poziomów, rozmiar ramki byłby niedopuszczalny. Dodatkowo, wiele modeli nie radzi sobie ze zmiennymi kategrycznymi mającymi wiele poziomów.
+ 
+<p>&nbsp;</p>
+
+```{r echo=TRUE, results="asis", cache=TRUE}
+
+knitr::kable(head(data_encoded[c(5:10),c(1,4,9)]), align = "c")
+
+```
+
+```{r warning=FALSE, cache=TRUE, fig.align="center", fig.height=10, fig.width=15}
+
+# Aby zwiększyć czytelność, wykluczam wartości skrajne 
+data_plot_1 <- data_encoded[data_encoded$it_location <= 500, ]
+
+ggplot(data_plot_1, aes(x = it_location)) +
+  geom_histogram(fill = "#69b3a2", bins = 100) +
+  theme_bw(base_size = 20) +
+  ggtitle("Gęstość uzyskanej zmiennej")
+  
+
+```
+
+## 1.2 One-hot Encoding
+<p>&nbsp;</p>
+_One-hot Encoding_ w funkcji _createDummyFeatures()_ jest dostępny z metodą _"1-of-n"_ oraz _"reference"_. _"1-of-n"_ tworzy dla n poziomów n zmiennych kodujących przynależność każdego rekordu. W przypadku _"reference"_ pierwszy poziom factora jest pomijany, czyli powstaje n-1 zmiennych. Przynależność rekordu do pominiętego poziomu możemy wyczytać z braku przynależności do pozostałych kategorii. Dzięki temu nasza ramka danych jest mniejsza.
+
+
+```{r warning=FALSE, cache=TRUE}
+# 2. One-hot encoding
+
+# Opcja z 1-of-n
+data_hot_1 <- createDummyFeatures(data$main_category, method = "1-of-n")
+
+# opcja z reference
+# Po prostu pierwszy poziom jest pomijany - jest on "zakodowany" w nieobecności wśród innych poziomów
+data_hot_2 <- createDummyFeatures(data$main_category, method = "reference")
+
+
+```
+
+Poniżej pokazanych jest 6 pierwszych kolumn kodujących dla obu metod:
+```{r echo=TRUE, results="asis", cache=TRUE}
+
+knitr::kable(head(data_hot_1[,c(1:6)]), align = "c")
+```
+
+```{r echo=TRUE, results="asis", cache=TRUE}
+
+knitr::kable(head(data_hot_2[,c(1:6)]), align = "c")
+```
+
+## 1.3 Ordinal Encoding
+<p>&nbsp;</p>
+Alternatywnie, możemy użyć _Ordinal Encoding_, który przyporządkowuje każdej kategorii unikalną liczbę. 
+```{r warning=FALSE, cache=TRUE}
+
+# 3. Ordinal - najprostszy encoding 
+# Każdemu factorowi przypisujemy liczbę
+
+data_ordinal <- data
+
+data_ordinal$code_category <- as.numeric(factor(data$main_category))
+
+```
+
+```{r echo=TRUE, results="asis", cache=TRUE}
+
+knitr::kable(head(data_ordinal[,c(1, 14, 15)]), align = "c")
+```
+
+# 2. Imputacja
+<p>&nbsp;</p>
+Kolejnym zadaniem była imputacja losowo utworzonych braków w danych dla zmiennej _it_seller_rating_. Użyłem do tego funkcji _mice_ z metodą predykcyjnego dopasowania zmiennych - _pmm_. Następnie usunąłem dodatkowo 10% danych ze zmiennej _it_quantity_ i powtórzyłem eksperyment. Na koniec porównałem wyniki z danymi oryginalnymi za pomocą _RMSE_ czyli średniej kwadratowej błędu. 
+<p>&nbsp;</p>
+
+```{r message=FALSE, warning=FALSE, cache=TRUE, results="hide"}
+####################
+Rmse <- as.data.frame(NULL)
+Rmse_2 <- as.data.frame(NULL)
+
+# Uzupełnianie braków przy pełnym it_quantity
+# Aby poprawić wydajność, zmniejszono liczbę rekordów
+data_limited <- data[sample(nrow(data), 50000), ]
+data_imputed <- data_limited[c("price", "it_seller_rating", "it_quantity")]
+
+# Najpierw musimy je stworzyć 
+data_imputed[sample(nrow(data_imputed), nrow(data_imputed)*0.1), "it_seller_rating"] <- NA 
+
+set.seed(123)
+
+
+for (i in 1:10) {
+
+# 1. pmm
+# m - liczba imputacji  maxit - liczba iteracji 
+# ze względu na duży rozmiar danych będzie tylko jedna imputacja
+data_imputation_1 <- mice(data_imputed, method = "pmm", m = 1, maxit = 10)
+
+# uzupełnianie danych w oparciu o model
+data_imputed_1 <- complete(data_imputation_1)
+
+# Wyliczam średnią kwadratową błędów (RMSE)
+Rmse[i, 1] <- sqrt(mean(data_imputed_1$it_seller_rating - data_limited$it_seller_rating)^2)
+Rmse[i, 2] <- mean(data_imputed_1$it_seller_rating)
+
+}
+
+colnames(Rmse) <- c("RMSE", "Mean")
+
+
+```
+
+```{r message=FALSE, warning=FALSE, cache=TRUE, results='hide'}
+
+# Uzupełnianie braków przy niepełnym it_quantity
+# tworzę braki w it_quantity
+data_imputed[sample(nrow(data_imputed), nrow(data_imputed)*0.1), "it_quantity"] <- NA 
+
+
+for (i in 1:10) {
+  
+  # 1. pmm
+  # m - liczba imputacji  maxit - liczba iteracji 
+  # ze względu na duży rozmiar danych będzie tylko jedna imputacja
+  data_imputation_2 <- mice(data_imputed, method = "pmm", m = 1, maxit = 10)
+  
+  
+  
+  # uzupełnianie danych w oparciu o model
+  data_imputed_2 <- complete(data_imputation_2)
+  
+  # Wyliczam średnią kwadratową błędów (RMSE)
+  Rmse_2[i, 1] <- sqrt(mean(data_imputed_2$it_seller_rating - data_limited$it_seller_rating)^2)
+  Rmse_2[i, 2] <- mean(data_imputed_2$it_seller_rating)
+  
+}
+
+colnames(Rmse_2) <- c("RMSE", "Mean")
+
+
+
+```
+
+Poniżej znajduje się wykres gęstości zmiennej _it_seller_rating_ dla imputacji z pełnymi danymi o _it_quantity_. Kolorem niebieskim zaznaczone są dane oryginalne, natomiast czerwonym dane imputowane.
+```{r warning=FALSE, fig.align="center", fig.height=6, fig.width=10}
+
+# wykres gęstości. Niebieski - reszta danych, Czerwone - dane imputowane
+densityplot(data_imputation_1, data = ~ it_seller_rating, thicker = 2, lwd = 3)    
+```
+
+<p>&nbsp;</p>
+Gęstość dla ramki z brakami
+```{r fig.height=6, fig.width=10, warning=FALSE, , fig.align="center"}
+# wykres gęstości. Niebieski - reszta danych , Czerwone - dane imputowane
+densityplot(data_imputation_2, data = ~ it_seller_rating, thicker = 2, lwd = 3)    
+
+```
+<p>&nbsp;</p>
+Gęstości dla obu testów wykazują duże różnice między sobą. Obie jednak są dosyć podobne w stosunku do oryginalnych danych.
+
+<p>&nbsp;</p>
+
+Wyniki RMSE dla ramki z pełnymi danymi _it_quantity_
+
+<p>&nbsp;</p>
+```{r}
+
+knitr::kable(Rmse, align = "c")
+```
+
+
+<p>&nbsp;</p>
+
+Wyniki RMSE dla ramki z niepełnymi danymi _it_quantity_
+
+<p>&nbsp;</p>
+
+
+```{r warning=FALSE}
+
+knitr::kable(Rmse_2, align = "c")
+```
+
+Mimo, iż gęstości wydają się odpowiednie, w obu wersjach eksperymentu błąd jest duży. Widać, że dla metody _pmm_, braki w danych innej zmiennej nie miały dużego wpływu na skuteczność imputacji. W naszym wypadku RMSE było nawet mniejsze, gdy dane były niepełne. 
+
+```{r warning= FALSE}
+odchylenie <- as.data.frame(NULL)
+odchylenie[1:2,1] <- c("Pełne it_quantity", "Brakujące it_quantity")
+odchylenie[1,2] <- sd(Rmse$RMSE)
+odchylenie[2,2] <- sd(Rmse_2$RMSE)
+
+colnames(odchylenie) <- c("Ramka", "Odchylenie standardowe")
+
+
+knitr::kable(odchylenie, align = "c")
+
+```

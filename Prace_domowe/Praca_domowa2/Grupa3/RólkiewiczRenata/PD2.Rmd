@@ -1,0 +1,314 @@
+---
+title: "Praca domowa 2"
+author: "Renata Rólkiewicz"
+date: "26 03 2020"
+output:
+  html_document:
+    df_print: kable
+    toc: true
+    toc_depth: 2
+    toc_float: true
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(naniar) 
+library(visdat) 
+library(dplyr) 
+library(mice)
+library(stringi) 
+library(mlr) 
+library(forcats)
+library(kableExtra)
+library(plotly)
+```
+
+<style>
+
+  div.blue pre.r { background-color:#E6F3FF; }
+</style>
+
+<div class = "blue">
+
+# Wprowadzenie
+
+## Wstępna analiza danych
+
+---
+
+Przyjżyjmy się najpierw naszej ramce danych.\
+
+- Zawera ona 14 kolumn oraz 420020 wierszy\
+- Cztery zmienne są kategoryczne, reszta numeryczne\
+- Dotyczy zamówień składanych na platformie allegro
+
+``` {r, echo = FALSE}
+data <- read.csv("C:\\Users\\acer\\Desktop\\WUM\\PD2\\allegro-api-transactions.csv", sep = ",", encoding = "UTF-8")
+str(data)
+```
+
+```{r}
+kable(head(data, n=3)) %>% kable_styling("striped") %>% scroll_box(width = "100%")
+```
+
+
+## Czyszczenie danych
+
+---
+
+**1. MISSING VALUES**\
+Sprawdźmy czy mamy jakieś brakujące wartości:
+
+```{r}
+kable(miss_var_summary(data)) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+Nie ma w ramce danych żadnych wartości NA, jednak przyjżyjmy się bliżej zmiennej **it_location**:
+
+```{r}
+head(sort(unique(data$it_location)))
+```
+
+Zawiera ona bardzo dużo wartości typu *- - - - -*. Co z nimi zrobimy?
+
+- Możemy uznać je za bezwartościowe i traktować jak missing values (wstawić NA i uzupełniać za pomocą metod imputacji)
+- Możemy je zostawić i uznać, że te "nazwy" to sposób zakodowania jakichś danych
+- A może powinniśmy zamienić je na kategorię *nieznana*, bo to że nie ma nazwy miejscowości ma jakieś znaczenie?\
+
+Nie mam jednak dostępu do jakiegoś dokładniejszego opisu tych danych, więc cieżko jest zdecydować co by było lepsze. Na potrzeby tej pracy domowej nie wydaje się to być znaczące, dlatego zostawiam je w takiej formie jakiej są.\
+**2. WIELKOŚCI LITER**\
+Kolejny krok to ujednolicenie wielkości liter, tak aby zmienna "Warszawa" i "WARSZAWA" traktowane były jako taka sama kategoria. Do tego posłuży nam funkcja `stri_trans_tolower`, która zamieni wszystkie litery na małe.
+
+```{r}
+data$it_location <- as.factor(stri_trans_tolower(data$it_location))
+```
+
+**3. AGREGACJA**\
+Żeby jeszcze bardziej uprościć nasze dane i je "oczyścić" zastosujemy funkcję `fct_lump`, która zmienne, które występują rzadziej niż 0.00001 (mniej niż 5 razy) złączy w jedną kategorię *Other*.
+
+```{r}
+data$it_location <- fct_lump(data$it_location, prop = 0.00001)
+```
+
+**4. WYNIKI**\
+Udało nam się zmniejszyć liczbę unikalnych wartości zmiennej **it_location** (na początku - 10056, teraz - 3522). Może mieć to kolosalne znaczenie dla kodowania np. metodą One-Hot Encoding.
+
+```{r, echo=FALSE}
+str(data$it_location)
+```
+# Część 1: Kodowanie zmiennych kategorycznych
+
+## Target encoding
+
+---
+
+Nie ma żadnego pakietu (a przynajmniej ja tekiego nie znam), gdzie mamy funkcję Target Encoding, dlatego zrobimy to ręcznie.\
+W tej metodzie zmienna jest kodowana poprzez wyliczenie średniej z ustalonego targetu dla danej kategorii. Zaletą tej metody jest to, że nie powiększamy rozmiaru danych - nie dodajemy wielu kolumn (jak np. w OHE).\
+W naszym przypadku targetem jest zmienna **price**,a kodujemy zmienną **it_location**.
+
+```{r}
+# wybieramy potrzebne kolumny
+data_te <- data %>% select(it_location, price)
+# wyliczamy średnią wartość price grupując po it_location
+temp <- data_te %>% group_by(it_location) %>% summarise(mean_price=mean(price))
+data_te <- left_join(data_te, temp)
+kable(head(data_te)) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+
+Dla każdej kategorii wyznaczyliśmy średnią cenę (zmienna *mean_price*), która ją koduje. Na przykład dla Warszawy wynosi ona 84.13290.\
+Po zastasowaniu Target Encoding w ramce danych zamiast kolumny z nazwami miast, będziemy mieli kolumnę z wartościami numerycznymi.
+
+## One-Hot Encoding 
+
+---
+
+Kolejna część zadania to zastosowanie metody One-Hot Encoding dla zmiennej **main_category** przy użyciu funkcji `createDummyFeatures` z pakietu `mlr` dla dwóch metod.
+
+### Metody {.tabset}
+
+---
+
+#### **1-of-n**
+- `method = "1-of-n"` dla n kategorii powstanie n *dummy variables* (w naszym przypadku n = 27)
+
+
+```{r}
+dummy1 <- createDummyFeatures(data$main_category) # domyślnie jest "1-of-n"
+str(dummy1)
+```
+
+
+#### **reference**
+- `method = "reference"` dla n kategorii powstanie n-1 *dummy variables* tym samym "pomijając" jedną z kategorii.\
+Porównując wynik z wynikiem dla metody 1-of-n widzimy, że brakuje kolumny **Antyki i Sztuka**.
+
+```{r}
+dummy2 <- createDummyFeatures(data$main_category, method = "reference")
+str(dummy2)
+```
+
+### Porównanie metod
+
+---
+
+ - **1-of-n** tworzymy n kolumn - tyle ile jest kategorii w kodowanej zmiennej\
+ - **reference** tworzymy n-1 kolumn - omijamy pierwszą kategorię\
+
+Dlaczego reference działa skoro mamy o jedną kolumnę mniej (a co za tym idzie brakuje kodowania dla jednej kategorii)?\
+Otóż kolumna ta jest "zbędna". W przypadku, gdy cały wiersz będzie zawierał wyłącznie 0, oznaczać będzie, że dany rekord należy właśnie do pominiętej kategorii. Usuwając tę kolumnę nie tracimy więc żadnej informacji.\
+\
+Jaki jest sens usunięcia tej kolumny? \
+Główny problem, gdy mamy n kolumn (metoda 1-of-n) pojawia się, gdy chcemy wykorzystać algorytm oparty na regresji liniowej. Zakłada ona brak współliniowości predyktorów (zmiennych na podstawie których przewidujemy). I właśnie usunięcie tej jednej kolumny rozwiązuje ten problem. A dodatkowo w wielu przypadkach możemy w ten sposób znacząco zmniejszyć rozmiar danych.
+
+
+
+# Część 2: Uzupełnianie braków
+W tej części skupiamy się tylko na zmiennych *price*, *it_seller_rating* i *it_quantity*. Usuwamy losowych 10% wartości ze zmiennej *it_seller_rating*, uzupełniamy je za pomocą funkcji `mice` (będziemy używac metody `norm.predict`). Następnie za pomocą miary RMSE (Root Mean Squared Error) porównujemy wartości imputowane z oryginalnymi. Całość wykonujemy 10 razy i liczymy odchylenie standardowe RMSE.\
+Następnie powtarzamy całość dla zmiennej *it_quantity* oraz w przypadku, gdy obie zmienne zawierają wartości usunięte.
+
+```{r, echo=FALSE}
+data_ub <- data %>% select(price, it_seller_rating, it_quantity)
+n <- length(data_ub$it_seller_rating)
+set.seed(1)
+rmse1 <- c()
+rmse2 <- c()
+rmse3 <- c()
+rmse4 <- c()
+```
+
+## Zmienna it_seller_rating
+
+---
+
+
+```{r, message=FALSE, results=FALSE}
+
+for (i in 1:10){
+# usuwanie 10% danych, imputacja za pomocą MICE
+  indeksy <- sample(n,n/10)
+  data_na <- data_ub
+  data_na[indeksy,"it_seller_rating"] <- NA
+  data_imputed <- mice(data_na, m = 1, method = "norm.predict", maxit = 5)
+  data_imputed <- complete(data_imputed, 1)
+# obliiczenie RMSE
+  rmse1 <- append(rmse1, sqrt(mean((data_ub$it_seller_rating - data_imputed$it_seller_rating)^2)))
+}
+```
+
+```{r, echo=FALSE}
+cat(" Średnia RMSE:", mean(rmse1), "\n", "Odchylenie standardowe RMSE:", sd(rmse1))
+```
+
+## Zmienna it_quantity
+
+---
+
+
+```{r, message=FALSE, results=FALSE}
+
+for (i in 1:10){
+# usuwanie 10% danych, imputacja za pomocą MICE
+  indeksy <- sample(n,n/10)
+  data_na <- data_ub
+  data_na[indeksy,"it_quantity"] <- NA
+  data_imputed <- mice(data_na, m = 1, method = "norm.predict", maxit = 5)
+  data_imputed <- complete(data_imputed, 1)
+# obliiczenie RMSE
+  rmse2 <- append(rmse2, sqrt(mean((data_ub$it_quantity - data_imputed$it_quantity)^2)))
+}
+```
+
+```{r, echo=FALSE}
+cat(" Średnia RMSE:", mean(rmse2), "\n", "Odchylenie standardowe RMSE:", sd(rmse2))
+```
+
+## Obie zmienne jednocześnie
+
+---
+
+
+```{r, message=FALSE, results=FALSE}
+
+for (i in 1:10){
+# usuwanie 10% danych, imputacja za pomocą MICE
+  indeksy1 <- sample(n,n/10)
+  indeksy2 <- sample(n,n/10)
+  data_na <- data_ub
+  data_na[indeksy1, "it_seller_rating"] <- NA
+  data_na[indeksy2,"it_quantity"] <- NA
+  data_imputed <- mice(data_na, m = 1, method = "norm.predict", maxit = 5)
+  data_imputed <- complete(data_imputed, 1)
+# obliiczenie RMSE
+  rmse3 <- append(rmse3, sqrt(mean((data_ub$it_seller_rating - data_imputed$it_seller_rating)^2)))
+  rmse4 <- append(rmse4, sqrt(mean((data_ub$it_quantity - data_imputed$it_quantity)^2)))
+}
+```
+
+```{r, echo=FALSE}
+cat(" Średnie RMSE dla zmiennej it_seller_rating: ", mean(rmse3),"\n","Średnie RMSE dla zmiennej it_quantity: ", mean(rmse4), "\n", "\n",
+    "Odchylenie standardowe RMSE dla zmiennej it_seller_rating: ", sd(rmse3), "\n", "Odchylenie standardowe RMSE dla zmiennej it_quantity: ", sd(rmse4))
+```
+
+## Podsumowanie oraz wizualizacja wyników {.tabset}
+
+---
+
+```{r, echo=FALSE}
+x <- 1:10
+df <- data.frame(x,rmse1,rmse2,rmse3,rmse4)
+```
+
+
+### it_seller_rating
+
+```{r, echo=FALSE}
+df1 <- data.frame("wskaźnik"=c("mean","sd"), "pojedynczo"=c(mean(rmse1),sd(rmse1)), "podwójnie"=c(mean(rmse3),sd(rmse3)))
+kable(df1) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+```{r, echo=FALSE}
+plot_ly(df, x = ~x, y = ~rmse1, name = 'brakujące dane w jednej zmiennej', type = 'scatter', mode = 'lines') %>%
+  add_trace(y = ~rmse3, name = 'brakujące dane w dwóch zmiennych', mode = 'lines') %>%
+  layout(xaxis = list(range=c(0.5,10), dtick = 1, tick0 = 1, title="Kolejne iteracje"),
+         yaxis = list(title="Wartość RMSE"))
+
+```
+
+### it_quantity
+
+```{r, echo=FALSE}
+df2 <- data.frame("wskaźnik"=c("mean","sd"), "pojedynczo"=c(mean(rmse2),sd(rmse2)), "podwójnie"=c(mean(rmse4),sd(rmse4)))
+kable(df2) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+```{r, echo=FALSE}
+plot_ly(df, x = ~x, y = ~rmse2, name = 'brakujące dane w jednej zmiennej', type = 'scatter', mode = 'lines') %>%
+  add_trace(y = ~rmse4, name = 'brakujące dane w dwóch zmiennych', mode = 'lines') %>%
+  layout(xaxis = list(range=c(0.5,10), dtick = 1, tick0 = 1, title="Kolejne iteracje"),
+         yaxis = list(title="Wartość RMSE"))
+
+```
+
+## {-}
+
+---
+
+**WNIOSKI**\
+
+- Zarówno średnia jak i odchylenie standardowe jest znacząco większe w przypadku zmiennej it_seller_rating, co nie powinno dziwić patrząc na zakres wartości tych zmiennych:\
+  **it_seller_rating**
+  + Min = -1
+  + Max = 292074
+  + średnia = 20402.59\
+  **it_quantity**
+  + Min = 0
+  + Max = 99999
+  + średnia = 6748
+- W przypadku, gdy brakujące dane występowały w dwóch zmiennych (na wykresach kolor żółty), zarówno dla it_seller_rating jak i it_quantity wzrosło odchylenie standardowe, a średnia utrzymywała się na mniej więcej tym samym poziomie
+- Model dość "słabo" poradził sobie z imputacją braków danych, co wynika zapewne z braku korelacji pomiędzy zmiennymi
+
+</div>
