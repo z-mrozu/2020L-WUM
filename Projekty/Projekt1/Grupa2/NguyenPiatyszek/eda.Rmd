@@ -1,0 +1,142 @@
+---
+title: "WUM Projekt 1"
+author: "Ngoc Anh Nguyen & Piotr Piątyszek"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.width = 10)
+knitr::opts_chunk$set(fig.height = 10)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+# Ładowanie danych
+```{r, echo=TRUE}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(DataExplorer)
+library(patchwork)
+data <- read.csv("./cervical-cancer.csv")
+```
+
+# Rozkład zmiennych kategorycznych
+```{r}
+plot_bar(data)
+```
+
+# Rozkład zmiennych numerycznych
+```{r}
+plot_histogram(data, ncol=3, geom_histogram_args=list(binwidth=1))
+```
+
+# Macierz korelacji
+```{r}
+plot_correlation(
+  data %>%
+    select(-STDs.cervical.condylomatosis, -STDs.AIDS),
+  cor_args=list(use="pairwise.complete.obs"))
+```
+
+# Popularność chorób wenerycznych
+```{r}
+data %>%
+  select(starts_with("STDs.")) %>%
+  select(-starts_with("STDs..")) %>%
+  pivot_longer(everything()) %>%
+  group_by(name) %>%
+  summarise(freq=sum(value, na.rm=TRUE)/n()*100) %>%
+  arrange(desc(freq)) %>%
+  mutate(name=factor(name, levels=name)) %>%
+  ggplot(aes(y=name, x=freq)) +
+    geom_col() +
+    theme_gray() +
+    ylab("Choroba") +
+    xlab("Procent chorych")
+```
+
+# Korelacja chorób wenerycznych
+```{r}
+data %>%
+  select(starts_with("STDs.")) %>%
+  select(-starts_with("STDs..")) %>%
+  select(-STDs.AIDS, -STDs.cervical.condylomatosis) %>%
+  mutate_all(as.numeric) %>%
+  plot_correlation(cor_args=list(use="pairwise.complete.obs"))
+```
+
+# Rak macicy a antykoncepcja
+```{r}
+data %>%
+  mutate(Dx=as.logical(Dx)) %>%
+  filter(!is.na(Dx)) %>%
+  pivot_longer(cols=c("IUD..years.", "Hormonal.Contraceptives..years.")) %>%
+  ggplot(aes(x=Dx, y=value, fill=name)) +
+    geom_violin() +
+    ylab("Lata stosowania antykoncepcji") +
+    xlab("Diagnoza") +
+    scale_x_discrete(breaks=c(0,1), labels=c("Zdrowa", "Chora")) +
+    theme_gray()
+```
+
+# Metody diagnozy a wiek
+```{r}
+data %>%
+  rename(Diagnosis=Dx) %>%
+  pivot_longer(cols=c("Diagnosis", "Hinselmann", "Biopsy", "Schiller", "Citology"), names_to="method", values_to ="result") %>%
+  mutate(result=as.logical(result)) %>%
+  filter(!is.na(result)) %>%
+  ggplot(aes(x=Age, fill=result)) +
+    geom_density(alpha=0.3) +
+    facet_wrap("method") +
+    theme_gray()
+```
+
+# Metody diagnostyki
+```{r}
+data %>%
+  select(Dx, Dx.Cancer, Hinselmann, Schiller, Citology, Biopsy) %>%
+  mutate_all(as.numeric) %>%
+  plot_correlation(cor_args=list(use="pairwise.complete.obs"))
+```
+
+# Palenie
+```{r}
+data %>%
+  filter(Smokes == 1) %>%
+  ggplot(aes(y=Smokes..packs.year., x=Age)) +
+    geom_jitter(width=0.2, height=0.2) +
+    theme_gray() +
+    xlab("Wiek") +
+    ylab("Licza wypalonych paczek rocznie przez osoby palące") +
+    geom_smooth(method="lm") -> p1
+data %>%
+  mutate(Age=cut(Age, breaks=c(-Inf, 15, 20, 25, 30, 40, 50, Inf))) %>%
+  group_by(Age) %>%
+  summarise(freq=sum(Smokes, na.rm=TRUE)/n()*100) %>%
+  arrange(desc(freq)) %>%
+  ggplot(aes(y=freq, x=Age)) +
+    ylab("Procent palących") +
+    xlab("Grupa wiekowa") +
+    theme_gray() +
+    geom_col() -> p2
+p2+p1
+```
+
+
+# Kobieta wyzwolona
+```{r}
+data %>%
+  mutate(diff=Age - First.sexual.intercourse) %>%
+  filter(diff > 0) %>%
+  mutate(Partners.per.year = Number.of.sexual.partners/diff) %>%
+  filter(!is.na(Partners.per.year)) %>%
+  mutate(Age=cut(Age, breaks=c(-Inf, 15, 20, 25, 30, 40, 50, 60, Inf))) %>%
+  ggplot(aes(y=Partners.per.year, x=Age)) +
+    geom_boxplot()
+```
+
+![](puszczamy.png)
