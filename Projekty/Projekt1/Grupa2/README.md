@@ -24,7 +24,7 @@
 * **Dla chętnych** (Za tą część nie będzie punktów - ale na pewno sprawdzę i dam feedback):
     - Interpretable Machine Learning (XAI)
         - Zastosować dowolne metody i przeprowadzić analizę wyników naszego modelu. Polecam metody:
-            - *Ceterus Paribus*
+            - *Ceteris Paribus*
             - *PD - plot*
             - *ALE- plot*
             - *Breakdown*
