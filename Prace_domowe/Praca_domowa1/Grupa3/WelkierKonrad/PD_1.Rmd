@@ -1,0 +1,144 @@
+---
+title: "PD_1"
+author: "Konrad Welkier"
+date: "8 03 2020"
+output: html_document
+---
+## Wstęp
+
+W poniższym sprawozdaniu prezentuję wyniki eksploracji przeprowadzonej na zbiorze dotyczącym chorób serca, do którego dane zebrane zostały wśród pacjentów szpitala w Cleveland.
+
+Na wstępie załadujmy odpowiednie biblioteki oraz analizowany zbiór danych.
+```{r setup, include=TRUE, warning=FALSE, message=FALSE}
+library(DataExplorer)
+library(ggplot2)
+library(dplyr)
+data <- read.csv("heart_disease_weka_dataset.csv")
+```
+
+## Początkowa obróbka danych
+
+Na tym etapie zamienimy na faktory odpowiednie kolumny, a także podzielimy nasz zbiór danych na dwa pozbiory, z których jeden zawierać będzie pacjentów zdiagnozowanych jako chorych, drugi natomiast osoby, które wg lekarzy nie mają problemów z sercem. Podział ten przyda się do jednego z porównań, które zaprezentowane zostanie w dalszej części sprawozdania.
+```{r, include=TRUE}
+data$sex <- as.factor(data$sex)
+data$cp <- as.factor(data$cp)
+data$fbs <- as.factor(data$fbs)
+data$restecg <- as.factor(data$restecg)
+data$exang <- as.factor(data$exang)
+data$slope <- as.factor(data$slope)
+data$ca <- as.factor(data$ca)
+data$thal <- as.factor(data$thal)
+disease <- data %>% filter(data$num == 0)
+no_disease <- data %>% filter(data$num == 1)
+data$num <- as.factor(data$num)
+```
+
+## Ogólne informacje o zbiorze
+
+Właściwą pracę ze zbiorem zacznijmy od zaprezentowania podstawowych faktów:
+```{r}
+summary(data)
+```
+
+W oczy rzucają się wartości -1e+05 w kolumnach ca oraz thal, ale występują one jedynie w kilku przypadkach, więc możemy uznać, że są to jedynie niewiele zmieniające zbiór błędy (te wartości zdają się być problemem, ponieważ w opisie zbioru, w tych kolumnach, takie wartości nie są uwzględnione). Ponadto możemy zauważyć, że na faktory zamienione zostały wszystkie kolumny, które takiej zamiany wymagały. Wreszcie możemy zaobserwować, że rozważani pacjenci są w zdecydowanej większości mężczyznami, natomiast w kwestii wieku mają oni od 29 do 77 lat.
+
+
+## Pierwsze zależności
+
+Do odnalezienia pierwszych zależności wykorzystamy bibliotekę DataExplorer. Najpierw utworzymy gotowy raport za pomocą innej funkcji z tej samej biblioteki.
+```{r, include=FALSE, warning=FALSE,message=FALSE, comment=FALSE, echo=TRUE}
+create_report(data)
+```
+
+W tym miejscu warto zauważyć, że wygenerowany automatycznie raport jest interesującą opcją do szybkiego poznania podstawowych własności nowego zbioru. Jednakże ma kilka wad, wśród których znajdą się niewątpliwie załączanie zbędnych wykresów, które muszą znaleźć się w automatycznym raporcie, ponieważ w żadnym miejscu nie są filtrowane oraz nieestetyczny wygląd większości wykresów. W naszym przypadku sporą wadą jest również fakt, że utworzone histogramy oraz bar charty nie uwzględniają podziału pacjentów względem zdiagnozowanej choroby, który to podział stanowi najważniejsze rozróżnienie w analizowanym zbiorze.
+
+Teraz skorzystamy z funkcji plot_correlation, która wskaże możliwości dalszej eksploracji zbioru.
+```{r}
+plot_correlation(data)
+```
+
+Powyższy wykres zawiera wiele sugestii, które zostaną przekształcone w interesujące zależności w dalszej częsci sprawozdania. Na razie jedynie zwrócimy pobieżnie uwagę na najciekawsze fragmenty powyższej grafiki. Są nimi widoczne zależności pomiędzy kolumną "num", a kolumnami pochodnymi od "cp" (tzn. "cp1", "cp2" i "cp3"), kolumną "oldpeak", kolumną "thalach" oraz kolumnami pochodnymi od "slope".
+
+## Interesujące zależności
+
+W najważniejszej części sprawozdania skupimy się na rozwijaniu zależności znalezionych w "pierwszych zależnościach" wykorzystując w tym celu zróżnicowane wykresy.
+
+# Zależność nr 1
+
+Zaczniemy od sprawdzenia zależności pomiędzy spoczynkownym ciśnieniem krwi (mm Hg) [trestbps], a zdiagnozowaną chorobą serca, która chociaż nie została zaobserwowana na wykresie powyżej, intuicyjnie zdaje się występować. Tej zależności przyjrzymy się rozbijając otrzymany wykres na 4 części w zależności od rodzaju bólu, który odczuwają pacjenci.
+
+```{r, echo=FALSE}
+data$cp <- as.integer(data$cp)
+data[data$cp == 1,"cp"] <- "typical angina"
+data[data$cp == 2,"cp"] <- "atypical angine"
+data[data$cp == 3,"cp"] <- "non-anginal pain"
+data[data$cp == 4,"cp"] <- "asymptomatic"
+ggplot(data, aes(x=data$trestbps, fill=data$num)) + geom_histogram(alpha = 0.5, position = "dodge", bins = 20) + facet_wrap(~cp) + labs(title = "Resting blood pressure (mm Hg) vs heart disease by type of pain", x = "resting blood pressure (mm Hg)", y = "number of patients") + guides(fill=guide_legend(title="Do the patients have a heart disease?")) + scale_fill_manual(values=c("#ff0000", "#44f36f"),labels=c("Yes", "No"))
+```
+
+Podsumowując ten etap można zauważyć, że w przypadku bólu bezobjawowego (asymptomatic) zdecydowana większość pacjentów nie została zdiagnozwaną jako posiadający problemy z sercem. Przeciwną tendencję widać natomiast u pacjentów skarżących się na bóle określone jako "atypical angine" oraz "non-anginal pain". Wreszcie, u pacjentów, których ból opisany został jako "typical angina", nie można jednoznacznie zdiagnozować wiodącego trendu. Jednkże najciekawszą obesrwacją z powyższego wykresu zdaje się być obalenie mitu, że im wyższe ciśnienie spoczynkowe, tym większa szansa posiadnia problemów z sercem. Generalnie można natomiast stwierdzic, że średnie spoczynkowe ciśnienie krwi u badanych pacjentów to 120-140 mm Hg.
+
+# Zależność nr 2
+
+Zależność z tego pozrodziału została zaobserwowana na wykresie korelacji i odnosi się do współczynnika otrzymywanego podczas badania EKG, który porównuje pracę serca podczas wysiłku oraz podczas odpoczynku (ST depression). Badana relacja zaprezentowana zostanie za pomocą wykresu gęstości. 
+
+
+```{r, echo=FALSE}
+ggplot(data, aes(x=oldpeak, fill=num)) + geom_density(alpha=0.5) + labs(title = "ST depression induced by exercise relative to rest vs heart disease", x = "ST depression induced by exercise relative to rest") +theme(axis.title.y = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank()) + guides(fill=guide_legend(title="Do the patients have a heart disease?")) + scale_fill_manual(values=c("#ff0000", "#44f36f"),labels=c("Yes", "No"))
+```
+
+Z powyższego wykresu można jasno wywnioskować, że ST depression jest znacząco inne u pacjentów chorych i u pacjentów zdrowych. Dla zdecydowanej większości pacjentów chorych ST depression ma wartość mniejszą od 2, podczas gdy u pacjentów zdrowych stosunkowo często pojawić się mogą wartości nawet do 4. Na tej podstwie można określić, że posiadanie ST depression powyżej 2 dość silnie sugeruje nieposiadanie problemów z sercem.
+
+# Zależność nr 3
+
+W tym podrozdziale zbadamy dogłębniej wspomnianą w podsumowaniu do wykresu korelacji zależność pomiędzy nachyleniem krzywej otrzymanej podczas badania EKG, a chorobą serca. Znalezienie jakiejś zależności ułatwiło sklasyfikowanie dość skomplikowanej informacji jaką jest nachylenie nieoczywistej do odbioru krzywej (otrzymanej podczas badania EKG) do jednej z trzech grup: "upsloping", "flat" oraz "downsloping".
+
+```{r, echo=FALSE}
+ggplot(data, aes(x=slope, fill=num)) + geom_bar(alpha=0.5, position = "dodge") + labs(title = "Is the slope of the peak exercise ST segment related to the heart disease?", x = "the slope of the peak exercise ST segment", y = "number of patients") + guides(fill=guide_legend(title="Do the patients have a heart disease?")) + scale_x_discrete(labels = c("upsloping", "flat", "downsloping")) + scale_fill_manual(values=c("#ff0000", "#44f36f"),labels=c("Yes", "No"))
+```
+
+W tym przypadku zależność jest dość widoczna. W przypadku krzywej o charakterze "upsloping" u 3/4 pacjentów przydzielonych do tej grupy zdiagnozowana została choroba serca. Dla krzywej określonej jako "flat" 2/3 badanych nie zostało określonych mianem chorych, natomiast w przypadku krzywej "downsloping" próżno doszukiwać się jakiejkolwiek zależności (niewielkie różnice między słupkami, ale i same liczności grup też dość niewielkie).
+
+# Zależność nr 4
+
+Kolejna ciekawa zależność, której warto się przyjrzeć to relacja występująca pomiędzy wiekiem pacjentów, a ich maksymalnym tętnem. Zależność ta została zaprezentowana za pomocą boxplotów oraz z podziałem na pacjentów ze zdiagnozowaną chorobą serca oraz tymi, którzy nie mają takich problemów.
+
+```{r, echo=FALSE}
+disease <- disease[,c("thalach","age")]
+colnames(disease) <- c("maximum_heart_rate_achieved", "age_of_the_patients")
+plot_boxplot(disease[,c("maximum_heart_rate_achieved", "age_of_the_patients")], title="Patients diagnosed with  a heart disease", by="age_of_the_patients", ggtheme = theme_light() )
+
+no_disease <- no_disease[,c("thalach","age")]
+colnames(no_disease) <- c("maximum_heart_rate_achieved", "age_of_the_patients")
+plot_boxplot(no_disease[,c("maximum_heart_rate_achieved", "age_of_the_patients")], title="Patients not diagnosed with a heart disease", by="age_of_the_patients", ggtheme = theme_light())
+```
+
+Bardzo ciekawy jest fakt, że w przypadku osób chorych występująca zależność jest widoczna na pierwszy rzut oka. Mianowicie wraz ze wzrostem wieku pacjentów posiadane przez nich tętno maleje. Natomiast w przypadku pacjentów zdrowych zależność taka w żadnym stopniu nie występuje. Moim zdaniem jest to bardzo ciekawa obserwcja, ponieważ nie jestem w stanie wyjaśnić, dlaczego taka tendencja ma miejsce.
+
+# Zależność nr 5
+
+Do przedstawienia ostatniej zależności wykorzystamy heat mapę. Konkretnie chodzi o relację pomiędzy wspomnianym już nachyleniem krzywej otrzymywanej podczas badania EKG oraz rodzajem bólu odczuwanego przez pacjentów. Jest to również zależność, którą udało się zauważyć już podczas analizowania wykresu korelacji. Na poniższej heat mapie (podobnie jak w zależności nr 4) zastosujemy podział na osoby ze zdiagnozowaną chorobą serca i bez niej.
+
+```{r, echo=FALSE}
+data$slope <- as.integer(data$slope)
+data[data$slope == 1,"slope"] <- "upslopping"
+data[data$slope == 2,"slope"] <- "flat"
+data[data$slope == 3,"slope"] <- "downsloping"
+
+tb_0 <- table(data[data$num==0,"cp"], data[data$num==0,"slope"])
+tb_1 <- table(data[data$num==1,"cp"], data[data$num==1,"slope"])
+
+tb1 <- as.data.frame(tb_1/sum(tb_1))
+tb0 <- as.data.frame(tb_0/sum(tb_0))
+colnames(tb1) <- c("slope", "cp", "probability")
+colnames(tb0) <- c("slope", "cp", "probability")
+
+ggplot(tb0, aes(slope, cp)) + geom_tile(aes(fill = probability), colour = "green") + labs(title="Patients diagnosed with a heart disease", x="chest pain type", y = "the slope of the peak exercise ST segment") + scale_fill_gradient(low = "green",high = "red")
+ggplot(tb1, aes(slope, cp)) + geom_tile(aes(fill = probability),colour = "green") + labs(title="Patients not diagnosed with a heart disease", x="chest pain type", y = "the slope of the peak exercise ST segment") + scale_fill_gradient(low = "green",high = "red")
+```
+
+Widać, że badana zależność różni się u obu grup. Można zauważyć, że kombinacje krzywej "uplsloping" z bólem typu "atypical angine" lub "non-anginal pain" są typowe dla osób chorych, natomiast u pacjentów zdrowych ból określany jest najcześciej jako "asymptomatic". W obu grupach ból typu "typical angina" pojawia się stosunkowo rzadko.
+
+## Podsumowanie
+
+Okazuje się, że z badanego zbioru można wyciągnąć przynajmniej kilka interesujących zależności. Większość z nich została odkryta już podczas analizy wykresu korelacji między kolumnami, a w następnych podrozdziałach jedynie przyjrzeliśmy się jej bliżej za pomocą czytelnych wykresów oraz krótkich opisów widocznych zależności.

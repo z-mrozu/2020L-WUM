@@ -1,0 +1,335 @@
+---
+title: "WUM - PD1"
+author: "Konrad Komisarczyk"
+date: "9.03.2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+# Heart Disease
+
+Przeprowadzę eksplorację danych dotyczących chorób serca z publicznie dostępnego zbioru: https://www.mldata.io/dataset-details/heart_disease/
+
+```{r}
+data <- read.csv("heart_disease_dataset.csv")
+```
+
+## Wstępne przygotowanie danych
+
+Na początek zamienimy dane kategoryczne na factory i sensownie nazwijmy poziomy:
+
+```{r}
+data$sex <- as.factor(data$sex)
+levels(data$sex) <- c("female", "male")
+
+data$cp <- as.factor(data$cp)
+levels(data$cp) <- c("typical angina", "atypical angine", "non-anginal", "asymptomatic")
+#colnames(data)[3] <- "chest pain type"
+
+data$fbs <- as.factor(data$fbs)
+levels(data$fbs) <- c("under 120 mg/dl", "over 120 mg/dl")
+#colnames(data)[6] <- "fasting blood sugar"
+
+data$restecg <- as.factor(data$restecg)
+levels(data$restecg) <- c("normal", "ST-T wave abnormality", "left ventricular hypertrophy")
+
+data$exang <- as.factor(data$exang)
+levels(data$exang) <- c("no", "yes")
+#colnames(data)[9] <- "excercise induced angina"
+
+
+data$slope <- as.factor(data$slope)
+levels(data$slope) <- c("upsloping", "flat", "downsloping")
+#colnames(data)[11] <- "slope of the peak exercise ST segment"
+
+data$ca <- as.factor(data$ca)
+levels(data$ca)[1] <- NA
+
+data$thal <- as.factor(data$thal)
+levels(data$thal) <- c(NA, "normal", "fixed defect", "reversable defect")
+
+data$num <- as.factor(data$num)
+levels(data$num) <- c(TRUE, FALSE)
+#colnames(data)[14] <- "heart disease"
+
+```
+
+Należy zwrócić uwagę na to, że w kolumnie `num` poziomy domyślnie nazwane były niezgodnie z intuicją.
+
+## Raport DataExplorer
+
+W załączonym pliku `report.html` znajduje się raport wygenerowany automatycznie z użyciem pakietu DataExplorer.
+
+```{r eval=FALSE}
+DataExplorer::create_report(data)
+```
+
+DataExplorer jest wygodnym narzędziem pozwalającym na szybkie wygenerowanie wielu podstawowych wykresów i statystyk, które zazwyczaj tworzy się eksplorując dane. Tworzy on jednak domyslnie wszystkie należące do jego możliwości wykresy, gdzie niektóre z nich mogą być nie potrzebne, np. gdy zbiór danych nie zawiera żadnych braków danych. 
+
+Nie rozumie on też dobrze danych i bez wczesniejszego przygotowania ich w tym przypadku wszystkie dane liczbowe rozpoznałby jako zmienne ciągłe, nawet w przypadku płci kodowanej liczbą 0/1. Ze względu na nierozpoznawanie przez pakiet zmiennych kategorycznych tworzyłby on także bezsensownie podzielone histogramy dla nich (dla `thal` i `ca`).
+
+
+
+## Podstawowe informacje o danych
+
+Przyjrzyjmy się podstawowym statystykom naszych danych:
+```{r}
+summary(data)
+```
+
+W zbiorze jest około dwa razy więcej mężczyzn niż kobiet, więc na pewno nie jest to zbiór reprezentatywny dla całej populacji. 
+U każdego z pacjentów występuje jakiś typ bólu w klatce piersiowej (kolumna `cp`), prawdopodobnie jest to zbiór osób które zgłosiły się do szpitala z bólem klatki piersiowej i może podejrzeniem choroby serca.
+
+
+U pacjentów zostały przeprowadzone i opisane w kolumnach m.in. następujące badania:
+
+
+* `cp` - określenie rodzaju bólu w klatce piersiowej na jaki skarży się pacjent     
+* `trestbps` - ciśnienie krwi w spoczynku (mm Hg)     
+* `chol` - poziom cholesterolu w serum krwi (mg/dl)
+* `fbs` - poziom cukru we krwi na czczo - powyżej 120 mg/dl może sugerować cukrzycę
+* `restecg` - sklasyfikowany wynik elektrokardiografii w spoczynku
+* `thalach` - maksymalny osiągnięty puls
+* `exang` - czy ból w klatce piersiowej wywołany był ćwiczeniem fizycznym
+* `oldpeak` - obniżenie odcinka ST na elektrokardiogramie wywołane przez wysiłek fizyczny     
+* `slope` - czy odcinek ST na elektrokardiografii jest unoszący się, opadający, cyz płaski       
+* `ca` - liczba głównych naczyń krwionośnych pokolorowanych przez fluoroskopię       
+
+
+W kolumnach `ca` oraz `thal` są odpowiednio 4 i 2 wartości "-100000", które należy potraktować jako braki danych. Nie jest wyjaśnione co znaczą te wartości. Ze względu na bardzo niewielką (6) liczbę obserwacji z takimi brakami, proponuję te obserwacje usunąć.
+
+
+25% próbki ma ciśnienie ponad 140 mm Hg, co uznaje się za granicę wysokiego ciśnienia. Za granicę zdrowego poziomu cholesterolu w serum krwi uznaje się około 200 mg/dl, poziom ten jest przekroczony dla większości (na pewno ponad 75%) próbki.
+
+
+## Rozkłady poszczególnych zmiennych ciągłych
+
+```{r}
+ggplot(data, aes(x = age)) + 
+  geom_histogram(aes(y = ..density..), bins = 16) + 
+  ggtitle("Rozkład wieku") +
+  stat_function(fun = dnorm, args = list(mean = mean(data$age), sd = sd(data$age)), color = "red")
+```
+
+```{r}
+ggplot(data, aes(x = "", y = age)) +
+  geom_boxplot() + 
+  ggtitle("Rozkład wieku")
+```
+
+```{r}
+ggplot(data, aes(x = trestbps)) + 
+  geom_histogram(aes(y = ..density..), bins = 16) + 
+  ggtitle("Rozkład ciśnienia krwi w spoczynku (mm Hg)") +
+  stat_function(fun = dnorm, args = list(mean = mean(data$trestbps), sd = sd(data$trestbps)), color = "red")
+```
+
+```{r}
+ggplot(data, aes(x = "", y = trestbps)) +
+  geom_boxplot() + 
+  ggtitle("Rozkład ciśnienia krwi w spoczynku (mm Hg)")
+```
+
+```{r}
+# x <- data$chol
+# hist(x, breaks = 16, main = "Rozkład poziomu cholesterolu w serum krwi (mg/dl)")
+ggplot(data, aes(x = chol)) + 
+  geom_histogram(aes(y = ..density..), bins = 16) + 
+  ggtitle("Rozkład poziomu cholesterolu w serum krwi (mg/dl)") +
+  stat_function(fun = dnorm, args = list(mean = mean(data$chol), sd = sd(data$chol)), color = "red")
+```
+
+```{r}
+ggplot(data, aes(x = "", y = chol)) +
+  geom_boxplot() + 
+  ggtitle("Rozkład poziomu cholesterolu w serum krwi (mg/dl)")
+```
+
+```{r}
+# x <- data$thalach
+# hist(x, breaks = 16, main = "Rozkład maksymalnego osiągniętego pulsu")
+ggplot(data, aes(x = thalach)) + 
+  geom_histogram(aes(y = ..density..), bins = 16) + 
+  ggtitle("Rozkład maksymalnego osiągniętego pulsu") +
+  stat_function(fun = dnorm, args = list(mean = mean(data$thalach), sd = sd(data$thalach)), color = "red")
+```
+
+```{r}
+ggplot(data, aes(x = "", y = thalach)) +
+  geom_boxplot() + 
+  ggtitle("Rozkład maksymalnego osiągniętego pulsu")
+```
+
+Czerwona krzywa to krzywa gęstości rozkładu normalnego o takim odchyleniu standardowym i średniej jak odpowiednie zmienne. 
+
+
+Rozkłady wszystkich powyższych zmiennych przypominają rozkład normalny, dodatkowo potwierdzają to wykresy kwantyl-kwantyl wygenerowane przez DataExplorer. Ma to sens, ponieważ są to dane medyczne, a w naukach biologicznych bardzo często występują rozkłady normalne.
+
+
+
+
+
+```{r}
+# x <- data$oldpeak
+# hist(x, breaks = 16, main = "Rozkład obniżenia odcinka ST wywołanego przez wysiłek fizyczny")
+ggplot(data, aes(x = oldpeak)) + 
+  geom_histogram(aes(y = ..density..), bins = 16) + 
+  ggtitle("Rozkład obniżenia odcinka ST wywołanego przez wysiłek fizyczny")
+```
+
+Obniżenie to jest bardzo bliskie 0 dla dużej części osób.
+
+```{r}
+data %>% 
+  filter(oldpeak == 0) %>% 
+  summarise(n = n(), min = min(oldpeak))
+```
+
+Okazuje się że dla prawie 1/3 próbki jest ono dokładnie równe 0. Można mieć podejrzenie co do twórców zbioru, że wpisywali oni 0 nie tylko osobom mającym obniżenie równe rzeczywiście 0, ale także w przypadku braku danych. Możliwe też że jeżeli dla niektórych osób odcinek był podniesiony, zamiast ujemnej liczby wpisywano 0. Możliwe też jest że dla wielu osób ten odcinek rzeczywiście nei zmienia wogóle wysokości, nie mam wiedzy specjalistycznej aby to potwierdzić. Można rozważyć kategoryzację zmiennej, np. na tych co mają opuszczony i tych co mają 0.
+
+## Rozkłady zmiennych kategorycznych
+
+```{r}
+ggplot(data, aes(x = cp)) + 
+  geom_bar() +
+  ggtitle("Rozkład rodzaju bólu w klatce piersiowej")
+```
+
+Rozkład poziomu cukru we krwi na czczo:
+```{r}
+table(data$fbs)
+```
+
+```{r}
+ggplot(data, aes(x = restecg)) + 
+  geom_bar() +
+  ggtitle("Rozkład wyniku elektrokardiografii w spoczynku")
+```
+
+Widzimy, że było zaledwie kilka przypadków deformacji fali ST-T. Prawie połowa pacjentów miała podejrzenie pogrubienia mięśni lewej komory serca, gdzie w ogólnej populacji występuje ono jedynie u około 10% kobiet i 15% męzczyzn (cyt. DOI: 10.1053/euhj.1998.1314).
+
+
+Rozkład exang:
+```{r}
+table(data$exang)
+```
+
+U około 1/3 pacjentów ból w klatce piersiowej wywołany był wysiłkiem fizycznym.
+
+```{r}
+ggplot(data, aes(x = slope)) + 
+  geom_bar() +
+  ggtitle("Rozkład pochylenia odcinka ST")
+```
+
+Opadający odcinek ST występował u małej liczby pacjentów. Ponad połowa pacjentów miała nie-unoszący się odcinek ST, gdzie powinien się on delikatnie unosić i nie-unoszący się może świadczyć o chorobie niedokrwiennej serca.
+
+
+```{r}
+ggplot(data, aes(x = ca)) + 
+  geom_bar() +
+  ggtitle("Rozkład liczby głównych naczyń krwionośnych pokolorowanych przez fluoroskopię")
+```
+
+```{r}
+ggplot(data, aes(x = thal)) + 
+  geom_bar() +
+  ggtitle("Rozkład thal")
+```
+
+
+
+
+
+## Korelacja zmiennych
+
+
+```{r fig.height=8}
+DataExplorer::plot_correlation(data[, -14])
+```
+
+```{r fig.height=8}
+DataExplorer::plot_correlation(data[, c("slope", "oldpeak", "thalach")])
+```
+
+```{r}
+p <- DataExplorer::plot_correlation(type = "continuous", data[, -14])
+```
+
+Żadne zmienne nie są ze sobą skorelowane. Nawet wybierając zmienne które na dużym wykresie zdają się mieć największy współczynnik korelacji okazuje się że wynosi on co najwyżej `0.51` (`oldpeak` - `slope_upsloping`).
+
+
+
+
+```{r}
+pairs(~ age + chol + trestbps, data = data, main = "Zależności między wiekiem, poziomem cholesterolu i ciśnieniem krwi")
+```
+
+Wykres potwierdza tylko brak korelacji pomiędzy zmiennymi.
+
+## Związek poszczególnych zmiennych z diagnozą choroby serca
+
+```{r}
+rpivotTable::rpivotTable(data,
+             cols = c("slope"),
+             rows = c("num"),
+             rendererName = "Row Heatmap",
+             aggregatorName = "Count")
+```
+
+Analizując analogicznie zalezności dla zmiennych `slope`, `age`, `cp`, `fbs`, `exang`, `ca` zauważamy, że:
+
+* osoby z płaskim odcinkiem ST rzadko mają diagnozowaną chorobę serca, a z podwyższającym się często, może jednak, wbrew temu co pisałem wczesniej to płaski odcinek ST jest prawidłowy      
+* nie ma wyraźnego związku między wiekiem a diagnozą      
+* wśród osób z niezdiagnozowaną chorobą ból w klatce piersiowej był najczęściej asymptomatyczny oraz w przypadku pozostałych rodzajów bólu często diagnozowano chorobę serca     
+* poziom cukru we krwi nie miał istotnego związku z diagnozą choroby        
+* w przypadku osób z chorobą serca ból w klatce piersiowej był dużo rzadziej wywołany wysiłkiem fizycznym       
+* u osób z chorobą serca bardzo często liczba naczyń krwionośnych pokolorowanych przez fluoroskopię wynosiła 0 i jeżeli wynosiła ona 0 u pewnej osoby to duże prawdopodobieństwo że u niej została zdiagnozowana choroba serca
+
+Zmienne `slope`, `cp`, `exang`, `ca` podejrzewam, że mogą być istotne w diagnozowaniu choroby serca.
+
+```{r}
+ggplot(data, aes(x = "", y = age)) +
+  geom_boxplot() + 
+  facet_wrap(~data$num) +
+  ggtitle("Rozkład wieku") + 
+  labs(subtitle = "W zależności od tego czy u pacjenta została zdiagnozowana choroba serca")
+```
+
+```{r}
+ggplot(data, aes(x = "", y = trestbps)) +
+  geom_boxplot() + 
+  facet_wrap(~data$num) +
+  ggtitle("Rozkład ciśnienia krwi w spoczynku (mm Hg)") + 
+  labs(subtitle = "W zależności od tego czy u pacjenta została zdiagnozowana choroba serca")
+```
+
+```{r}
+ggplot(data, aes(x = "", y = chol)) +
+  geom_boxplot() + 
+  facet_wrap(~data$num) +
+  ggtitle("Rozkład poziomu cholesterolu w serum krwi (mg/dl)") + 
+  labs(subtitle = "W zależności od tego czy u pacjenta została zdiagnozowana choroba serca")
+```
+
+```{r}
+ggplot(data, aes(x = "", y = thalach)) +
+  geom_boxplot() + 
+  facet_wrap(~data$num) + 
+  ggtitle("Rozkład maksymalnego osiągniętego pulsu") + 
+  labs(subtitle = "W zależności od tego czy u pacjenta została zdiagnozowana choroba serca")
+```
+
+Widzimy, że osoby ze zdiagnozowaną chorobą serca są przeciętnie trochę młodsze, mają nieco wyższy puls oraz wbrew pozorom nie mają wyższego ciśnienia krwi oraz poziomu cholesterolu. Mimo, że osoby mające diagnozę choroby są przeciętnie młodsze nie nalezy traktować niskiego wieku jako czynnika ryzyka choroby, po prostu osoby starsze bardziej martwią się o swoje zdrowie, są świadome ryzyka choroby i częściej zgłaszają się do szpitala.

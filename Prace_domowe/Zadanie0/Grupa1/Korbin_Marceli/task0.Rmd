@@ -1,0 +1,57 @@
+---
+title: "Praca nr 0 (WUM)"
+author: "Marceli Korbin"
+date: "25 II 2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Dane i biblioteki
+
+```{r data, echo=FALSE}
+abalone <- read.csv("abalone_weka_dataset.csv")
+library(dplyr)
+library(ggplot2)
+```
+
+## Rozkład zmiennej "rings" - histogram
+
+```{r rings1}
+ggplot(abalone) +
+  geom_histogram(aes(x=rings),
+                 bins=max(abalone$rings)) +
+  labs(title="Rozklad liczby kregow") +
+  xlab("rings") +
+  ylab("liczba")
+```
+
+Najczęściej występuje około 9-10 kręgów.
+
+## Liczba kręgów w zależności od płci i wieku - boxplot
+
+```{r rings2}
+ggplot(abalone,
+       aes(x=sex, y=rings)) +
+  geom_boxplot() +
+  labs(title="Rozklad liczby kregow wedlug plci/wieku") +
+  xlab("sex") +
+  ylab("rings")
+```
+
+Dzieci mają mniej kręgów.
+
+## Liczba kręgów w zależności od długości ciała
+
+```{r rings3}
+ggplot(abalone,
+       aes(x=length, y=rings)) +
+  geom_point() +
+  labs(title="Rozklad liczby kregow wedlug dlugosci ciala") +
+  xlab("length") +
+  ylab("rings")
+```
+
+Długość ciała nieco "ogranicza" liczbę kręgów.
