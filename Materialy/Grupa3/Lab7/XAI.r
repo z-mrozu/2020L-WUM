@@ -1,26 +1,32 @@
+# drwhy.ai
+# https://pbiecek.github.io/ema
+
 library(DALEX)
 library(ranger)
 
 # Stwórzmy dwa modele, liniowy oraz las losowy
 apartments_lm_model <- lm(m2.price ~ ., data = apartments)
 predicted_mi2_lm <- predict(apartments_lm_model, apartmentsTest)
+
 sqrt(mean((predicted_mi2_lm - apartmentsTest$m2.price)^2))
 
 apartments_rf_model <- ranger(m2.price ~ ., data = apartments)
-
-# Residuals
 predicted_mi2_rf <- predict(apartments_rf_model, apartmentsTest)$predictions
 sqrt(mean((predicted_mi2_rf - apartmentsTest$m2.price)^2))
 
 explainer_lm <- explain(apartments_lm_model,
-                        data = apartmentsTest[,2:6], y = apartmentsTest$m2.price)
+                        data = apartmentsTest,
+                        y = apartmentsTest$m2.price,
+                        label = "Linear Model")
 
 
 explainer_rf <- explain(apartments_rf_model,
-                        data = apartmentsTest[,2:6], y = apartmentsTest$m2.price)
+                        data = apartmentsTest,
+                        y = apartmentsTest$m2.price,
+                        label = "RF model")
 
-mp_lm <- model_performance(explainer_lm)
-mp_rf <- model_performance(explainer_rf)
+(mp_lm <- model_performance(explainer_lm))
+(mp_rf <- model_performance(explainer_rf))
 plot(mp_lm)
 plot(mp_lm, geom = "boxplot")
 plot(mp_lm, mp_rf)
@@ -44,6 +50,7 @@ plot(md_lm, md_rf, variable = "y", yvariable = "y_hat") +
 vi_lm <- variable_importance(explainer_lm, loss_function = loss_root_mean_square)
 plot(vi_lm)
 
+
 vi_rf <- variable_importance(explainer_rf, loss_function = loss_root_mean_square)
 plot(vi_rf)
 
@@ -66,6 +73,8 @@ plot(vi_class_rf)
 
 plot(vi_class_lm, vi_class_rf)
 
+
+
 # Partial Dependence Plots
 
 pdp_regr_rf  <- variable_effect(explainer_rf, variable =  "construction.year", type = "partial_dependency")
@@ -84,14 +93,18 @@ plot(pdp_regr_rf_factor, pdp_regr_lm_factor)
 
 # iBreakDown
 
-bd_lm <- predict_parts(explainer_lm, new_observation = apartments[1,])
+bd_lm <- predict_parts(explainer_lm, new_observation = apartments[5,])
 bd_rf <- predict_parts(explainer_rf, new_observation = apartments[1,])
-plot(bd)
+plot(bd_lm)
 plot(bd_rf)
 
 library(patchwork)
 
-plot(bd) | plot(bd_rf)
+plot(bd_lm) | plot(bd_rf)
+
+
+bd_titanic <- predict_parts(explainer_classif_rf, new_observation = titanic_imputed[1,])
+plot(bd_titanic)
 
 # modelStudio
 
@@ -99,6 +112,8 @@ library(modelStudio)
 new_observations <- titanic_imputed[1:4,]
 rownames(new_observations) <- c("Lucas", "James", "Thomas", "Nancy")
 modelStudio(explainer_classif_rf, new_observations)
+
+#modelOriented/modelStudio
 
 # DALEXtra
 
@@ -117,6 +132,10 @@ learner_lm <- mlr::makeLearner(
 )
 model_lm <- mlr::train(learner_lm, task)
 explainer_lm <- explain_mlr(model_lm, apartmentsTest, apartmentsTest$m2.price, label = "LM")
+
+?explain_mlr3
+?explain_mlr
+?explain_scikitlearn
 
 learner_rf <- mlr::makeLearner(
   "regr.randomForest"
