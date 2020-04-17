@@ -1,0 +1,142 @@
+---
+title: "Praca domowa 3"
+author: "Jacek Wiśniewski"
+date: "04/04/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rpart)
+library(pROC)
+library(rpart.plot)
+library(ROCR)
+library(mlr)
+library(tidyr)
+library(nnet)
+library(measures)
+```
+
+## Wstęp
+
+W tej pracy porównam działanie 3 klasyfikatorów (modelu liniowego, drzewa decyzyjnego i sieci neuronowej) i porównam ich działanie przy pomocy 3 miar (AUC, ACC, MMCE).
+
+## Tworzenie modeli
+
+### Wstępna obróbka danych
+
+```{r}
+# Wczytywanie danych
+data <- read.csv("australia.csv")
+
+# Zamiana zmiennych kategorycznych na factor'y
+data$RainToday <- as.factor(data$RainToday)
+data$RainTomorrow <- as.factor(data$RainTomorrow)
+
+# Podgląd w strukturę danych
+#str(data)
+#summary(data)
+data_pca <- prcomp(data[,c(-17, -18)], scale. = TRUE, center = TRUE)
+#summary(data_pca)
+
+# Tworzenie zbioru testowego i treningowego
+set.seed(123)
+train_index <- sample(1:nrow(data), 2/3*nrow(data))
+train_set <- data[train_index,]
+test_set <- data[-train_index,]
+```
+
+### Model GLM (generalized linear model)
+
+```{r}
+# Szkolenie modelu regresji
+linear_model <- glm(RainTomorrow ~ ., family = binomial(link = probit), data = train_set)
+prediction_linear <- predict(linear_model, newdata = test_set, type = "response")
+cutoff <- c(0.5)
+class_predict <- ifelse(prediction_linear > cutoff, 1, 0)
+table_linear <- table(test_set$RainTomorrow, class_predict)
+```
+
+Confusion matrix (tablica pomyłek)
+
+```{r}
+# Analiza wyników modelu regresji
+knitr::kable(table_linear, align = "c")
+```
+
+### Model rpart (Recursive Partitioning and Regression Trees)
+
+```{r}
+# Szkolenie modelu drzewa decyzyjnego
+tree_model <- rpart(RainTomorrow ~ ., method = "class",
+                    control = rpart.control(cp = 0.001),
+                    parms = list(prior = c(0.8, 0.2)),
+                    data = train_set)
+plotcp(tree_model)
+#printcp(tree_model)
+ptree_model <- prune(tree_model, cp = 0.0012)
+prediction_tree <- predict(ptree_model, newdata = test_set, type = "prob")
+prediction_tree_class <- predict(ptree_model, newdata = test_set, type = "class")
+table_tree <- table(test_set$RainTomorrow, prediction_tree_class)
+# Analiza wyników modelu drzewa
+```
+
+Confusion matrix (tablica pomyłek)
+
+``` {r}
+knitr::kable(table_tree, align = "c")
+prp(ptree_model, extra = 1)
+```
+
+### Model nnet (Neural Networks)
+
+```{r results='hide'}
+# Szkolenie modelu sieci nauronowych
+task <- makeClassifTask(data = train_set, target = "RainTomorrow")
+# listLearners("classif", properties = "prob")[c("class", "package")]
+lrn <- makeLearner("classif.nnet", predict.type = "prob", fix.factors.prediction = TRUE)
+# getParamSet("classif.nnet")
+lrn <- setHyperPars(lrn, par.vals = list(size = 1,
+                                         maxit = 150,
+                                         decay = 0.1))
+model <- train(lrn, task)
+prediction_nnet <- predict(model, newdata = test_set)
+table_nnet <- table(test_set$RainTomorrow, prediction_nnet$data$response)
+```
+
+Confusion matrix (tablica pomyłek)
+
+```{r}
+# Analiza wyników modelu sieci naurownowych
+knitr::kable(table_nnet, align = "c")
+```
+
+## Analiza wyników modeli
+
+```{r, message=FALSE}
+# Analiza porównawcza
+roc_linear <- roc(test_set$RainTomorrow, prediction_linear)
+roc_tree <- roc(test_set$RainTomorrow, prediction_tree[,2])
+roc_nnet <- roc(test_set$RainTomorrow, prediction_nnet$data$prob.1)
+```
+```{r}
+# Wykresy ROC na korzyść glm
+plot(roc_linear, col = "red")
+lines(roc_tree, col = "blue")
+lines(roc_nnet, col = "green")
+legend(x = 1.2, y = 1 , c("glm", "rpart", "nnet"), col = c("red", "blue", "green"), lty = 1)
+
+# Miary na korzyść glm
+knitr::kable(data.frame(model = c("glm", "rpart", "nnet"),
+           auc = c(auc(roc_linear), auc(roc_tree), auc(roc_nnet)),
+           acc = c(ACC(test_set$RainTomorrow, class_predict),
+           ACC(test_set$RainTomorrow, prediction_tree_class),
+           mlr::performance(prediction_nnet, measure = acc)),
+           mmce = c(MMCE(test_set$RainTomorrow, class_predict),
+           MMCE(test_set$RainTomorrow, prediction_tree_class),
+           mlr::performance(prediction_nnet, measure = mmce))), align = "c")
+```
+
+## Wnioski
+
+Model glm ze sposobem łączenia probit i ustawionym parametrem cutoff na 0.5 wypadł najlepiej spośród testowanych modeli.
