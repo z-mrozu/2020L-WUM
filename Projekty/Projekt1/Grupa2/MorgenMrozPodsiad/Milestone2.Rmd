@@ -1,0 +1,219 @@
+---
+title: "Milestone 2"
+author: "Paweł Morgen, Zuzanna Mróz, Aleksander Podsiad"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE)
+library(rpart)
+library(rpart.plot)
+library(mlr)
+library(gbm)
+library(ranger)
+library(ggplot2)
+source('inzyniera_cech.R')
+data_preprocessed <- data2
+data_enhanced <- data3
+set.seed(1234)
+```
+
+# Zabawa zmiennymi
+
+```{r new_features}
+new_columns <- colnames(data_enhanced)[!(colnames(data_enhanced)) %in% colnames(data_preprocessed)]
+print(new_columns)
+```
+
+Zostały wprowadzone nowe zmienne, utworzone na podstawie starych. Są to:
+
+* `gender` - kobieta/mężyczyzna, na podstawie personal; podział typu singiel/singielka rozbity na prostsze rozróżnienie k/m
+* `retirement_age` - True/False, na podstawie age; tutaj uznaliśmy >=65 za wiek emerytalny
+* `age_category` - young/middle-aged/old, na podstawie age; przedziały <=39/40-59/>=60
+* `never_married` - True/False, na podstaiwe personal; jako że te kategorie nie były najlepsze, np. dla kobiet jedyne kategorie to singielka/[mężata/rozwiedziona/wdowa] podzieliliśmy ludzi na tych którzy nigdy nie byli w związku i na tych co kiedyś byli albo nadal są
+* `employed` - True/False, na podstawie present_employement; nie bierzemy uwagi na to ile lat ktoś ma pracę tylko czy faktycznie ma pracę
+* `duration_years` - numeryczne, na podstawie duration; jako że duration było w miesiącach przekonwertowaliśmy je na lata
+* `duration_years_cat` - <1/1/1<&<2/2/2<&<3/3/3>, na podstawie duration_years; podzielone na pełne lata i pomiędzy przy uznaniu że 3+ lata to już jedna kategoria
+
+# Wstępne modelowanie - drzewo decyzyjne
+
+## Audyt modelu
+
+Na początku stworzymy trzy klasyfikatory za pomocą modelu `CART`, kierując się kryteriami:
+
+* w pierwszym przypadku ograniczymy głębokość drzewa i wyznaczymy minimalne rozbicie danych;
+* w drugim drzewie zbadamy wpływ parametru `cp` na postać drzewa;
+* trzecie drzewo tworzymy domyślną metodą;
+
+Używamy do tego pakietu `mlr`.
+
+```{r tree_cv}
+task <- makeClassifTask(id = "german_credit", data = data_enhanced, target = "customer_type")
+tree1_learner <- makeLearner('classif.rpart',
+                             par.vals = list(maxdepth = 2,
+                                             minsplit = 5),
+                             predict.type = 'prob')
+tree2_learner <- makeLearner('classif.rpart',
+                             par.vals = list(cp = 0.05),
+                             predict.type = 'prob')
+tree3_learner <- makeLearner('classif.rpart',
+                             predict.type = 'prob')
+
+# Sprawdźmy, czy nasz model będzie sprawiał problemy
+
+cv <- makeResampleDesc("CV", iters = 7)
+r1 <- resample(tree1_learner, task, cv, measures = list(auc, acc, ppv), models = TRUE)
+r2 <- resample(tree2_learner, task, cv, measures = list(auc, acc, ppv), models = TRUE)
+r3 <- resample(tree3_learner, task, cv, measures = list(auc, acc, ppv), models = TRUE)
+
+print(r1$aggr, r2$aggr, r3$aggr)
+
+```
+
+## Trening i ocena skuteczności
+
+Trenujemy drzewa decyzyjne na odpowiednich klasyfikatorach.
+
+```{r tree_train}
+tree1 <- train(tree1_learner, task)
+tree2 <- train(tree2_learner, task)
+tree3 <- train(tree3_learner, task)
+
+# sprawdźmy:
+predict(tree1, newdata = data_enhanced) %>%
+  performance(measures = list(auc, acc, ppv)) %>%
+  print()
+predict(tree2, newdata = data_enhanced) %>%
+  performance(measures = list(auc, acc, ppv)) %>%
+  print()
+predict(tree3, newdata = data_enhanced) %>%
+  performance(measures = list(auc, acc, ppv)) %>%
+  print()
+```
+
+## Wizualizacja
+
+Pierwsze drzewo decyzyjne jest dosyć proste ze względu na nałożone ograniczenia.
+
+```{r tree_plots_1}
+rpart.plot(getLearnerModel(tree1), type = 5, roundint = FALSE)
+```
+
+Drugie drzewo ma już trzy poziomy, z czego pierwsze dwa są takie same jak w powyższym.
+
+```{r tree_plots_2}
+rpart.plot(getLearnerModel(tree2), type = 5, roundint = FALSE)
+```
+
+Jeśli klasyfikator pozostawimy z domyślnymi parametrami, tworzy on już bardziej rozbudowane drzewo.
+
+```{r tree_plots_3}
+rpart.plot(getLearnerModel(tree3), type = 5, tweak = 1.7, fallen.leaves = FALSE, roundint = FALSE)
+```
+
+## Omówienie
+
+Okazuje się, że wszystkie trzy drzewa jako jedne z ważniejszych zmiennych wyznaczają `checking_account_status` oraz `duration`. Zmienne te umożliwiają drzewom tzw. optymalny podział dla najskuteczniejszej predykcji. Pierwsze dwa poziomy są wszędzie takie same, a kolejne drzewa są rozszerzeniami poprzednich. Z oczywistych względów ostatnie drzewo ma największą skuteczność przewidywania, lecz co ciekawe nie jest ona o wiele większa nawet od dwu poziomowego drzewa (różnica accuracy to około 6%). Na testowane drzewa decyzyjne nakładaliśmy te ograniczenia ze względu na podatność do overfittingu tego modelu.
+
+# Częściowe wyjaśnienie - ważność zmiennych
+
+Wybiegnijmy trochę w przyszłość i zobaczmy, co o ważności zmiennych myślą modele `ranger` (las losowy) oraz `gbm`.
+```{r explain, cache=TRUE}
+learner_ranger <- makeLearner("classif.ranger", par.vals = list(mtry = 3), predict.type = "prob")
+learner_gbm <- makeLearner('classif.gbm',predict.type = 'prob')
+
+# Audyt
+cv <- makeResampleDesc("CV", iters = 7)
+r1 <- resample(learner_ranger, task, cv, measures = list(auc, acc, ppv), models = TRUE)
+
+r2 <- resample(learner_gbm, task, cv, measures = list(auc, acc, ppv), models = TRUE)
+# ranger CV performance:
+print(r1$aggr)
+# gbm CV performance:
+print(r2$aggr)
+```
+```{r feature_performance, cache=TRUE}
+generateFeatureImportanceData(task, learner = learner_ranger, nmc = 10) -> feat_ranger
+generateFeatureImportanceData(task, learner = learner_gbm, nmc = 30) -> feat_gbm
+```
+
+```{r feature_plot, message=TRUE}
+plot_importance <- function(feat){
+data.frame(importance = as.numeric(t(as.matrix(feat$res))),
+           feature = colnames(feat$res)) %>% 
+  arrange(desc(importance)) %>%
+  mutate(feature = factor(feature, levels = feature))-> feats_summarized
+ggplot(feats_summarized, aes(x = feature, y = importance)) + geom_col() + coord_flip()}
+
+plot_importance(feat_ranger) + labs(title = 'Feature importance for random Forest model')
+plot_importance(feat_gbm) + labs(title = 'Feature importance for gbm model')
+```
+
+Jak widzimy, bardziej skomplikowane modele podzielają zdanie drzewa decyzyjnego o ogromnym znaczeniu zmiennej `checking_account_status`. Zmienne `duration` oraz `savings` również się pojawiają jako istotne. Zmienne `credit_amount` oraz `credit_history`, wykorzystywane w skomplikowanym drzewie nr 3, należą do najistotniejszych.
+
+Pominięcie innych zmiennych uznanych za istotne możemy uznać za poświęcenie w imię prostoty zbudowanego modelu.
+
+# Porównanie z bardziej skomplikowanymi modelami
+
+```{r compare}
+ranger_model <- train(learner_ranger, task)
+gbm_model <- train(learner_gbm, task)
+
+predictions <- predict(tree2, newdata = data3)
+troublesome_data <- data3[predictions$data$truth != predictions$data$response,]
+gbm_predicitons <- predict(gbm_model, newdata = data3)
+ranger_predicitons <- predict(ranger_model, newdata = data3)
+tree_predictions <- predict(tree2, newdata = data3)
+
+troublesome_gbm_predicitons <- predict(gbm_model, newdata = troublesome_data)
+troublesome_ranger_predicitons <- predict(ranger_model, newdata = troublesome_data)
+troublesome_tree_predictions <- predict(tree2, newdata = troublesome_data)
+
+
+
+# kalkulacja strat
+
+buisness_summary <- function(predictions){
+  select(data3, credit_amount, customer_type) %>%
+    mutate(customer_type_predicted = predictions,
+          false_positives = if_else(customer_type == 'Bad' & customer_type_predicted == 'Good',
+                                credit_amount, 0),
+          false_negatives = if_else(customer_type == 'Good' & customer_type_predicted == 'Bad',
+                                   credit_amount, 0),
+          true_positives = if_else(customer_type == 'Good' & customer_type_predicted == 'Good',
+                                    credit_amount, 0),
+          true_negatives = if_else(customer_type == 'Bad' & customer_type_predicted == 'Bad',
+                                   credit_amount, 0)) %>%
+    summarise(total_lost_credit = sum(false_positives),
+              total_lost_potential = sum(false_negatives),
+              total_correct_credit = sum(true_positives),
+              total_correct_decline = sum(true_negatives))
+}
+predictions_list <- list(tree_predictions,
+                         gbm_predicitons,
+                         ranger_predicitons)
+summary <- bind_rows(lapply(predictions_list, function(v) buisness_summary(v$data$response))) %>%
+  mutate(model = c('rpart', 'gbm', 'ranger'),
+         accuracy_overall = sapply(predictions_list, function(p) performance(p, measures = acc)),
+         accuracy_for_troublesome = c(0, 
+                                      performance(troublesome_gbm_predicitons, acc),
+                                      performance(troublesome_ranger_predicitons, acc)))
+knitr::kable(summary)
+```
+
+# Podsumowanie
+
+Prosty model drzewa decyzyjnego okazuje się niewiele słabszy od modelu `gbm`, zachowując przy tym czytelność i przejrzystość. Oczywiście, jest słabszy od modelu lasu losowego, ale tego się spodziewaliśmy - uproszczenie modelu pociąga za sobą gorszą skuteczność. 
+
+Co ciekawe, więcej zmiennych niekoniecznie znaczy lepiej dla modelu - jeśli te zmienne są skorelowane z już istniejącymi, nie niosą ze sobą nowej infromacji i model nie uznaje ich za istotne. 
+
+```{r session_info}
+# session info
+sessionInfo()
+```
