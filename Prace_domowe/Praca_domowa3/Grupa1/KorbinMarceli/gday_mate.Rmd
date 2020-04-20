@@ -1,0 +1,141 @@
+---
+title: "Praca domowa ze wstępu do uczenia maszynowego nr 3"
+author: "Marceli Korbin"
+date: "6 kwietnia 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE)
+```
+
+## Wstęp
+
+Tworzymy model klasyfikacyjny z trzech kandydatów: drzewo klasyfikacyjne _rpart_, kNN, lasy losowe. Modele będziemy sprawdzać na zbiorze danych o pogodzie w Australii.
+
+```{r setup2}
+australia <- read.csv("~/2020L-WUM/Prace_domowe/Praca_domowa3/australia.csv")
+library(dplyr)
+library(rpart)  # drzewo klasyfikacyjne
+library(rattle) # wizualizacja powyższego
+library(class)  # kNN
+library(ranger) # lasy losowe
+australia$RainTomorrow <- factor(australia$RainTomorrow, levels=unique(australia$RainTomorrow), ordered=F)
+# wcześniej to był "integer"
+```
+
+Każdy model potrzebuje treningowego zbioru danych. Nasz stworzymy z 70% oryginalnego:
+
+```{r traintest}
+baseCol <- 1:(ncol(australia)-1)
+classCol <- ncol(australia)
+trainID <- sample(1:nrow(australia), nrow(australia)*0.7)
+trainDF <- australia[trainID,]
+testDF <- australia[-trainID,]
+```
+
+Do sprawdzania skuteczności stworzymy kilka funkcji określających _accuracy_, _precision_, _recall_, _specificity_ i wynik _F1_.
+
+```{r measures}
+posneg <- function(predDF){
+  tab <- ifelse(predDF$pred=="0" & predDF$actual=="0", "TN",
+                 ifelse(predDF$pred=="0" & predDF$actual=="1", "FN",
+                        ifelse(predDF$pred=="1" & predDF$actual=="0", "FP", "TP")))
+  return(table(tab))
+}
+accuracy <- function(tab) return((tab['TP']+tab['TN'])/sum(tab))
+precision <- function(tab) return((tab['TP'])/(tab['TP']+tab['FP']))
+recall <- function(tab) return((tab['TP'])/(tab['TP']+tab['FN']))
+specificity <- function(tab) return((tab['TN'])/(tab['TN']+tab['FP']))
+# specificity to taki recall, ale dla obserwacji negatywnych
+f1 <- function(tab) return(2/(1/precision(tab)+1/recall(tab)))
+# średnia harmoniczna z precision i recall
+measures <- function(meas) return(c(accuracy=accuracy(meas)[['TP']],
+                                    precision=precision(meas)[['TP']],
+                                    recall=recall(meas)[['TP']],
+                                    specificity=specificity(meas)[['TN']],
+                                    F1=f1(meas)[['TP']]))
+```
+
+## Modele
+
+### Drzewo klasyfikacyjne
+
+Klasyczne drzewo klasyfikacyjne z pakietu _rpart_.
+
+Zmusimy liście do zebrania co najmniej 15 obserwacji, żeby mogły się rozdzielić. Ustawimy również parametr złożoności _cp_ na 0.01 - chodzi z nim o to, że nie dokonuje się podziałów, które obniżają ogólny brak dopasowania o wartość _cp_.
+
+```{r tree_class}
+klasyfikator1 <- rpart(RainTomorrow~., data=trainDF, minsplit=15, cp=0.01)
+fancyRpartPlot(klasyfikator1, caption=NULL)
+RainTomorrow1 <- predict(klasyfikator1, newdata=testDF[,baseCol], type="class")
+# z predykcji modelu i rzeczywistych obserwacji stworzę ramkę danych
+pred1 <- as.data.frame(RainTomorrow1) %>% cbind(testDF[,classCol])
+colnames(pred1) <- c("pred", "actual")
+```
+
+Ocena modelu:
+
+```{r measure1}
+measures1 <- measures(posneg(pred1))
+measures1
+```
+
+### 8 najbliższych sąsiadów
+
+Zgodnie z treścią podnagłówka, klasyfikujemy dane według k=8 najbliższych sąsiadów.
+
+```{r knn}
+klasyfikator2 <- knn(train=trainDF[,baseCol],
+                     cl=trainDF[,classCol],
+                     test=testDF[,baseCol],
+                     k=8)
+RainTomorrow2 <- as.integer(as.character(factor(klasyfikator2)))
+RainTomorrow2 <- factor(RainTomorrow2, levels=unique(RainTomorrow2), ordered=F)
+# ramka danych jak poprzednio
+pred2 <- as.data.frame(cbind(RainTomorrow2, testDF[,classCol]))-1
+# z nieznanego mi powodu robią się czynniki 1 i 2 zamiast 0 i 1; inaczej nie dałem rady naprawić tego błędu
+rownames(pred2) <- rownames(pred1)
+colnames(pred2) <- c("pred", "actual")
+```
+
+Ocena modelu:
+
+```{r measure2}
+measures2 <- measures(posneg(pred2))
+measures2
+```
+
+### Lasy losowe
+
+Model baggingowy znany z ćwiczeń. Tworzymy 1000 niezależnych drzew decyzyjnych, których predykcje złożą się na ostateczną.
+
+```{r ranfor}
+klasyfikator3 <- ranger(RainTomorrow~., data=trainDF, num.trees=1000)
+RainTomorrow3 <- predict(klasyfikator3, data=testDF[,baseCol])
+pred3 <- RainTomorrow3$predictions
+pred3 <- as.data.frame(cbind(pred3, testDF[,classCol]))-1
+# znowu to samo
+rownames(pred3) <- rownames(pred1)
+colnames(pred3) <- c("pred", "actual")
+```
+
+Ocena modelu:
+
+```{r measure3}
+measures3 <- measures(posneg(pred3))
+measures3
+```
+
+## Wnioski
+
+```{r res, echo=FALSE}
+resDF <- cbind(measures1, measures2, measures3) %>% as.data.frame()
+# rownames(resDF) <- c("accuracy", "precision", "recall", "specificity", "F1")
+colnames(resDF) <- c("rpart", "8NN", "randomForest")
+resDF
+```
+
+Ze względu na stosunkowo małą liczbę obserwacji pozytywnych, wszystkie modele były łatwo narażone na obniżany _recall_. Szczególnie drzewo _rpart_ wywnioskowało więcej nieprawidłowych obserwacji pozytywnych niż te oczekiwane. W zamian żaden model nie miał problemu z przewidywaniem obserwacji negatywnych (co opisuje _specificity_).
+
+Jako najlepszy model jestem skłonny wskazać lasy losowe, z uwagi na największą ilość najlepszych miar oceny.
