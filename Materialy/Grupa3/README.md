@@ -1,9 +1,10 @@
 Szymon Maksymiuk is inviting you to a scheduled Zoom meeting.
 
-Topic: WUM LAB7
-Time: Apr 9, 2020 12:00 PM Warsaw
+Topic: WUM LAB8
+Time: Apr 21, 2020 08:00 AM Warsaw
 
 Join Zoom Meeting
-https://zoom.us/j/190431571
+https://zoom.us/j/95626034008?pwd=WnBHUDNwRnlkRlhtdHE2VG92WTU4Zz09
 
-Meeting ID: 190 431 571
+Meeting ID: 956 2603 4008
+Password: 9WRib2
