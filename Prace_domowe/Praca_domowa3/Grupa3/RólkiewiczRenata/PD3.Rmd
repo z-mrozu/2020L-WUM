@@ -1,0 +1,427 @@
+---
+title: "Praca domowa 3"
+author: "Renata Rólkiewicz"
+date: "09 04 2020"
+output:
+  html_document:
+    df_print: kable
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: true 
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(naniar)
+library(visdat)
+library(mlr3)
+library(mlr3measures)
+library(mlr3learners)
+library(stringi)
+library(mlr3viz)
+library(forcats)
+library(dplyr)
+library(kableExtra)
+```
+
+<style>
+
+  div.blue pre.r { background-color:#E6F3FF; }
+</style>
+
+<div class = "blue">
+
+# Część pierwsza
+
+---
+
+Analizowany zbiór danych zawiera codzienne obserwacje pogody z wielu australijskich stacji pogodowych. Dane pochodzą\
+z https://www.kaggle.com/jsphyg/weather-dataset-rattle-package .\
+Nasz zbiór jest już przygotowany do pracy i nie zawiera brakujących wartości i kolumn z tekstem.
+
+- MinTemp - Minimalna temperatura [C]
+- MaxTemp - Maksymalna temperatura [C]
+- Rainfall - Suma opadów [mm]
+- Evaporation - Miara odparowywania [mm]
+- Sunshine - Suma czasu nasłonecznienia [h]
+- WindGustSpeed - Najwyższa prędkość wiatru [km/h]
+- WindSpeed9am - Prędkość wiatru o 9:00 [km/h]
+- WindSpeed3pm - Prędkość wiatru o 15:00 [km/h]
+- Humidity9am - Wilgotność o 9:00 [%]
+- Humidity3pm - Wilgotność o 15:00 [%]
+- Pressure9am - Ciśnienie atmosferyczne o 9:00 [hPa]
+- Pressure3pm - Ciśnienie atmosferyczne o 15:00 [hPa]
+- Cloud9am - Zachmurzenie o 9:00 [skala: 0 - słońce, 8 - całkowite zachmurzenie]
+- Cloud3pm - Zachmurzenie o 15:00 [skala: 0 - słońce, 8 - całkowite zachmurzenie]
+- Temp9am - Temperatura o 9:00 [C]
+- Temp3pm - Temperatura o 15:00 [C]
+- RainToday - Czy dzisiaj padał deszcz [0 - nie, 1 - tak]
+- Zmienna celu: RainTomorrow - Czy jutro będzie padał deszcz [0 - nie, 1 - tak]
+
+``` {r, echo = FALSE}
+data <- read.csv("C:/Users/acer/Desktop/WUM/PD3/australia.csv")
+data$RainToday <- as.factor(data$RainToday)
+data$RainTomorrow <- as.factor(data$RainTomorrow)
+```
+
+```{r}
+str(data)
+```
+
+```{r}
+kable(head(data, n=10)) %>% kable_styling("striped") %>% scroll_box(width = "100%")
+```
+
+\
+
+```{r}
+kable(miss_var_summary(data)) %>% kable_styling("striped", full_width=FALSE, position = "left")
+summary(data$RainTomorrow)
+```
+
+Patrząc na rozkład zmiennej `RainTomorrow` widzimy, że nasz zbiór jest niezbalansowany. Obserwacji pozytywnych mamy ponad 3 razy mniej niż negatywnych.
+
+## Podział danych na zbiór treningowy i testowy
+
+---
+
+Dzielimy na dwa zbiory - treningowy i testowy w stosunku 80% do 20%.
+```{r}
+set.seed(40)
+task = TaskClassif$new(id = "australia", backend = data, target = "RainTomorrow", positive = "1")
+
+train_set = sample(task$nrow, 0.8 * task$nrow)
+test_set = setdiff(seq_len(task$nrow), train_set)
+data_train <- data[train_set,]
+data_test <- data[test_set,]
+```
+
+## Klasyfikatory {.tabset}
+
+---
+
+Do tego zadania użyjemy następujących klasyfikatorów:
+
+ - Random Forest
+ - Naive Bayes
+ - Xgboost
+
+### Random Forest
+
+```{r}
+# definiujemy learner
+learner_ranger = mlr_learners$get("classif.ranger")
+learner_ranger$predict_type = "prob"
+```
+
+Przyjżyjmy się hiperparametrom dostępnym w tym modelu:
+
+```{r}
+learner_ranger$param_set
+```
+
+Spośród wielu dostępnych dla tego klasyfikatora parametrów ustawimy dwa:
+
+- `num.trees` - liczba drzew, domyślnie przyjmuje wartość 500
+- `mtry` - liczba zmiennych dostępna w każdym splicie, domyślnie - pierwiastek kwadratowy z liczby zmiennych predykcyjnych (zaokrąglony w dół)
+
+```{r}
+# ustawiamy hiperparametry
+learner_ranger$param_set$values = list(num.trees=1000, mtry=5)
+# trenujemy model na danych treningowych
+learner_ranger$train(task, row_ids = train_set)
+# testujemy model na danych testowych
+prediction_ranger = learner_ranger$predict(task, row_ids = test_set)
+```
+
+
+### Naive Bayes
+
+```{r}
+# definiujemy learner
+learner_nb = mlr_learners$get("classif.naive_bayes")
+learner_nb$predict_type = "prob"
+```
+
+Przyjżyjmy się hiperparametrom dostępnym w tym modelu:
+
+```{r}
+learner_nb$param_set
+```
+.
+Ustawimy jeden parametr:
+
+- `laplace` - odpowiada za *Laplace Smoothing*, domyślnie przyjmuje wartość 0
+
+```{r}
+# ustawiamy hiperparametr
+learner_nb$param_set$values = list(laplace=3)
+# trenujemy model na danych treningowych
+learner_nb$train(task, row_ids = train_set)
+# testujemy model na danych testowych
+prediction_nb = learner_nb$predict(task, row_ids = test_set)
+```
+
+### Kknn
+
+```{r}
+# definiujemy learner
+learner_kknn = mlr_learners$get("classif.kknn")
+learner_kknn$predict_type = "prob"
+```
+
+Przyjżyjmy się hiperparametrom dostępnym w tym modelu:
+
+```{r}
+learner_kknn$param_set
+```
+
+Ustawimy dwa parametry:
+
+- `k` - liczba sąsiadów, domyślnie 7
+- `kernel` - jądro, domyślnie *optimal*
+
+```{r}
+# ustawiamy hiperparametry
+learner_kknn$param_set$values = list(k = 5, kernel = "gaussian")
+# trenujemy model na danych treningowych
+learner_kknn$train(task, row_ids = train_set)
+# testujemy model na danych testowych
+prediction_kknn = learner_kknn$predict(task, row_ids = test_set)
+```
+
+### {-}
+
+## Ocena jakości klasyfikatorów
+
+---
+
+Do oceny jakości naszych modeli użyjemy następujących miar:
+
+- Recall
+- Precision
+- PRC
+
+### Macierze pomyłek
+
+```{r}
+prediction_ranger$confusion
+prediction_nb$confusion
+prediction_kknn$confusion
+```
+
+### Recall i Precision (PPV)
+
+- Recall - odpowiada na pytanie **Ile z dni deszczowych zostało dobrze zakwalifikowanych?**
+- Precision - odpowada na pytanie **W ile z dni zaklasyfikowanych jako deszczowe faktycznie padał deszcz?**\
+
+Pamiętajmy, że obserwacji pozytywnych (padał deszcz kolejnego dnia) było ponad 3 razy mniej od negatywnych.
+
+```{r, echo=FALSE}
+rec_pre <- data.frame(
+                  "RandomForest"=c(prediction_ranger$score(msr("classif.recall")),prediction_ranger$score(msr("classif.precision")),
+                                   prediction_ranger$score(msr("classif.auc"))),
+                  "Naive Bayes"=c(prediction_nb$score(msr("classif.recall")),prediction_nb$score(msr("classif.precision")),
+                                 prediction_nb$score(msr("classif.auc"))),
+                  "Kknn"=c(prediction_kknn$score(msr("classif.recall")),prediction_kknn$score(msr("classif.precision")),
+                           prediction_kknn$score(msr("classif.auc")))
+                  )
+kable(rec_pre) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+### PRC - Precision-Recall Curve
+Po kolei wykresy dla: Random Forest, Naive Bayes oraz Kknn:
+
+```{r, echo=FALSE}
+autoplot(prediction_ranger, type = "prc")
+autoplot(prediction_nb, type = "prc")
+autoplot(prediction_kknn, type = "prc")
+
+```
+
+## Wnioski
+
+---
+
+- Jeśli zależy nam na jak najniższej wartości FN - wybieramy model Naive Bayes
+- Jeśli zależy nam na tym, aby nasz model kwalifikował z jak największą skutecznością dni deszczowe jako faktycznie dni deszczowe (najwyższa wartość recall) - wybieramy ponownie model Naive Bayes
+- Jeśli natomiast zależy nam na jak największej precyzji lub jak najmniższej wartości FP - wybieramy Random Forest
+- AUC nie jest najlepszą miarą do oceny modeli gdzie zbiór danych jest niezrównoważony. Dla Random Forest i Naive Bayes wartości AUC były bardzo zbliżone, a widzimy, że wyniki tych modeli są istotnie różne i wybór "lepszego" nie jest jednoznaczny
+
+
+# Część druga - bonusowy punkt
+
+---
+
+W tej części po raz kolejny sięgamy do zbioru danych allegro z PD2. Tym razem będziemy prognozować zmienną `price` za pomocą modelu regresji korzystając wcześniej z 3 typów kodowania zmiennych kategorycznych.
+
+```{r, echo=FALSE}
+data2 <- read.csv("C:\\Users\\acer\\Desktop\\WUM\\PD3\\allegro-api-transactions.csv", sep = ",", encoding = "UTF-8")
+```
+
+## Przygotowanie danych
+
+---
+
+Zanim przejdziemy do kodowania musimy przygotować nasze dane:
+
+- W przypadku zmiennej `it_location` postępujemy tak jak w PD2 (ujednolicamy wielkość liter, grupujemy w kategorię *Other* rekordy, które występowały tylko kilka razy)
+- usuwamy zmienne `lp`, `date`, `seller`, `item_id`
+
+```{r}
+# it_location
+data2$it_location <- as.factor(stri_trans_tolower(data2$it_location))
+data2$it_location <- fct_lump(data2$it_location, prop = 0.0001)
+# usunięcie lp, date, seller, item_id
+data2 <- data2 %>% select(-(lp), -(date), -(seller), -(item_id))
+
+str(data2)
+```
+
+## Kodowanie zmiennych kategorycznych {.tabset}
+
+---
+
+Do zakodowania mamy 3 zmienne:
+
+- it_location - 991 kategorii
+- main_category - 27 kategorii
+- categories - 9020 kategorii
+
+Powyższze zmienne (szczególnie `categories`) mają bardzo dużo unikalnych wartości, cały zbiór danych jest także spory (ponad 400 000 obserwacji), dlatego będziemy używać metod kodowania, które nie powiększają rozmiaru danych (nie zwiększy się liczba kolumn).
+
+### Target-encoding
+
+Kodowanie poprzez wyliczenie średniej z ustalonego targetu dla danej kategorii. Targetem jest zmienna `price` a kodujemy kolejno wszystkie 3 zmienne kategoryczne.
+
+```{r}
+temp1 <- data2 %>% group_by(categories) %>% summarise(mean_categories=mean(price))
+data_te <- left_join(data2, temp1, by="categories") %>% select(-(categories))
+
+temp2 <- data2 %>% group_by(it_location) %>% summarise(price_location=mean(price))
+data_te <- left_join(data_te, temp2, by="it_location") %>% select(-(it_location))
+
+temp3 <- data2 %>% group_by(main_category) %>% summarise(price_main_category=mean(price))
+data_te <- left_join(data_te, temp3, by="main_category") %>% select(-(main_category))
+
+kable(head(data_te, n=10)) %>% kable_styling("striped") %>% scroll_box(width = "100%")
+```
+
+Ostatnie 3 kolumny kodują odpowiednio zmienną `categories`, `it_location`, `main_category`.
+
+### Label-encoding
+
+Kategorie zamianiane są na liczby od 1 do n gdzie n to liczba unikalnych kategorii danej zmiennej.
+
+```{r}
+data_le <- data2
+levels(data_le$categories) <- c(1:nlevels(data_le$categories))
+data_le$categories <- as.numeric(data_le$categories)
+
+levels(data_le$it_location) <- c(1:nlevels(data_le$it_location))
+data_le$it_location <- as.numeric(data_le$it_location)
+
+levels(data_le$main_category) <- c(1:nlevels(data_le$main_category))
+data_le$main_category <- as.numeric(data_le$main_category)
+
+kable(head(data_le, n=10)) %>% kable_styling("striped") %>% scroll_box(width = "100%")
+```
+Zmienne nazywają się tak samo jak przed kodowaniem, zmieniły się tylko ich wartości na liczbowe.
+
+### Frequency-encoding
+
+Kategorie zamieniamy na częstość jej wystąpowania.
+
+```{r}
+temp1 <- data2 %>% group_by(it_location) %>% mutate(freq_location = length(it_location))
+temp2 <- temp1 %>% group_by(categories) %>% mutate(freq_categories = length(categories))
+temp3 <- temp2 %>% group_by(main_category) %>% mutate(freq_main_category = length(main_category))
+
+data_fe <- temp3 %>% group_by(freq_main_category) %>% select(-(it_location), -(categories), -(main_category))
+
+kable(head(data_fe, n=10)) %>% kable_styling("striped") %>% scroll_box(width = "100%")
+```
+Ponownie ostatnie 3 kategorie kodują odpowiednio zmienną `it_location`, `categories`, `main_category`.
+
+## Regresja {.tabset}
+
+---
+
+Będziemy używać klasycznego modelu regresji liniowej - `regr.lm`. \
+Do oceny i porównania powstałych modeli użyjemy miar:
+
+- RMSE - pierwiastek błędu średniokwadratowego
+- R2 - współczynnik determinacji
+
+### Target-encoding
+
+```{r}
+
+# task, podział na zbiór testowy i treningowy
+task_te = TaskRegr$new(id = "target_encoding", backend = data_te, target = "price")
+train_set = sample(task_te$nrow, 0.8 * task_te$nrow)
+test_set= setdiff(seq_len(task_te$nrow), train_set)
+# learner i trenowanie
+learner_te = mlr_learners$get("regr.lm")
+learner_te$train(task_te, row_ids = train_set)
+# testowanie
+prediction_te = learner_te$predict(task_te, row_ids = test_set)
+```
+
+```{r, echo=FALSE}
+cat("RMSE:", prediction_te$score(msr("regr.rmse")), "\n", "R2:", prediction_te$score(msr("regr.rsq")))
+```
+
+### Label-encoding
+
+```{r}
+# task
+task_le = TaskRegr$new(id = "lebel_encoding", backend = data_le, target = "price")
+# learner i trenowanie
+learner_le = mlr_learners$get("regr.lm")
+learner_le$train(task_le, row_ids = train_set)
+# testowanie
+prediction_le = learner_le$predict(task_le, row_ids = test_set)
+```
+
+```{r, echo=FALSE}
+cat("RMSE:", prediction_le$score(msr("regr.rmse")), "\n", "R2:", prediction_le$score(msr("regr.rsq")))
+```
+
+### Frequency-encoding
+
+```{r}
+# task
+task_fe = TaskRegr$new(id = "frequency_encoding", backend = data_fe, target = "price")
+# learner i trenowanie
+learner_fe = mlr_learners$get("regr.lm")
+learner_fe$train(task_fe, row_ids = train_set)
+# testowanie
+prediction_fe = learner_fe$predict(task_fe, row_ids = test_set)
+```
+
+```{r, echo=FALSE}
+cat("RMSE:", prediction_fe$score(msr("regr.rmse")), "\n", "R2:", prediction_fe$score(msr("regr.rsq")))
+```
+
+
+## Podsumowanie
+
+```{r, echo=FALSE}
+df <- data.frame("wskaźnik"=c("RMSE","R2"),
+                 "Target-encoding"=c(prediction_te$score(msr("regr.rmse")),prediction_te$score(msr("regr.rsq"))),
+                 "Label-encoding"=c(prediction_le$score(msr("regr.rmse")), prediction_le$score(msr("regr.rsq"))),
+                 "Frequency-encoding"=c(prediction_fe$score(msr("regr.rmse")), prediction_fe$score(msr("regr.rsq")))
+                 )
+
+kable(df) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+Najlepiej wypadł model korzystający z **Target-encoding**. Ma zdecydowanie najmniejsze RMSE a jego współczynnik R2 wynosi aż 0.87 (dla modelu "idealnego" R2 jest równe 1). Współczynniki determinacji pozostałych modeli są bliskie zeru, co oznacza bardzo niską zdolność predykcyjną.
+
+
+</div>
