@@ -1,0 +1,173 @@
+---
+title: "WUM Projekt 1"
+author: "Ngoc Anh Nguyen & Piotr Piątyszek"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width = 10)
+knitr::opts_chunk$set(fig.height = 10)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+# Ładowanie danych
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(tibble)
+library(mice)
+library(gbm)
+library(ROSE)
+library(caret)
+library(pROC)
+raw <- read.csv("../cervical-cancer.csv")
+```
+
+# Usuwamy kolumny
+Usuwamy kolumny związane z diagnozą inne niż wynik biopsji.
+```{r}
+data.selected <- raw %>%
+  mutate(target = Biopsy) %>%
+  select(-starts_with("Dx"), -Hinselmann, -Schiller, -Citology, -Biopsy, target)
+names(data.selected)
+```
+
+# Kolumny kategoryczne
+```{r}
+library(plyr)
+lapply(data.selected, function(x) {
+  if (all(unique(x) %in% c(0, 1, NA))) {
+    f <- as.factor(x)
+    mapvalues(addNA(f), from=c("1", "0", NA), to=c("true","false", "NA"))
+  } else {
+    x
+  }
+}) %>% as.data.frame -> data
+data$target <- factor(data$target, levels=c("true", "false"))
+data.num <- data.selected
+```
+
+# Imputacja
+```{r imp, results="hide", cache=TRUE}
+data.imp <- complete(mice(data[,-28]))
+data.imp$target <- data$target
+```
+
+# Podział Test & Train
+```{r split, dependson="imp", cache=TRUE}
+set.seed(1515)
+partition.index <- createDataPartition(data.imp$target, p = 0.6, list = FALSE)
+data.train <- data.imp[partition.index, ]
+data.test <- data.imp[-partition.index, ]
+table(data.train$target)
+table(data.test$target)
+```
+
+# Modelowanie
+```{r, results="hide", cache=TRUE, dependson="split"}
+
+models <-list()
+
+gbmGrid <-  expand.grid(interaction.depth = c(1, 2, 3, 4), 
+                        n.trees = (1:10)*30, 
+                        shrinkage = 0.1,
+                        n.minobsinnode = c(5, 10, 20))
+ctrl <- trainControl(method = "LGOCV",
+                     p = 0.75,
+                     classProbs = TRUE,
+                     number = 100,
+                     summaryFunction = twoClassSummary,
+                     sampling = "up",
+                     savePredictions = "final",
+                     allowParallel=T)
+models$up_tb <- train(target ~ ., data = data.train,
+                   method = "treebag",
+                   nbagg = 50,
+                   metric = "ROC",
+                   trControl = ctrl)
+models$up_rf <- train(target ~ ., data = data.train,
+                   method = "rf",
+                   metric = "ROC",
+                   trControl = ctrl)
+models$up_gbm <- train(target ~ ., data = data.train,
+                   method = "gbm",
+                   metric = "ROC",
+                   trControl = ctrl,
+                   tuneGrid = gbmGrid
+)
+ctrl$sampling <- "smote"
+models$smote_tb <- train(target ~ ., data = data.train,
+                   method = "treebag",
+                   nbagg = 50,
+                   metric = "ROC",
+                   trControl = ctrl)
+models$smote_gbm <- train(target ~ ., data = data.train,
+                   method = "gbm",
+                   metric = "ROC",
+                   trControl = ctrl,
+                   tuneGrid = gbmGrid
+)
+models$smote_rf <- train(target ~ ., data = data.train,
+                   method = "rf",
+                   metric = "ROC",
+                   trControl = ctrl)
+
+```
+
+# Metryki dla stworzoych modeli
+```{r}
+results <- lapply(seq_along(models), function(i) {
+  m <- models[[i]]
+  res <- m$results %>% select(ROC, Sens, Spec, ROCSD, SensSD, SpecSD) %>% arrange(desc(ROC)) %>% head(n=3)
+  res$model <- names(models)[i]
+  res
+})
+do.call('rbind', results) %>% arrange(desc(ROC)) %>% (knitr::kable)
+
+```
+
+## ROC
+```{r}
+results <- lapply(seq_along(models), function(i) {
+  mod <- models[[i]]
+  cat(names(models)[i])
+  plot.roc(roc(response = mod$pred$obs, predictor=mod$pred$true))
+})
+```
+
+# Metryki dla danych testowych
+```{r}
+cm <- lapply(models, function(mod) {
+  confusionMatrix(data=predict(mod, data.test), reference=data.test$target)$byClass
+})
+do.call('rbind', cm) %>% as.data.frame %>% (knitr::kable)
+```
+
+# Variable importance
+
+### up_gbm
+```{r}
+varImp(models$up_gbm)$importance %>%
+  rownames_to_column("var") %>%
+  arrange(desc(Overall)) -> vi_up_gbm
+vi_up_gbm %>%
+  head(n=10) %>%
+  (knitr::kable)
+```
+
+# PDP Profiles
+```{r}
+library(DALEX)
+library(ingredients)
+explainer_up_gbm <- explain(
+  models$up_gbm,
+  y = data.test$target,
+  data = data.test[,-28]
+)
+plot(ingredients::partial_dependence(explainer_up_gbm))
+plot(ingredients::partial_dependence(explainer_up_gbm, variable_type="categorical"))
+```
+
