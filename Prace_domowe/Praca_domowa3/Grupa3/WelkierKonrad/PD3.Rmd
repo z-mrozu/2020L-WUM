@@ -1,0 +1,148 @@
+---
+title: "PD3"
+author: "Konrad Welkier"
+date: "6 04 2020"
+output: html_document
+---
+
+# Wstęp
+
+Zbiór danych, na któym będziemy pracować zawiera informacje na temat pogody w Australii, a konkretnie obserwacje różnorodnych zjawisk pogodowych z wielu australijskich stacji pomiarowych. Zacznijmy od załadowania odpowiedniego zbioru i przejrzenia jego podsumowania, a także przygotowania odpowiednich bibliotek.
+
+```{r setup, echo=FALSE, message = FALSE, warning=FALSE}
+library(dplyr)
+library(mlr)
+library(randomForest)
+library(ada)
+library(knitr)
+library(ggplot2)
+data <- read.csv("../../australia.csv")
+summary(data)
+```
+
+Wszystkie dane wyglądają realistycznie poza pewną obserwacją lub obserwacjami dotyczącymi zachmurzenia o godzinie 15 (wartość poza przewidzianą skalą). Teraz zajmijemy się usunięciem problematycznych wierszy oraz zapiszemy odpowiednie kolumny jako faktory. Po przeprowadzeniu tych działań dane wyglądają następująco:
+
+```{r, echo = FALSE}
+data <- data %>% filter(Cloud3pm <= 8)
+data$Cloud9am <- factor(data$Cloud9am, levels = c(0, 1, 2, 3, 4, 5, 6, 7, 8))
+
+data$Clou3pm <- factor(data$Cloud3pm, levels = c(0, 1, 2, 3, 4, 5, 6, 7, 8))
+
+data$RainToday <- factor(data$RainToday, levels = c(0, 1))
+data$RainTomorrow <- factor(data$RainTomorrow, levels = c(0, 1))
+summary(data)
+```
+
+# Podział danych 
+
+W tej części zajmiemy się podziałem przygotowanych danych na zbiór treningowy oraz testowy. W pierszym z nich znajdzie się 70% losowych pomiarów, natomiast w zbiorze testowym umieszczone zostaną pozostałe obserwacje.
+
+```{r, echo=FALSE}
+n <- sample(1:nrow(data), 0.7*nrow(data))
+data_train <- data[n,]
+data_test <- data[-n,]
+```
+
+# Klasyfikatory
+
+Teraz nadszedł czas na wytrenowanie oraz sprawdzenie skuteczności trzech klasyfikatorów będą nimi "rpart", "ranger" oraz "logreg".
+
+Jednakże najpierw zdefiniujmy nasze zadanie, ponieważ będzie ono takie samo dla wszystkich klasyfikatorów i będzie polegało na przewidzeniu wartości występującej w kolumnie "RainTomorrow".
+
+
+```{r, echo = FALSE}
+task <- makeClassifTask(data = data_train, target = "RainTomorrow")
+```
+
+W tym miejscu warto wspomnieć, że klasyfikatory będziemy porównywać za pomocą trzech miar:
+
+*  `auc` - pole pod wykresem, który również zostanie zaprezentowany, oznacza zdolność przyporząkowywania odpowiedniej wartości
+*  `acc` - precyzja
+*  `mmce` - średni błąd klasyfikacji
+
+## Rpart
+
+```{r}
+learner_rpart <- makeLearner("classif.rpart", predict.type = "prob")
+model_rpart <- train(learner_rpart, task)
+predictions_rpart <- predict(model_rpart, newdata = data_test)
+perf_rpart <- performance(predictions_rpart, measures = list(auc, acc, mmce))
+```
+
+Przyjrzyjmy się teraz dostępnym hiperparametrom:
+
+```{r}
+getLearnerParamSet("classif.randomForest")
+```
+
+Część z udostępnionych parametrów to:
+
+*  `maxdepth` - maksymalna głębokość drzwa
+*  `minbucket` - minimalna liczba obserwacji znajdująca się w jednym liściu (ze zbioru treningowego)
+
+## Ranger
+
+```{r}
+learner_ranger <- makeLearner("classif.ranger", predict.type = "prob")
+model_ranger <- train(learner_ranger, task)
+predictions_ranger <- predict(model_ranger, newdata = data_test)
+perf_ranger <- performance(predictions_ranger, measures = list(auc, acc, mmce))
+```
+
+Jeszcze raz spojrzymy na dostępne hiperparametry:
+
+```{r}
+getLearnerParamSet("classif.ranger")
+```
+
+Część z udostępnionych parametrów to:
+
+*  `max.depth` - maksymalna głębokość drzewa, gdzie NULL lub 0 odnosi się do nieograniczonej głębokości
+
+*  `mtry` - liczba zmiennych do możliwego rozłożenia w każdym węźle. 
+
+## Ada
+
+```{r, message = FALSE}
+learner_ada <- makeLearner("classif.ada", predict.type = "prob")
+model_ada <- train(learner_ada, task)
+predictions_ada <- predict(model_ada, newdata = data_test)
+perf_ada <- performance(predictions_ada, measures = list(auc, acc, mmce))
+```
+
+Tym razem również spojrzymy na występujące hiperparametry:
+
+```{r}
+getLearnerParamSet("classif.ada")
+```
+
+Część z udostępnionych parametrów to:
+
+*  `iter` - liczba drzew, która zostanie utworzona
+
+# Porównanie
+
+```{r}
+performance_classify <- rbind(perf_rpart, perf_ranger, perf_ada)
+rownames(performance_classify) <- c("Rpart", "Ranger", "Ada")
+kable(performance_classify)
+```
+
+Wreszcie nadszedł odpowiedni moment na zwizualizowanie AUC:
+
+```{r}
+df1 = generateThreshVsPerfData(predictions_rpart, measures = list(fpr, tpr, mmce))
+plotROCCurves(df1) + ggtitle("AUC - ROC dla Rpart")
+```
+
+```{r}
+df1 = generateThreshVsPerfData(predictions_ranger, measures = list(fpr, tpr, mmce))
+plotROCCurves(df1) + ggtitle("AUC - ROC dla Ranger")
+```
+
+```{r}
+df1 = generateThreshVsPerfData(predictions_ada, measures = list(fpr, tpr, mmce))
+plotROCCurves(df1) + ggtitle("AUC - ROC dla Ada")
+```
+
+Podsumowując, można stwierdzić, że zarówno klasyfikator Ranger jak i Ada poradziły sobie stosunkowo dobrze z rozważanym zbiorem, natomiast klasyfikator Rpart nie poradził sobie satysfakcjonująco z zadaniem.
