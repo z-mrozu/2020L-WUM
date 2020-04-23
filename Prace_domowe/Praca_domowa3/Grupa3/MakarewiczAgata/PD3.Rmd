@@ -1,0 +1,358 @@
+---
+title: "Praca domowa 3"
+author: "Agata Makarewicz"
+date: "1 04 2020"
+output: 
+  html_document:
+     toc: true
+     theme: united
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(knitr)
+library(mlr3)
+library(dplyr)
+library(Metrics)
+library(mlr3learners)
+library(mlr3measures)
+library(mlr3viz)
+library(factoextra)
+library(DataExplorer)
+library(gridExtra)
+library(data.table)
+```
+
+## Wprowadzenie 
+
+W realizacji zadania korzystamy ze zbioru danych pogodowych z Australii. Dane pochodzą z https://www.kaggle.com/jsphyg/weather-dataset-rattle-package. Wykorzystywany zbiór jest już jednak wstępnie obrobiony i nie zawiera brakujących wartości ani kolumn z tekstem.
+
+Naszym celem jest stworzenie modeli klasyfikacyjnych (wytrenowanie dowolnych 3 klasyfikatorów), które będą potrafiły przewidzieć czy następnego dnia będzie padał deszcz czy też nie, oraz sprawdzenie ich skuteczności. 
+
+```{r data}
+data <- read.csv("~/2020L-WUM/Prace_domowe/Praca_domowa3/australia.csv", sep=",")
+knitr::kable(head(data), caption = "Fragment ramki danych")
+```
+
+Zobaczmy najpierw co oznaczają poszczególne zmienne:
+
+- 1 - MinTemp - minimalna temperatura [C]
+- 2 - MaxTemp - maksymalna temperatura [C]
+- 3 - Rainfall - suma opadów [mm]
+- 4 - Evaporation - miara odparowywania [mm]
+- 5 - Sunshine - suma czasu nasłonecznienia [h]
+- 6 - WindGustSpeed - najwyższa prędkość wiatru [km/h]
+- 7 - WindSpeed9am - prędkość wiatru o 9:00 [km/h]
+- 8 - WindSpeed3pm - prędkość wiatru o 15:00 [km/h]
+- 9 - Humidity9am - wilgotność o 9:00 [%]
+- 10 - Humidity3pm - wilgotność o 15:00 [%]
+- 11 - Pressure9am - ciśnienie atmosferyczne o 9:00 [hPa]
+- 12 - Pressure3pm - ciśnienie atmosferyczne o 15:00 [hPa]
+- 13 - Cloud9am - zachmurzenie o 9:00 [skala: 0 - słońce, 8 - całkowite zachmurzenie]
+- 14 - Cloud3pm - zachmurzenie o 15:00 [skala: 0 - słońce, 8 - całkowite zachmurzenie]
+- 15 - Temp9am - temperatura o 9:00 [C]
+- 16 - Temp3pm - temperatura o 15:00 [C]
+- 17 - RainToday - czy dzisiaj padał deszcz [0 - nie, 1 - tak]
+- 18 - (zmienna celu) RainTomorrow - czy jutro będzie padał deszcz [0 - nie, 1 - tak]
+
+Mamy całkiem sporo zmiennych, spójrzmy zatem na ich krótkie podsumowanie.
+
+```{r summ}
+# str(data)
+knitr::kable(summary(data))
+```
+
+Ciekawe statystyki otrzymujemy dla dwóch ostatnich kolumn, w tym naszej zmiennej celu, określających opad deszczu. Przyjrzyjmy się bliżej ich rozkładom.
+
+```{r stat}
+plot_bar(data[,c(17,18)])
+# plot_histogram(data)
+```
+
+Widzimy, że tylko w około 1/5 obserwacji wystąpił deszcz, taka sama proporcja występuje dla obserwacji prognozujących deszcz w dniu następnym.
+
+```{r rain, echo=TRUE}
+rain <- data%>%
+  filter(RainToday==1 & RainTomorrow==1)
+dim(rain)[1]
+```
+
+Jak się okazuje, 1/10 obserwacji to te, dla których zarówno wystąpił deszcz jak i prognozowany jest w dniu następnym.
+
+## Trenowanie modeli 
+
+### Podział danych na zbiór treningowy i testowy
+
+Po wstępnej analizie, nasze zadanie zaczynamy od podzielenia naszego zbioru danych na treningowy i testowy. Pierwszy z nich składa się z 80% losowo wybranych rekordów, drugi z pozostałych 20%. 
+
+```{r sets, echo=TRUE}
+set.seed(123)
+
+# zmiana kolumny zmiennej celu na typ factor
+data$RainTomorrow <- as.factor(data$RainTomorrow)
+
+# zdefiniowanie rodzaju problemu (task)
+task <- TaskClassif$new(id = "data", backend = data, target = "RainTomorrow")
+
+n <- nrow(data)
+
+# podział zbioru
+train_set = sample(n, 0.8 * n)
+test_set = setdiff(seq_len(n), train_set)
+
+# data_train <- data[train_set,]
+# data_test <- data[test_set,]
+```
+
+```{r plot, fig.width=10, fig.height=4}
+plot1 <- ggplot(data[train_set,], aes(x=Temp3pm, y = Humidity3pm, col = RainTomorrow))+
+   geom_point(alpha = 0.8)
+plot2 <- ggplot(data[test_set,], aes(x=Temp3pm, y = Humidity3pm, col = RainTomorrow))+
+   geom_point(alpha = 0.8)
+grid.arrange(plot1, plot2, ncol=2)
+```
+
+## Metody klasyfikacji
+
+Wytrenujemy następujące modele:
+
+   1. RF - Random Forest
+   2. KNN - k-Nearest-Neighbor Classiﬁcation
+   3. LDA - Linear Discriminal Analysis
+   4. RPART - Recursive Partitioning and Regression Trees
+
+### RF - Random Forest
+
+**Lista parametrów**
+
+```{r learner1}
+
+# zdefiniowanie modelu
+learner_rf = mlr_learners$get("classif.ranger")
+learner_rf$predict_type = "prob"
+# dostępne parametry
+learner_rf$param_set
+```
+
+**Ustawienie hiperparametru**
+
+```{r, echo = TRUE}
+learner_rf$param_set$values = list(min.node.size = 2) 
+```
+
+```{r}
+## trenowanie modelu
+learner_rf$train(task, row_ids = train_set)
+#print(learner$model)
+
+# predykcja na zbiorze testowym
+prediction_rf = learner_rf$predict(task, row_ids = test_set)
+kable(head(as.data.table(prediction_rf)), caption = "Przykładowe wyniki predykcji")
+```
+
+**Macierz błędów**
+
+```{r}
+# macierz błędów - zliczamy ile obserwacji w każdej z grup zostało poprawnie zaklasyfikowanych
+confusion_matrix(prediction_rf$truth, prediction_rf$response, "1", na_value = NaN, relative = FALSE)$matrix
+
+# wykres automatyczny
+autoplot(prediction_rf)
+
+```
+
+### KNN - k-Nearest-Neighbor Classiﬁcation
+
+**Lista parametrów**
+
+```{r learner2}
+
+# zdefiniowanie modelu
+learner_knn = mlr_learners$get("classif.kknn")
+learner_knn$predict_type = "prob"
+# dostępne parametry
+learner_knn$param_set
+```
+
+**Ustawienie hiperparametru**
+
+```{r, echo = TRUE}
+learner_knn$param_set$values = list(kernel = "gaussian") 
+```
+
+```{r}
+## trenowanie modelu
+learner_knn$train(task, row_ids = train_set)
+#print(learner$model)
+
+# predykcja na zbiorze testowym
+prediction_knn = learner_knn$predict(task, row_ids = test_set)
+kable(head(as.data.table(prediction_knn)), caption = "Przykładowe wyniki predykcji")
+```
+
+**Macierz błędów**
+
+```{r}
+# macierz błędów - zliczamy ile obserwacji w każdej z grup zostało poprawnie zaklasyfikowanych
+confusion_matrix(prediction_knn$truth, prediction_knn$response, "1", na_value = NaN, relative = FALSE)$matrix
+
+# wykres automatyczny
+autoplot(prediction_knn)
+
+```
+
+### LDA - Linear Discriminal Analysis
+
+**Lista parametrów**
+
+```{r learner3}
+
+# zdefiniowanie modelu
+learner_lda = mlr_learners$get("classif.lda")
+learner_lda$predict_type = "prob"
+# dostępne parametry
+learner_lda$param_set
+```
+
+**Ustawienie hiperparametru**
+
+```{r, echo = TRUE}
+learner_lda$param_set$values = list(method = "mle") 
+```
+
+```{r}
+## trenowanie modelu
+learner_lda$train(task, row_ids = train_set)
+#print(learner$model)
+
+# predykcja na zbiorze testowym
+prediction_lda = learner_lda$predict(task, row_ids = test_set)
+kable(head(as.data.table(prediction_lda)), caption = "Przykładowe wyniki predykcji")
+```
+
+**Macierz błędów**
+
+```{r}
+# macierz błędów - zliczamy ile obserwacji w każdej z grup zostało poprawnie zaklasyfikowanych
+confusion_matrix(prediction_lda$truth, prediction_lda$response, "1", na_value = NaN, relative = FALSE)$matrix
+
+# wykres automatyczny
+autoplot(prediction_lda)
+
+```
+
+### RPART - Recursive Partitioning and Regression Trees
+
+**Lista parametrów**
+
+```{r}
+
+# zdefiniowanie modelu
+learner_rpart = mlr_learners$get("classif.rpart")
+learner_rpart$predict_type = "prob"
+# dostępne parametry
+learner_rpart$param_set
+```
+
+**Ustawienie hiperparametru**
+
+```{r, echo = TRUE}
+learner_rpart$param_set$values = list(cp = 0.2) 
+```
+
+```{r}
+## trenowanie modelu
+learner_rpart$train(task, row_ids = train_set)
+#print(learner$model)
+
+# predykcja na zbiorze testowym
+prediction_rpart = learner_rpart$predict(task, row_ids = test_set)
+kable(head(as.data.table(prediction_rpart)), caption = "Przykładowe wyniki predykcji")
+```
+
+**Macierz błędów**
+
+```{r}
+# macierz błędów - zliczamy ile obserwacji w każdej z grup zostało poprawnie zaklasyfikowanych
+confusion_matrix(prediction_rpart$truth, prediction_rpart$response, "1", na_value = NaN, relative = FALSE)$matrix
+
+# wykres automatyczny
+autoplot(prediction_rpart)
+
+```
+
+## Miary oceny jakości klasyfikatorów i wybór najlepszego z nich
+
+Do oceny wyników zastosujemy następujące miary:
+
+   - krzywa ROCR - wykres funkcji punktu odcięcia; jeśli model przewidzi prawdopodobieństwo powyżej tej wartości to klasyfikujemy ją do klasy pozytywnej (im bardziej _stromy_ tym lepiej)
+
+   - AUC - pole pod krzywą ROC, im bliższe wartości 1 tym model jest lepszy
+   
+   - Accuracy - procent obserwacji poprawnie zaklasyfikowanych
+   
+   - Precision - procent obserwacji zaklasyfikowanych jako pozytywne faktycznie należących do tej klasy
+   
+   - Recall - procent obserwacji faktycznie pozytywnych zaklasyfikowanych do właściwej klasy 
+   
+   - False Positive Rate - procent obserwacji negatywnych zaklasyfikowanych jako pozytywne
+   
+   - False Negative Rate - procent obserwacji pozytywnych zaklasyfikowanych jako negatywne
+   
+Miarą jakości są również macierze błędów, które tworzyliśmy przy każdym z klasyfikatorów.
+
+W przypadku naszych danych warości zmiennej celu nie są zbilansowane - jest duża różnica pomiędzy licznością klasy negatywnej i pozytywnej. Musimy zatem zwrócić szczególną uwagę na Accuracy, Precision oraz Recall.
+
+**Krzywe ROC dla każdego z modeli. Od lewej: RF, KNN, LDA, RPART.**
+
+```{r roc, fig.width=10,fig.height=4}
+# krzywe ROCR
+plot1 <- autoplot(prediction_rf, type = "roc")
+plot2 <- autoplot(prediction_knn, type = "roc") 
+plot3 <- autoplot(prediction_lda, type = "roc")
+plot4 <- autoplot(prediction_rpart, type = "roc") 
+
+grid.arrange(plot1, plot2, plot3, plot4, ncol=4)
+```
+
+**Pozostałe miary jakości:**
+
+```{r measures1}
+
+# wybranie miar jakości 
+auc <- msr("classif.auc")
+acc <- msr("classif.acc")
+precision <- msr("classif.precision")
+recall <- msr("classif.recall")
+fpr <- msr("classif.fpr")
+fnr <- msr("classif.fnr")
+
+list_of_measures <- c(auc,acc,precision, recall, fpr, fnr)
+
+```
+
+```{r measures2}
+
+# miary jakości każdego z modeli 
+rf_measures <- prediction_rf$score(list_of_measures)
+knn_measures <- prediction_knn$score(list_of_measures)
+lda_measures <- prediction_lda$score(list_of_measures)
+rpart_measures <- prediction_rpart$score(list_of_measures)
+
+prediction_measures <- as.data.frame(rbind(
+                           rf_measures,
+                           knn_measures,
+                           lda_measures,
+                           rpart_measures))
+
+colnames(prediction_measures) <- c("AUC", "ACCURACY", "PRECISION", "RECALL", "FalsePositiveRate", "FalseNegativeRate")
+rownames(prediction_measures)<-c("RF","KNN","LDA", "RPART")
+
+# tabela z wynikami 
+prediction_measures <- cbind(method=rownames(prediction_measures), prediction_measures)
+kable(data.table(prediction_measures))
+```
+
+## Podsumowanie 
+
+Na podstawie użytych miar jakości możemy stwierdzić,że najlepszym modelem okazał się pierwszy, czyli klasyfikacja za pomocą metody lasów losowych (RF - Random Forest). Róznice w powyższej tabeli są minimalne dla pierwszych 3 modeli (RPART wypada zdecydowanie gorzej od pozostałych), ale mimo wszystko RF osiąga najlepsze wyniki w większości miar oraz ma najkorzystniejszy wykres krzywej ROC.
