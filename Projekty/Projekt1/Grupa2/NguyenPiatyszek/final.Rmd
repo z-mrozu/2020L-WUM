@@ -1,0 +1,310 @@
+---
+title: "WUM Projekt 1"
+author: "Ngoc Anh Nguyen & Piotr Piątyszek"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width = 10)
+knitr::opts_chunk$set(fig.height = 10)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+# Ładowanie danych
+```{r}
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(tibble)
+library(mice)
+library(gbm)
+library(ROSE)
+library(caret)
+library(pROC)
+library(doParallel)
+library(DALEX)
+library(auditor)
+raw <- read.csv("../cervical-cancer.csv")
+```
+
+# Usuwamy kolumny
+Usuwamy kolumny związane z diagnozą inne niż wynik biopsji.
+```{r}
+data.selected <- raw %>%
+  mutate(target = Biopsy) %>%
+  select(-starts_with("Dx"), -Hinselmann, -Schiller, -Citology, -Biopsy, target) %>%
+  # Usuwamy zmienne, które w km2 okazały się nie jako niemające wpływu
+  select(-STDs..number., -STDs..Number.of.diagnosis, -Smokes, -STDs.cervical.condylomatosis, -STDs.vaginal.condylomatosis,
+         -STDs.syphilis, -STDs.pelvic.inflammatory.disease, -STDs.genital.herpes, -STDs.molluscum.contagiosum, -STDs.AIDS,
+         -STDs.HPV, -STDs.Hepatitis.B)
+names(data.selected)
+```
+
+# Kolumny kategoryczne
+```{r}
+lapply(data.selected, function(x) {
+  if (all(unique(x) %in% c(0, 1, NA))) {
+    f <- as.factor(x)
+    mapvalues(addNA(f), from=c("1", "0", NA), to=c("true","false", "NA"))
+  } else {
+    x
+  }
+}) %>% as.data.frame -> data
+data$target <- factor(data$target, levels=c("true", "false"))
+```
+
+# Imputacja zmiennych numerycznych
+```{r imp, results="hide", cache=TRUE}
+data.imp <- complete(mice(data[,-17]))
+data.imp$target <- data$target
+```
+
+# Podział Test & Train
+```{r split}
+set.seed(1515)
+partition.index <- createDataPartition(data.imp$target, p = 0.6, list = FALSE)
+data.train <- data.imp[partition.index, ]
+data.test <- data.imp[-partition.index, ]
+table(data.train$target)
+table(data.test$target)
+```
+
+# Funkcje pomocnicze
+```{r metric, cache=TRUE, dependson="split"}
+mySummary <- function(data_arg, lev = NULL, model = NULL) {
+  out <- c(
+    defaultSummary(data_arg, lev, model),
+    twoClassSummary(data_arg, lev, model)
+  )
+  out["Balanced Accuracy"] <- (out["Sens"] + out["Spec"])/2
+  out
+}
+predictDF <- function(model, data_arg) {
+  df <- data.frame(
+    pred = factor(as.character(predict(model, data_arg)), levels = model$levels),
+    obs = factor(as.character(data_arg$target), levels=model$levels)
+  )
+  df <- cbind(df, predict(model, data_arg, type="prob"))
+}
+summaryOnTest <- function(model) {
+  mySummary(predictDF(model, data.test), model$levels, model)
+}
+compareWithTest <- function(model) {
+  testMetrics <- summaryOnTest(model)
+  trainMetrics <- model$results %>% inner_join(model$bestTune)
+  df <- rbind(trainMetrics[1, names(testMetrics)], testMetrics)
+  rownames(df) <- c("Train", "Test")
+  df
+}
+getROC <- function(model) {
+  rocObject <- pROC::roc(
+    response = model$pred$obs,
+    predictor = model$pred[, model$levels[1]],
+    direction = ">",
+    quite = TRUE
+  )
+}
+getROCTest <- function(model) {
+  df <- predictDF(model, data.test)
+  rocObject <- pROC::roc(
+    response = df$obs,
+    predictor = df[, model$levels[1]],
+    direction = ">",
+    quite = TRUE
+  )
+}
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 5, # 5 fold cv
+  repeats = 10, # repeated 3 times
+  classProbs = TRUE,
+  sampling = "up", # upsampling
+  summaryFunction = mySummary,
+  savePredictions = "final",
+  allowParallel=T
+)
+models <-list()
+```
+
+# Modelowanie
+
+## Boosted GLM
+```{r glmboost, results="hide", cache=TRUE, dependson="metric"}
+tuneGrid <- expand.grid(mstop = c(30, 60, 100, 200, 500), prune=FALSE)
+cl <- makePSOCKcluster(3)
+registerDoParallel(cl)
+models$glmboost <- train(
+  target ~ .,
+  data = data.train,
+  method = "glmboost",
+  metric = "ROC",
+  trControl = ctrl,
+  tuneGrid = tuneGrid
+)
+stopCluster(cl)
+```
+
+### Metryki
+```{r, cache=FALSE}
+models$glmboost$results %>% arrange(desc(ROC)) %>% head(n=10) %>% (knitr::kable)
+```
+
+### Weryfikacja metryk na danych testowych
+```{r, cache=FALSE}
+compareWithTest(models$glmboost) %>% (knitr::kable)
+```
+
+### Random Forest
+```{r rf, results="hide", cache=TRUE, dependson="metric"}
+tuneGrid <- expand.grid(mtry = c(2, 5, 7, 10, 13))
+cl <- makePSOCKcluster(3)
+registerDoParallel(cl)
+models$randomForest <- train(
+  target ~ .,
+  data = data.train,
+  method = "rf",
+  metric = "ROC",
+  trControl = ctrl,
+  tuneGrid = tuneGrid
+)
+stopCluster(cl)
+```
+
+### Metryki
+```{r, cache=FALSE}
+models$randomForest$results %>% arrange(desc(ROC)) %>% head(n=10) %>% (knitr::kable)
+```
+
+### Weryfikacja metryk na danych testowych
+```{r, cache=FALSE}
+compareWithTest(models$randomForest) %>% (knitr::kable)
+```
+
+### GBM
+```{r gbm, results="hide", cache=TRUE, dependson="metric"}
+tuneGrid <- expand.grid(
+  interaction.depth = c(1, 3, 5), 
+  n.trees = (1:30)*10, 
+  shrinkage = c(0.1, 0.05),
+  n.minobsinnode = c(5, 10, 20)
+)
+cl <- makePSOCKcluster(3)
+registerDoParallel(cl)
+models$gbm <- train(
+  target ~ .,
+  data = data.train,
+  method = "gbm",
+  metric = "ROC",
+  trControl = ctrl,
+  tuneGrid = tuneGrid
+)
+stopCluster(cl)
+```
+
+### Metryki
+```{r, cache=FALSE}
+models$gbm$results %>% arrange(desc(ROC)) %>% head(n=10) %>% (knitr::kable)
+```
+
+### Weryfikacja metryk na danych testowych
+```{r, cache=FALSE}
+compareWithTest(models$gbm) %>% (knitr::kable)
+```
+
+# Krzywe ROC
+
+### Na podstawie danych z CV
+```{r, cache=FALSE}
+ggroc(
+  list(
+    glmboost=getROC(models$glmboost),
+    randomForest=getROC(models$randomForest),
+    gbm=getROC(models$gbm)
+  )
+) + xlab("Specifity") + ylab("Sensivity") + geom_abline(intercept = 1, slope = 1, color = "darkgrey", linetype = "dashed")
+```
+
+### Na podstawie danych testowych
+```{r, cache=FALSE}
+ggroc(
+  list(
+    glmboost=getROCTest(models$glmboost),
+    randomForest=getROCTest(models$randomForest),
+    gbm=getROCTest(models$gbm)
+  )
+) + xlab("Specifity") + ylab("Sensivity") + geom_abline(intercept = 1, slope = 1, color = "darkgrey", linetype = "dashed")
+```
+
+# Model performance & XAI
+
+### Zbalansowany zbiór testowy
+```{r, cache=FALSE}
+balanced.test <- rbind(
+  data.test[data.test$target=="true", ],
+  data.test[sample(size=21, which(data.test$target=="false")), ]
+)
+rownames(balanced.test) <- paste0("[", balanced.test$target, "] ", rownames(balanced.test))
+```
+
+### Explainery
+```{r, cache=FALSE, results="hide"}
+getExplainer <- function(model, lev = "true", df = data.test) {
+  explain(
+    model,
+    data = df[,-17],
+    y = as.numeric(df$target == lev),
+    predict_function = function(m, x) predict(model, x, type="prob")[, lev],
+    label = model$method
+  )
+}
+explainers <- lapply(models, getExplainer)
+```
+
+### Model residuals
+```{r, cache=FALSE}
+model_residuals <- lapply(explainers, model_residual)
+plot_residual_density(model_residuals[[1]], model_residuals[[2]], model_residuals[[3]])
+plot_residual_boxplot(model_residuals[[1]], model_residuals[[2]], model_residuals[[3]])
+```
+
+### Variable importance
+
+#### Boosted GLM
+```{r, cache=FALSE}
+varImp(models$glmboost)$importance %>%
+  rownames_to_column("var") %>%
+  arrange(desc(Overall)) -> vi_up_gbm
+vi_up_gbm %>%
+  head(n=10) %>%
+  (knitr::kable)
+```
+
+#### Random Forest
+```{r, cache=FALSE}
+varImp(models$randomForest)$importance %>%
+  rownames_to_column("var") %>%
+  arrange(desc(Overall)) -> vi_up_gbm
+vi_up_gbm %>%
+  head(n=10) %>%
+  (knitr::kable)
+```
+
+
+### Arena
+```{r, cache=FALSE, eval=FALSE}
+# devtools::install_github("ModelOriented/ArenaR")
+explainers <- lapply(models, getExplainer, df=balanced.test)
+
+library(arenar)
+create_arena(live=F) %>%
+  push_observations(balanced.test) %>%
+  push_model(explainers[[1]]) %>%
+  push_model(explainers[[2]]) %>%
+  push_model(explainers[[3]]) %>%
+  upload_arena(arena_url="https://arena.drwhy.ai/branch/dev/")
+```
+
+[Arena URL](https://arena.drwhy.ai/branch/dev/?session=https://gist.githubusercontent.com/piotrpiatyszek/204135c535190bb4e6e585d636f216b5/raw/ac3dfd0be685136de1de9fbe696e246bd2466fdc/wum)
