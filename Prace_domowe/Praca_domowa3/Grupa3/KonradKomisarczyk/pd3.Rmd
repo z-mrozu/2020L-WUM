@@ -1,0 +1,249 @@
+---
+title: "WUM - PD3"
+author: "Konrad Komisarczyk"
+date: "05.04.2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true 
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(mlr)
+
+set.seed(213)
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+# Wstęp
+
+W tej pracy domowej zajmę się porównaniem 3 klasyfikatorów w zadaniu przewidywania deszczu na danych pogodowych z Australii: 
+
+```{r}
+data <- read.csv("../../australia.csv")
+
+data$RainToday <- as.factor(data$RainToday)
+data$RainTomorrow <- as.factor(data$RainTomorrow)
+
+summary(data)
+```
+
+Porównam trzy rodzaje modeli drzewiastych:   
+
+* drzewo decyzyjne - `rpart`      
+* las losowy - `ranger` - połączenie wielu drzew decyzyjnych poprzez bagging - trenowanie drzew na wybranym losowo podzbiorze zbioru treningowego      
+* gradient boosting - AdaBoost `ada` - połączenie wielu drzew decyzyjnych poprzez boosting - poprawianie wyniku sumy drzew przez dodawanie do nich kolejnych drzew    
+
+Spodziewam się najsłabszych wyników po drzewie decyzyjnym, a najlepszych po AdaBoost.    
+
+
+Wyniki metod porównam za pomocą trzech miar:   
+
+* AUC - standardowo wybierana miara jakości modelu biorąca pod uwagę nie tylko wynik klasyfikacji, a także to, jak "pewny" tego wyniku jest algorytm       
+* Sensitivity = Recall = True Positive Rate = Czułość testu - jaka część deszczowych dni została wykryta    
+* Specificity = True Negative Rate = Swoistość testu - jaka część pogodnych dni została wykryta     
+
+```{r}
+perfs <- data.frame(model = character(0), 
+                           auc = numeric(0), 
+                           czulosc = numeric(0), 
+                           swoistosc = numeric(0))
+
+measures <- list(auc, tpr, tnr)
+
+insert_performance <- function(performances, model_name, values) {
+  performances %>% rbind(data.frame(model = model_name, 
+                           auc = values[1], 
+                           czulosc = values[2], 
+                           swoistosc = values[3]))
+}
+
+```
+
+
+
+
+# Podział na zbiór treningowy i testowy
+
+Wybieram losowe 20% wierszy jako zbiór testowy.
+
+```{r}
+ids <- sample(1:nrow(data), 0.2 * nrow(data))
+data.test <- data[ids, ]
+data.train <- data[-ids, ]
+```
+
+# Przygotowanie zadania klasyfikacji
+
+Najpierw przygotowywuję zadanie klasyfikacji.
+
+```{r}
+task <- makeClassifTask(id = "rain", data = data.train, target = "RainTomorrow")
+task
+```
+
+# Model 1 - `rpart`
+
+Przyjrzyjmy się dostępnym hiperparametrom klasyfikatora:
+```{r}
+getLearnerParamSet("classif.rpart")
+```
+
+Udostępnione są między innymi następujące parametry:     
+
+* `minsplit` - minimalna liczba obserwacji ze zbioru treningowego, jaka musi wchodzić do wierzchołka, aby przeprowadzony był na nim split - domyślnie 20     
+* `minbucket` - minimalna liczba obserwacji ze zbioru treningowego, jaka musi wchodzić do liścia - domyślnie 3*`minsplit`     
+* `maxdepth` - maksymalna głębokość drzewa - domyślnie 30     
+
+
+Tworzymy model:
+```{r}
+lrn.rpart <- makeLearner("classif.rpart", par.vals = list(minsplit = 20, maxdepth = 5), predict.type = "prob")
+model.rpart <- train(lrn.rpart, task)
+```
+
+Obliczamy predykcje modelu dla naszego zbioru testowego:
+```{r}
+pred.rpart <- predict(model.rpart, newdata = data.test)
+```
+
+Oceniamy jakość modelu pod względem 3 ustalonych metryk:
+```{r}
+perf.rpart <- performance(pred.rpart, measures = measures)
+perfs <- perfs %>% insert_performance("rpart", perf.rpart)
+
+perf.rpart
+```
+
+# Model 2 - `ranger`
+
+Przyjrzyjmy się dostępnym hiperparametrom klasyfikatora:
+```{r}
+getLearnerParamSet("classif.ranger")
+```
+
+Udostępnione są między innymi następujące parametry:      
+
+* `num.trees` - liczba drzew - domyślnie 500 - większa liczba drzew nie powinna powodować przeuczenia, a jedynie lepszą jakość modelu, zwiększa za to znacznie czas budowania modelu      
+* `mtry` - maksymalna liczba zmiennych według których splitowane jest w wierzchołku drzewa - domyślnie pierwiastek z liczby zmiennych w zbiorze treningowym     
+* `max.depth` - maksymalna głębokość drzewa - mimo, że parametr jest na tej liście, próba ustawienia go przy tworzeniu learnera powoduje błąd     
+
+
+Tworzymy model:
+```{r}
+lrn.ranger <- makeLearner("classif.ranger", par.vals = list(num.trees = 1000, mtry = 3), predict.type = "prob")
+model.ranger <- train(lrn.ranger, task)
+```
+
+Obliczamy predykcje modelu dla naszego zbioru testowego:
+```{r}
+pred.ranger <- predict(model.ranger, newdata = data.test)
+```
+
+Oceniamy jakość modelu pod względem 3 ustalonych metryk:
+```{r}
+perf.ranger <- performance(pred.ranger, measures = list(auc, tpr, tnr))
+perfs <- perfs %>% insert_performance("ranger", perf.ranger)
+
+perf.ranger
+```
+
+# Model 3 - `ada`
+
+Przyjrzyjmy się dostępnym hiperparametrom klasyfikatora:
+```{r}
+getLearnerParamSet("classif.ada")
+```
+
+Udostępnione są między innymi następujące parametry:    
+
+* `loss` - rodzaj funkcji straty jaka ma być użyta    
+* `iter` - liczba drzew        
+* `maxdepth` - maksymalna głębokość drzewa    
+
+
+
+
+Tworzymy model:
+```{r}
+lrn.ada <- makeLearner("classif.ada", par.vals = list(iter = 200, maxdepth = 5), predict.type = "prob")
+model.ada <- train(lrn.ada, task)
+```
+
+Obliczamy predykcje modelu dla naszego zbioru testowego:
+```{r}
+pred.ada <- predict(model.ada, newdata = data.test)
+```
+
+Oceniamy jakość modelu pod względem 3 ustalonych metryk:
+```{r}
+perf.ada <- performance(pred.ada, measures = list(auc, tpr, tnr))
+perfs <- perfs %>% insert_performance("ada", perf.ada)
+
+perf.ada
+```
+
+# Porównanie jakości modeli
+
+```{r}
+perfs %>% 
+  ggplot(aes(x = model, y = auc)) +
+  geom_bar(stat = "identity") +
+  ylim(0, 1) +
+  ggtitle("Porównanie miary AUC")
+```
+
+Zgodnie z przewidywaniami drzewo decyzyjne poradziło sobie znacznie słabej od pozostałych dwóch modeli, natomiast okazało się, że AdaBoost nie daje lepszych wyników od Random Forest, a nawet minimalnie słabsze. Oba komitety drzew dość dobrze poradziły sobie z zadaniem.
+
+
+```{r}
+perfs %>% 
+  ggplot(aes(x = model, y = czulosc)) +
+  geom_bar(stat = "identity") +
+  ylim(0, 1) +
+  ggtitle("Porównanie czułości")
+```
+
+Czułość wszystkich modeli jest bardzo dobra - wszystkie wykryły po około 95% deszczowych dni. Natomiast pod tym względem okazuje się, że drzewo decyzyjne bardzo dobrze poradziło sobie z zadaniem, nawet minimalnie lepiej niż pozostałe metody.
+
+
+```{r}
+perfs %>% 
+  ggplot(aes(x = model, y = swoistosc)) +
+  geom_bar(stat = "identity") +
+  ylim(0, 1) +
+  ggtitle("Porównanie swoistości")
+```
+
+Wszystkie modele miały niską swoistość. Tutaj także drzewo decyzyjne spisało się najsłabiej, a komitety na podobnym poziomie.
+
+
+Nasze modele przewidywały prawdopodobieństwo deszczu - liczbę z przedziału 0, 1. Możnaby zwiększyć swoistość kosztem zmniejszenia czułości zwiększając próg określający od jakiego prawdopodobieństwa klasyfikujemy obserwację jako TAK - z 0.5 na przykładowo 0.7.
+
+
+
+Jako najlepszy ze zbadanych klasyfikatorów pod względem jakości wyników wybrałbym random forest. Jednak w jego przypadku budowanie modelu trwało najdłużej.
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+  
