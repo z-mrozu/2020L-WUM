@@ -6,7 +6,7 @@ W realizacji zadania skorzystaj zbiór danych z folderu: *clustering.csv*
 Plik zawiera dane w wymiarze $\mathbb{R^2}$. Obserwacje nie są przypisane do żadnej klasy. 
 
 ### Treść zadania
-Zadanie polega na przetestowaniu minimum 2 metod klasteryzujących. Następnie należy wybrać optymalną liczbę *klastrów*. W każdej metodzie należy wykorzystać inny sposób wynierania optymalnej liczby *klastrów*.
+Zadanie polega na przetestowaniu minimum 2 metod klasteryzujących. Następnie należy wybrać optymalną liczbę *klastrów*. W każdej metodzie należy wykorzystać inny sposób wybierania optymalnej liczby *klastrów*.
 
 Raport powinien zawierać:
 - graficzne przedstawienie przypisania do klastrów dla 2 wybranych metod klasteryzujących
