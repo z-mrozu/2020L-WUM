@@ -1,0 +1,445 @@
+---
+title: "PD3- bonus"
+author: "Martyna Majchrzak"
+date: "4 04 2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mlr)
+library(dplyr)
+set.seed(1)
+```
+
+Poniższy raport przedstawia wpływ metod encodingu na modelowanie regresji liniowej.
+
+# Zbiór danych
+
+Zbiór danych dotyczy transakcji z serwisu Allegro. 
+```{r data loading, cache=TRUE}
+data <- read.csv('https://www.dropbox.com/s/360xhh2d9lnaek3/allegro-api-transactions.csv?dl=1',encoding = "UTF-8")
+original_data<-data
+# data<-original_data
+str(data)
+```
+
+W tym zadaniu za zmienną celu przyjęta zostanie cena zakupionego produktu - price. 
+
+Ze względu na czasochłonność niektórych wykonywanych operacji ograniczymy się do 10 000 losowych wierszy.
+
+```{r cut-rows}
+keep_rows<-sample(nrow(data), 10000)
+data<-data[keep_rows,]
+rownames(data)<-NULL
+
+str(data)
+```
+
+Po samym obcięciu zmienne kategoryczne zachowują dużą liczbę poziomów. Należy to skorygować.
+
+```{r factors}
+data$date<-as.factor(as.character(data$date))
+data$categories<-as.factor(as.character(data$categories))
+data$seller<-as.factor(as.character(data$seller))
+data$it_location<-as.factor(as.character(data$it_location))
+data$main_category<-as.factor(as.character(data$main_category))
+
+str(data)
+```
+
+# Zmienne kategoryczne
+
+W zbiorze znajduje się obecnie 5 zmiennych typu factor: 
+
+ - date, 7943 poziomów
+ - categories,  3162 poziomóW
+ - seller, 6323 poziomów
+ - it_location, 2179 poziomów
+ - main_category, 26 poziomów
+ 
+ Aby móc wykorzystać je w modelu regresji, należy pozbyć się ich lub zakodować je np. jako zmienne numeryczne.
+ 
+## date
+
+```{r date-show}
+data$date[1:5]
+```
+
+Data dla każdej obserwacji jest taka sama - 2016-04-03, różnią się jedynie godziną zakupu tego dnia. Zamieniono więc tę kolumnę na zmienną numeryczną, oznaczającą liczbę sekund od godziny 0:00.
+
+```{r date-conversion}
+# zrzutowanie na clasę POSIXlt
+newdate<-as.POSIXlt(data$date, format="%Y-%m-%d  %H:%M:%S")
+# obliczenie liczby sekund od godziny 0:00
+data$date<-newdate$hour*3600+newdate$min*60+newdate$sec
+
+```
+
+
+Pozostałe zmienne są ewidentnie nieporównywalne i kategoryczne, należy więć wykonać na nich encoding. Uprzednio zostanie jeszcze sprawdzone, czy można zmiejszych liczbę poziomóW zmiennej zamieniając wszystkie znaki na małe.
+
+## categories
+
+```{r categories-check}
+length(levels(data$seller))==length(levels(as.factor(tolower(data$seller))))
+
+```
+
+## seller
+```{r seller-check}
+length(levels(data$seller))==length(levels(as.factor(tolower(data$seller))))
+```
+
+## it_location
+```{r location-check}
+length(levels(data$it_location))==length(levels(as.factor(tolower(data$it_location))))
+```
+
+Liczba poziomów się zmiejszyła, zatem warto wykonać rzutowanie na małe litery.
+
+```{r location-change}
+data$it_location<-as.factor(tolower(data$it_location))
+```
+
+## main_category
+
+```{r main_category-check}
+length(levels(data$it_location))==length(levels(as.factor(tolower(data$it_location))))
+```
+
+# Encoding
+
+W celu zakodowania zmiennych kategorycznych (categories, seller, it_location, main_category) zastosujemy 3 różne metody:
+
+ - target encoding
+ 
+ - one-hot encoding z użyciem makeDummyFeatures(method="1-of-n")
+ 
+ - one-hot encoding z użyciem makeDummyFeatures(method="reference")
+ 
+## Target encoding
+
+Jest to metoda polegająca na wyliczeniu dla każdego poziomu zmiennej kategorycznej średniej z kolumny celu (w tym przypadku price) i zastąpienie nią wartości w kodowanej kolumnie.
+
+Ze względu na to, że metoda ta korzysta ze zmiennej celu, zostanie ona wykonana osobno na zbiorze treningowym i osobno na testowym.
+
+```{r target-train}
+data_target<-data
+### Testowy i treningowy
+n<-nrow(data_target)
+train_set<-sample(n, 0.8*n)
+data_target_train<-data_target[train_set,]
+data_target_test<-data_target[-train_set,]
+```
+
+### categories
+```{r target-categories}
+# Wyliczenie średniej dla każdego poziomu w zbiorze treningowym
+
+target_mean_categories<-data_target_train%>%
+  select(categories,price)%>%
+  group_by(categories)%>%
+  summarize(price_mean=mean(price))
+
+# Zastąpienie wartości w kolumnie odpowiednią średnią w zbiorze treningowym
+data_target_train <- data_target_train%>%
+  left_join(target_mean_categories, 
+            by = c("categories" = "categories"))%>%
+  select(-(categories))%>%
+  rename(categories_encoded = price_mean)
+
+# Zastąpienie wartości w kolumnie odpowiednią średnią w zbiorze testowym
+data_target_test <- data_target_test%>%
+  left_join(target_mean_categories, 
+            by = c("categories" = "categories"))%>%
+  select(-(categories))%>%
+  rename(categories_encoded = price_mean)
+
+```
+
+### it_location
+```{r target-location}
+# Wyliczenie średniej dla każdego poziomu w zbiorze treningowym
+
+target_mean_itlocation<-data_target_train%>%
+  select(it_location,price)%>%
+  group_by(it_location)%>%
+  summarize(price_mean=mean(price))
+
+# Zastąpienie wartości w kolumnie odpowiednią średnią w zbiorze treningowym
+data_target_train <- data_target_train%>%
+  left_join(target_mean_itlocation, 
+            by = c("it_location" = "it_location"))%>%
+  select(-(it_location))%>%
+  rename(it_location_encoded = price_mean)
+
+# Zastąpienie wartości w kolumnie odpowiednią średnią w zbiorze testowym
+data_target_test <- data_target_test%>%
+  left_join(target_mean_itlocation, 
+            by = c("it_location" = "it_location"))%>%
+  select(-(it_location))%>%
+  rename(it_location_encoded = price_mean)
+
+```
+
+### seller
+```{r target-seller}
+# Wyliczenie średniej dla każdego poziomu w zbiorze treningowym
+
+target_mean_seller<-data_target_train%>%
+  select(seller,price)%>%
+  group_by(seller)%>%
+  summarize(price_mean=mean(price))
+
+# Zastąpienie wartości w kolumnie odpowiednią średnią w zbiorze treningowym
+data_target_train <- data_target_train%>%
+  left_join(target_mean_seller, 
+            by = c("seller" = "seller"))%>%
+  select(-(seller))%>%
+  rename(seller_encoded = price_mean)
+
+# Zastąpienie wartości w kolumnie odpowiednią średnią w zbiorze treningowym
+data_target_test <- data_target_test%>%
+  left_join(target_mean_seller, 
+            by = c("seller" = "seller"))%>%
+  select(-(seller))%>%
+  rename(seller_encoded = price_mean)
+
+```
+
+### main_category
+```{r atrget-main_category}
+# Wyliczenie średniej dla każdego poziomu w zbiorze treningowym
+
+target_mean_main_category<-data_target_train%>%
+  select(main_category,price)%>%
+  group_by(main_category)%>%
+  summarize(price_mean=mean(price))
+
+# Zastąpienie wartości w kolumnie odpowiednią średnią w zbiorze treningowym
+data_target_train <- data_target_train%>%
+  left_join(target_mean_main_category, 
+            by = c("main_category" = "main_category"))%>%
+  select(-(main_category))%>%
+  rename(main_category_encoded = price_mean)
+
+# Zastąpienie wartości w kolumnie odpowiednią średnią w zbiorze testowym
+data_target_test <- data_target_test%>%
+  left_join(target_mean_main_category, 
+            by = c("main_category" = "main_category"))%>%
+  select(-(main_category))%>%
+  rename(main_category_encoded = price_mean)
+
+```
+
+## One-hot encoding method "1-of-n"
+
+Metoda ta nie korzysta ze zmiennej celu, więc dla uproszczenia zostanie zastosowana na całym zbiorze. Podział na zbiór treningowy i testowym zostanie wykonany bezpośrednio przed wytrenowaniem modelu.
+
+```{r data_dummy1}
+data_dummy1<-data
+```
+
+
+W zmiennej categories znajdują się wszystkie kategorie, do jakich zalicza się dany produkt, jedna z nich jest główna i zapisana w kolumnie main_category.  Jej wartości nie są więc atomowe, a listy. Wykonamy więc coś w rodzaju one-hot encoding, ale w każdym wierszu będzie mogła znajdować się więcej niż 1 jedynka.
+
+```{r categories-change}
+## Zamiana faktorów na listę napisów
+categ<-as.character(data_dummy1$categories)
+cut_categ<-substr(categ,2,nchar(categ)-1)
+# podział na vektor 
+split_categ<-strsplit(cut_categ, split=",")
+# usunięcie znaków białych
+library(stringr)
+nowhite_categ<-sapply(split_categ, function(x)
+  str_replace_all(x, pattern=fixed(" "),replacement=""))
+
+# zamiana listy vectorów na ramkę danych
+categ_dataframe<-bind_rows(lapply(nowhite_categ, as.data.frame.list))
+# dodanie nr_wiersza
+categ_dataframe<-categ_dataframe%>%mutate(id=rownames(categ_dataframe))
+categ_dataframe<-categ_dataframe[,c(ncol(categ_dataframe),1:ncol(categ_dataframe)-1)]
+
+# zamiana wartości na i nazw kategorii na 0 i 1
+categ_dataframe1<-categ_dataframe%>%
+  transmute_at(.vars = vars(starts_with("X")),
+              .funs = function(x) ifelse(is.na(x),0,1))%>%
+  mutate(id=rownames(categ_dataframe))
+
+# połączenie categ_dataframe1 z oryginalną ramką
+data_dummy1<-data_dummy1%>%mutate(id=rownames(categ_dataframe))%>%
+  left_join(categ_dataframe1, by="id")%>%
+  select(-categories)%>%
+  select(-id)
+```
+
+
+Na pozostałych 3 kolumnach kategorycznych zastosowana zostanie funkcja createDummyFeatures.
+
+```{r other-change-dummy1}
+data_dummy1<-createDummyFeatures(data_dummy1,target="price", cols="main_category", method="1-of-n")
+data_dummy1<-createDummyFeatures(data_dummy1,target="price", cols="it_location", method="1-of-n")
+data_dummy1<-createDummyFeatures(data_dummy1,target="price", cols="seller", method="1-of-n")
+```
+
+## One-hot encoding method "reference"
+
+Metoda ta nie korzysta ze zmiennej celu, więc dla uproszczenia zostanie zastosowana na całym zbiorze. Podział na zbiór treningowy i testowym zostanie wykonany bezpośrednio przed wytrenowaniem modelu.
+
+```{r data_dummy2}
+data_dummy2<-data
+```
+
+KOlumna `categories` przekształcona zostanie dokładnie tak samo jak w poprzedniej metodzie, dodając utworzone już poprzednio kolumny.
+
+```{r categ-change2}
+# połączenie categ_dataframe1 z oryginalną ramką
+data_dummy2<-data_dummy2%>%mutate(id=rownames(categ_dataframe))%>%
+  left_join(categ_dataframe1, by="id")%>%
+  select(-categories)%>%
+  select(-id)
+```
+
+Na pozostałych 3 kolumnach kategorycznych zastosana zostanie funkcja createDummyFeatures.
+
+```{r other-change-dummy2}
+data_dummy2<-createDummyFeatures(data_dummy2,target="price", cols="main_category", method="reference")
+data_dummy2<-createDummyFeatures(data_dummy2,target="price", cols="it_location", method="reference")
+data_dummy2<-createDummyFeatures(data_dummy2,target="price", cols="seller", method="reference")
+```
+
+# Model regresji
+
+```{r listLearners, include=FALSE}
+listLearners()
+```
+
+Na tak przygotowanych 3 zbiorach danych zastosowany zostanie model Recursive Partitioning and Regression Trees. Jego działanie sprawdzony zostanie poprzez przeprowadzenie krowalidacji w 5 iteracjach na każdym zbiorze trenigowym, a następnie predykcji na zbiorach testowych.
+
+Do ich oceny użyte zostaną miary: RMSE zaimplementowane w mlr oraz samodzielnie skostruowana miara R2, oznaczająca kwadrat kowariancji pomiędzy predykcją a prawdziwymi wartościami.
+
+```{r R2}
+cv <- makeResampleDesc("CV", iters = 5)
+lrn <- makeLearner("regr.rpart", maxdepth=10)
+
+# Konstrukcja funkcji R2
+R2_func = function(task, model, pred, feats, extra.args) {
+  response<-getPredictionResponse(pred)
+  truth<-getPredictionTruth(pred)
+  (cov(response,truth))^2
+}
+
+# Utworzenie obiektu klasy Measure
+R2 = makeMeasure(
+  id = "R2", name = "Correlation squared",
+  properties = c("regr", "req.pred", "req.truth"),
+  minimize = TRUE, best = 1, worst = 0,
+  fun = R2_func
+)
+
+```
+
+
+## Target Encoding
+
+```{r target-encoding-model, cache=TRUE}
+task_target <- makeRegrTask(id="target", 
+                            data = data_target_train, 
+                            target = "price")
+
+# Kroswalidacja na zbiorze treningowym
+r_target <- resample(lrn, task_target, cv, measures = list(rmse, R2))
+cv_target <- r_target$aggr
+cv_target
+
+# Predykacja na zbiorze testowym
+model_target <- train(lrn, task_target)
+prediction_target<-predict(model_target, 
+                           newdata = data_target_test)
+performance_target<-performance(prediction_target, 
+                                list(rmse, R2))
+performance_target
+```
+
+## One-hot Encoding method "1-of-n"
+```{r dummy1-encoding-model, cache=TRUE}
+### Testowy i treningowy
+n<-nrow(data_dummy1)
+train_set<-sample(n, 0.8*n)
+data_dummy1_train<-data_dummy1[train_set,]
+data_dummy1_test<-data_dummy1[-train_set,]
+
+task_dummy1 <- makeRegrTask(id = "dummy1", 
+                            data = data_dummy1_train, 
+                            target = "price")
+
+# Kroswalidacja na zbiorze treningowym
+r_dummy1 <- resample(lrn, task_dummy1, cv, measures = list(rmse, R2))
+cv_dummy1 <- r_dummy1$aggr
+cv_dummy1
+
+# Predykcja na zbiorze testowym
+model_dummy1 <- train(lrn, task_dummy1)
+prediction_dummy1<-predict(model_dummy1,
+                           newdata = data_dummy1_test)
+performance_dummy1<-performance(prediction_dummy1, 
+                                list(rmse, R2))
+performance_dummy1
+```
+
+## One-hot Encoding method "reference"
+```{r dummy2-encoding-model, cache=TRUE}
+### Testowy i treningowy
+n<-nrow(data_dummy2)
+train_set<-sample(n, 0.8*n)
+data_dummy2_train<-data_dummy2[train_set,]
+data_dummy2_test<-data_dummy2[-train_set,]
+
+task_dummy2 <- makeRegrTask(id = "dummy2", data = data_dummy2_train, target = "price")
+
+# Kroswalidacja na zbiorze treningowym
+r_dummy2 <- resample(lrn, task_dummy2, cv, measures = list(rmse, R2))
+cv_dummy2 <- r_dummy2$aggr
+cv_dummy2
+
+# Predykcja na zbiorze testowym
+lrn_dummy2 <- makeLearner("regr.rpart", maxdepth=10)
+model_dummy2 <- train(lrn, task_dummy2)
+prediction_dummy2<-predict(model_dummy2, 
+                           newdata = data_dummy2_test)
+performance_dummy2<-performance(prediction_dummy2, 
+                                list(rmse, R2))
+performance_dummy2
+
+```
+
+# Podsumowanie wyników
+
+Do porównania posłużymy się wynikami z kroswalidacji zbiorów oraz predykcji.
+
+```{r cv}
+cv_results<-as.data.frame(rbind(cv_target,
+                                cv_dummy1,
+                                cv_dummy2))
+colnames(cv_results)=c("rmse", "r2")
+cv_results
+```
+
+```{r performance}
+pred_results<-as.data.frame(rbind(performance_target, 
+                                  performance_dummy1, 
+                                  performance_dummy2))
+colnames(pred_results)=c("rmse", "r2")
+pred_results
+```
+
+
+Od razu uwagę zwraca wynik krowalidacji przy target-encodingu : zastanawiająco niski błąd rmse i bardzo wysoki (o ponad rząd wielkości) r2. Przy predykcji na zbiorze testowym metoda ta osiągnęła o wiele gorsze wyniki od pozostalych pod względem rmse, za to wypadła najlepiej pod względem r2, ale niewiele lepiej niż dummy1. Byćmoże tak dobry wynik podczas kroswalidacji został spowodowany wyciekiem danych (podczas każdej iteracji zmienna celu przewidywany jest przy pomocy zmiennych, które były wcześniej zakodowane przy pomocy tej zmiennej z całego zbioru). Wynik ten nie będzie więc brany pod uwagę. 
+
+Wyniki metod one-hot encoding bardzo trudno jest porównać - wyniki z krowalidacji i predykcji są bardzo niespójne. Ostatecznie żadna z nich nie wydaje się być znacznie bardziej efektywna od drugiej.

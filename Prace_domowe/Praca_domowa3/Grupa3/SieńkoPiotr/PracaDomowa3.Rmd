@@ -1,0 +1,507 @@
+---
+title: "Praca Domowa 2"
+author: "Piotr Sieńko"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    css: style.css
+    code_folding: hide
+---
+# Wprowadzenie
+<p>&nbsp;</p>
+Głównym celem 3 pracy domowej było wytrenowanie 3 różnych klasyfikatorów na zbiorze danych _australia.csv_. Do tego celu wybrałem : _classif.ranger_ oparty o metodę lasów losowych, _classif.svm_ wykorzystującą maszynę wektorów nośnych oraz _classif.gbm_, działający na zasadzie gradient boostingu dla drzew decyzyjnych. 
+<p>&nbsp;</p>
+
+# Podział zbioru
+<p>&nbsp;</p>
+Na początek przyjrzyjmy się bliżej naszej ramce danych:
+```{r, include=FALSE}
+
+library(mlr)
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(kknn)
+```
+
+```{r,fig.align='center', fig.height=5, cache=TRUE}
+
+data <- read.csv(file = "australia.csv", sep = ",", stringsAsFactors = FALSE)
+
+# Usuwam błędny rekord
+data[data$Cloud3pm == 9,"Cloud3pm"] <- 8
+
+str(data)
+
+```
+<p>&nbsp;</p>
+Widać że zmienne _Rain_Today_, _Cloud9pm_, _Cloud3pm_ są zmiennymi kategorycznymi. Zamieniam je więc na factory. Zastosowanie One-hot Encoding nie przyniosło poprawy działania modelu, więc zostawiłem je tak jak były.
+
+<p>&nbsp;</p>
+Z oryginalnej ramki danych wydzieliłem 70% rekordów jako zbiór treningowy. Reszta stanowiła zbiór testowy. Dokonałem także standaryzacji zmiennych nie będących factorami.
+```{r, cache=TRUE}
+
+
+n <- sample(c(1:nrow(data)), 0.7*nrow(data))
+
+# Zamiana 2 ostatnich kolumn na factory
+data$RainToday <- as.factor(data$RainToday)
+data$RainTomorrow <- as.factor(data$RainTomorrow)
+data$Cloud3pm <- as.factor(data$Cloud3pm)
+data$Cloud9am <- as.factor(data$Cloud9am)
+
+
+
+# Tworzę zbiory trenigowe i testowe 
+data_train <- data[n,]
+data_test <- data[-n,]
+
+# Standaryzuję zmienne ciągłe
+data_train <- normalizeFeatures(data_train, method = "standardize")
+data_test <- normalizeFeatures(data_test, method = "standardize")
+  
+```
+<p>&nbsp;</p>
+
+# Ranger
+<p>&nbsp;</p>
+Pierwszym wybranym klasyfikatorem jest _ranger_. Jako, że jest on lasem losowym, zmieniłem hiperparametry określające liczbę drzew oraz liczbę zmiennych w każdym podziale na odpowiednio 1000 i 5. 
+```{r eval=FALSE, message=FALSE, warning=FALSE}
+
+set.seed(123)
+
+library(parallelMap)
+
+parallelStartMulticore(6)
+
+# Tworze task i learner
+task_forest <- makeClassifTask(id = "RandomForest", data = data_train, target = "RainTomorrow", positive = "1")
+learner_forest <- makeLearner("classif.ranger", par.vals = list(num.trees = 1000, mtry = 5), predict.type = "prob")
+
+# Cross Validation
+cv_forest <- makeResampleDesc("CV", iters = 12)
+
+# Wybrane miary ocen klasyfikatorów to: auc, acc, f1, mmce
+r_forest <- resample(learner_forest, task_forest, cv_forest, measures = list(auc, acc, f1, mmce))
+
+```
+<p>&nbsp;</p>
+W ramach audytu modelu przeprowadziłem walidację krzyżową. Do oceny jakości predykcji wybrałem miary: _auc_, _acc_, _f1_ i _mmce_.
+
+
+```{r, cache = TRUE}
+
+# Wyswietl wyniki walidacji
+AUC_forest <- r_forest$aggr
+AUC_forest
+```
+
+# SVM
+<p>&nbsp;</p>
+
+Następnym klasyfikatorem był maszyna wektorów nośnych. Jednym z hiperparametrów jest tu _cost_, który określa koszt błędnego przypisania danej zmiennej. W ten sposób można zmniejszyć lub zwiększyć czułość naszego modelu. W tym przypadku zdecydowałem się zmniejszyć współczynnik kosztu z 1 do 0.2.
+
+```{r eval=FALSE, message=FALSE, warning=FALSE}
+
+# Tworze task i learner
+task_log <- makeClassifTask(id = "LogReg", data = data_train, target = "RainTomorrow", positive = "1")
+learner_log <- makeLearner("classif.svm", par.vals = list(cost = 0.2), predict.type = "prob")
+
+# Cross Validation
+cv_log <- makeResampleDesc("CV", iters = 12)
+
+# Wybrane miary ocen klasyfikatorów to: auc, acc, f1, mmce
+r_log <- resample(learner_log, task_log, cv_log, measures = list(auc, acc, f1, mmce))
+
+```
+<p>&nbsp;</p>
+
+W walidacji krzyżowej, wszystkie miary wskazały o wiele gorsze wyniki aniżeli _classif.ranger_.
+
+```{r, cache=TRUE}
+
+# Wyswietl wyniki walidacji
+AUC_log <- r_log$aggr
+AUC_log
+```
+
+# Gradient Boost 
+<p>&nbsp;</p>
+
+Ostatnim użytym klasyfikatorem jest _Gradient Boost Machine_. W tym przypadku zwiększyłem parametr liczby drzew ze 100 na 5000 oraz zmniejszyłem learning rate z 0.1 do 0.02.
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+
+
+
+# Tworze task i learner
+task_Boost <- makeClassifTask(id = "GradientBoost", data = data_train, target = "RainTomorrow", positive = "1")
+learner_Boost <- makeLearner("classif.gbm", par.vals = list(n.trees = 5000, shrinkage = 0.02), predict.type = "prob")
+
+# Cross Validation
+cv_Boost <- makeResampleDesc("CV", iters = 12)
+
+# Wybrane miary ocen klasyfikatorów to: auc, acc, f1, mmce
+r_Boost <- resample(learner_Boost, task_Boost, cv_Boost, measures = list(auc, acc, f1, mmce))
+
+```
+<p>&nbsp;</p>
+
+Znów wykorzystując _Cross Validation_, okazało się, iż jest on średnio lepszy od _SVM_ i gorszy od _ranger_ dla zbioru treningowego.
+
+```{r, cache=TRUE}
+
+# Wyswietl wyniki walidacji
+AUC_Boost <- r_Boost$aggr
+AUC_Boost
+```
+<p>&nbsp;</p>
+
+# Zbiór testowy
+<p>&nbsp;</p>
+
+Następnym krokiem było sprawdzenie wszystkich klasyfikatorów na jednym zbiorze testowym.
+
+```{r message=FALSE, warning=FALSE, cache=TRUE, include=TRUE}
+
+# Sprawdzenie wszystkich modeli na zbiorze testowym
+
+results <- as.data.frame(NULL)
+
+
+###############
+# 1  Random Forest (ranger)
+task_forest <- makeClassifTask(id = "RandomForest", data = data_train, target = "RainTomorrow", positive = "1")
+learner_forest <- makeLearner("classif.ranger", par.vals = list(num.trees = 1000, mtry = 5), predict.type = "prob")
+
+# tworzymy model na zbiorze treningowym
+model_forest <- train(learner_forest, task_forest)
+
+# sprawdzamy model na zbiorze testowym
+pred_forest <- predict(model_forest, newdata = data_test)
+
+
+# sprawdzamy model poprzez auc i acc
+performance(pred_forest, measures = list(auc, acc, f1, mmce))
+
+# rysujemy wykres auc
+df1 = generateThreshVsPerfData(pred_forest, measures = list(fpr, tpr, mmce))
+p1 <- plotROCCurves(df1) + theme_bw()
+
+
+results[1,1:4] <- performance(pred_forest, measures = list(auc, acc, f1, mmce))
+colnames(results) <- c("AUC", "ACC", "F1", "MMCE")
+
+###################
+
+# 2 SVM
+task_log <- makeClassifTask(id = "LogReg", data = data_train, target = "RainTomorrow", positive = "1")
+learner_log <- makeLearner("classif.svm", par.vals = list(cost = 0.2), predict.type = "prob")
+
+# tworzymy model na zbiorze treningowym
+model_log <- train(learner_log, task_log)
+
+# sprawdzamy model na zbiorze testowym
+pred_log <- predict(model_log, newdata = data_test)
+
+
+# sprawdzamy model poprzez auc i acc
+performance(pred_log, measures = list(auc, acc, f1, mmce))
+
+# rysujemy wykres auc
+df2 = generateThreshVsPerfData(pred_log, measures = list(fpr, tpr, mmce))
+p2 <- plotROCCurves(df2) + theme_bw()
+
+
+results[2,1:4] <- performance(pred_log, measures = list(auc, acc, f1, mmce))
+
+####################
+
+
+# 3 Gradient Boost Model
+task_Boost <- makeClassifTask(id = "GradientBoost", data = data_train, target = "RainTomorrow", positive = "1")
+learner_Boost <- makeLearner("classif.gbm", par.vals = list(n.trees = 5000, shrinkage = 0.02), predict.type = "prob")
+
+# tworzymy model na zbiorze treningowym
+model_boost <- train(learner_Boost, task_Boost)
+
+# sprawdzamy model na zbiorze testowym
+pred_boost <- predict(model_boost, newdata = data_test)
+
+
+# sprawdzamy model poprzez auc i acc
+performance(pred_boost, measures = list(auc, acc, f1, mmce))
+
+# rysujemy wykres auc
+df3 = generateThreshVsPerfData(pred_boost, measures = list(fpr, tpr, mmce))
+p3 <- plotROCCurves(df3) + theme_bw()
+
+
+results[3,1:4] <- performance(pred_boost, measures = list(auc, acc, f1, mmce))
+
+
+```
+<p>&nbsp;</p>
+
+Sprawdzenie modelu na zbiorze testowym przyniosło podobne wyniki co walidacja krzyżowa. Według wszystkich miar, _ranger_ okazał się najlepszy. Szczególnie widoczne jest to w średnim błędzie klasyfikacji (mmce). Wyniki poszczególnych klasyfikatorów nie są na tyle wyraźnie aby wpływały mocno na wykresy ROC, jednak zauważalna jest różnica w krzywej pomiędzy _SVM_, a pozostałą dwójką modeli. 
+
+
+```{r, cache = TRUE}
+
+p1
+p2
+p3
+
+rownames(results) <- c("Forest", "SVM", "GBM")
+results
+```
+<p>&nbsp;</p>
+
+Podsumowując, z ręcznie (i dosyć losowo) dobranymi hiperparametrami, klasyfkator _ranger_ okazał się najdokładniejszy. Oczywiście, po dostrojeniu wyniki wszystkich modeli byłyby wyższe. Zapewne najlepszy okazałby się wtedy najbardziej złożony algorytm czyli _Gradient Boosting Machine_. 
+
+<p>&nbsp;</p>
+
+# Zbiór allegro
+<p>&nbsp;</p>
+
+W tej części pracy domowej naszym zadaniem jest odkodowanie danych zawartych w zbiorze _allegro-api-transactions.csv_ za pomocą 3 metod oraz użycie modelu regresji w celu oszacowania zmiennej _price_. Wybrałem _Label Encoding_, _Binary Encoding_ oraz _Target Encoding_. Niestety, przy zmiennych posiadajacych tysiące poziomów np. _categories_, użycie _One-hot Encoding_ było niemożliwe. 
+
+```{r, eval=FALSE}
+
+data_all <- read.csv(file = "allegro-api-transactions.csv")
+
+# Usuwanie kolumn z id
+# Zmniejszam rozmiar danych 
+m <- sample(1:nrow(data_all), 0.5*nrow(data_all))
+data_all <- data_all[, c(-(1:3))]
+
+# Label Encoding
+levels(data_all$categories) <- c(1:nlevels(data_all$categories))
+levels(data_all$seller) <- c(1:nlevels(data_all$seller))
+levels(data_all$it_location) <- c(1:nlevels(data_all$it_location))
+levels(data_all$main_category) <- c(1:nlevels(data_all$main_category))
+
+# Removing Factors
+
+data_all$categories <- as.numeric(as.character(data_all$categories))
+data_all$seller <- as.numeric(as.character(data_all$seller))
+data_all$it_location <- as.numeric(as.character(data_all$it_location))
+data_all$main_category <- as.numeric(as.character(data_all$main_category))
+
+###########
+# Tworzenie zbioru treningowego i testowego
+
+n <- sample(1:nrow(data_all), 0.7*nrow(data_all))
+data_all_train <- data_all[n,]
+data_all_test <- data_all[-n,]
+
+
+##########
+# Binary Encoding
+
+data_bin_train <- data_all_train
+data_bin_test <- data_all_test
+
+# Koduję label w systemie binarnym.
+# Train
+# Categories
+bin <- as.data.frame(t(sapply(data_bin_train$categories, function(x){as.integer(intToBits(as.numeric(x)))})))
+colnames(bin) <- paste("cat", c(1:32),sep = "")
+
+data_bin_train <- cbind(data_bin_train, bin)
+
+# Seller
+bin <- as.data.frame(t(sapply(data_bin_train$seller, function(x){as.integer(intToBits(as.numeric(x)))})))
+colnames(bin) <- paste("sell", c(1:32),sep = "")
+
+data_bin_train <- cbind(data_bin_train, bin)
+
+# It_location
+bin <- as.data.frame(t(sapply(data_bin_train$it_location, function(x){as.integer(intToBits(as.numeric(x)))})))
+colnames(bin) <- paste("loc", c(1:32),sep = "")
+
+data_bin_train <- cbind(data_bin_train, bin)
+
+# Main_category
+bin <- as.data.frame(t(sapply(data_bin_train$main_category, function(x){as.integer(intToBits(as.numeric(x)))})))
+colnames(bin) <- paste("main", c(1:32),sep = "")
+
+data_bin_train <- cbind(data_bin_train, bin)
+
+
+# Test
+# Categories
+bin <- as.data.frame(t(sapply(data_bin_test$categories, function(x){as.integer(intToBits(as.numeric(x)))})))
+colnames(bin) <- paste("cat", c(1:32),sep = "")
+
+data_bin_test <- cbind(data_bin_test, bin)
+
+# Seller
+bin <- as.data.frame(t(sapply(data_bin_test$seller, function(x){as.integer(intToBits(as.numeric(x)))})))
+colnames(bin) <- paste("sell", c(1:32),sep = "")
+
+data_bin_test <- cbind(data_bin_test, bin)
+
+# It_location
+bin <- as.data.frame(t(sapply(data_bin_test$it_location, function(x){as.integer(intToBits(as.numeric(x)))})))
+colnames(bin) <- paste("loc", c(1:32), sep = "")
+
+data_bin_test <- cbind(data_bin_test, bin)
+
+# Main_category
+bin <- as.data.frame(t(sapply(data_bin_test$main_category, function(x){as.integer(intToBits(as.numeric(x)))})))
+colnames(bin) <- paste("main", c(1:32),sep = "")
+
+data_bin_test <- cbind(data_bin_test, bin)
+
+################
+# Target Encoding
+
+data_target_train <- data_all_train
+data_target_test <- data_all_test
+
+# Training set
+
+#  Categories
+
+means <- aggregate(data_target_train$price, by = list(data_target_train$categories), FUN = "mean")
+data_target_train <- merge(data_target_train, means, by.x = "categories", by.y = "Group.1")
+data_target_train$categories <- data_target_train$x
+data_target_train <- data_target_train[,-12]
+
+# Seller
+means <- aggregate(data_target_train$price, by = list(data_target_train$seller), FUN = "mean")
+data_target_train <- merge(data_target_train, means, by.x = "seller", by.y = "Group.1")
+data_target_train$seller <- data_target_train$x
+data_target_train <- data_target_train[,-12]
+
+# it_location
+means <- aggregate(data_target_train$price, by = list(data_target_train$it_location), FUN = "mean")
+data_target_train <- merge(data_target_train, means, by.x = "it_location", by.y = "Group.1")
+data_target_train$it_location <- data_target_train$x
+data_target_train <- data_target_train[,-12]
+
+# main_category
+means <- aggregate(data_target_train$price, by = list(data_target_train$main_category), FUN = "mean")
+data_target_train <- merge(data_target_train, means, by.x = "main_category", by.y = "Group.1")
+data_target_train$main_category <- data_target_train$x
+data_target_train <- data_target_train[,-12]
+
+
+# Testing set
+
+#  Categories
+
+means <- aggregate(data_target_test$price, by = list(data_target_test$categories), FUN = "mean")
+data_target_test <- merge(data_target_test, means, by.x = "categories", by.y = "Group.1")
+data_target_test$categories <- data_target_test$x
+data_target_test <- data_target_test[,-12]
+
+# Seller
+means <- aggregate(data_target_test$price, by = list(data_target_test$seller), FUN = "mean")
+data_target_test <- merge(data_target_test, means, by.x = "seller", by.y = "Group.1")
+data_target_test$seller <- data_target_test$x
+data_target_test <- data_target_test[,-12]
+
+# it_location
+means <- aggregate(data_target_test$price, by = list(data_target_test$it_location), FUN = "mean")
+data_target_test <- merge(data_target_test, means, by.x = "it_location", by.y = "Group.1")
+data_target_test$it_location <- data_target_test$x
+data_target_test <- data_target_test[,-12]
+
+# main_category
+means <- aggregate(data_target_test$price, by = list(data_target_test$main_category), FUN = "mean")
+data_target_test <- merge(data_target_test, means, by.x = "main_category", by.y = "Group.1")
+data_target_test$main_category <- data_target_test$x
+data_target_test <- data_target_test[,-12]
+
+```
+<p>&nbsp;</p>
+
+Następnie sprawdziłem wpływ metod na jakość zwykłego modelu regresji liniowej za pomocą średniej kwadratowej błędów (RMSE) oraz współczynnika determinacji (R2).
+
+```{r eval=FALSE, message=FALSE, warning=FALSE}
+
+# Sprawdzenie wszystkich modeli na zbiorze testowym
+
+results_reg <- as.data.frame(NULL)
+
+
+
+###############
+# 1. Label Encoding
+task <- makeRegrTask(data = data_all_train, target = "price")
+learner <- makeLearner("regr.lm", par.vals = list(), predict.type = "response")
+# tworzymy model na zbiorze treningowym
+model <- train(learner, task)
+
+# sprawdzamy model na zbiorze testowym
+pred <- predict(model, newdata = data_all_test)
+
+
+# sprawdzamy model poprzez rmse i r^2
+performance(pred, measures = list(rmse, rsq))
+
+
+results_reg[1,1:2] <- performance(pred, measures = list(rmse, rsq))
+colnames(results_reg) <- c("RMSE", "R2")
+
+```
+
+```{r eval=FALSE, message=FALSE, warning=FALSE}
+
+
+###############
+# 2. Binary Encoding
+task <- makeRegrTask(data = data_bin_train, target = "price")
+learner <- makeLearner("regr.lm", par.vals = list(), predict.type = "response")
+# tworzymy model na zbiorze treningowym
+model <- train(learner, task)
+
+# sprawdzamy model na zbiorze testowym
+pred <- predict(model, newdata = data_bin_test)
+
+
+# sprawdzamy model poprzez rmse i r^2
+performance(pred, measures = list(rmse, rsq))
+
+
+results_reg[2,1:2] <- performance(pred, measures = list(rmse, rsq))
+
+
+```
+
+```{r eval=FALSE, message=FALSE, warning=FALSE}
+
+###############
+# 3. Target Encoding
+task <- makeRegrTask(data = data_target_train, target = "price")
+learner <- makeLearner("regr.lm", par.vals = list(), predict.type = "response")
+# tworzymy model na zbiorze treningowym
+model <- train(learner, task)
+
+# sprawdzamy model na zbiorze testowym
+pred <- predict(model, newdata = data_target_test)
+
+
+# sprawdzamy model poprzez rmse i r^2
+performance(pred, measures = list(rmse, rsq))
+
+
+results_reg[3,1:2] <- performance(pred, measures = list(rmse, rsq))
+
+
+```
+<p>&nbsp;</p>
+
+Okazało się, że jedynie _Target Encoding_ nie psuje naszego modelu. Wyniki pozostałych metod są zdecydowanie gorsze. Nie jest to zaskakujące, biorąc pod uwagę fakt, że _Label Encoding_ przypisuje kolejnym poziomom factora kolejne liczby naturalne, co model może błędnie zinterpretować. Trochę lepiej model zachowuje się przy _Binary Encoding_, który tworzy binarną reprezentację liczb z _Label Encoding_. Dzięki temu zrozumienie danego poziomu jako większego lub mniejszego od innego (tak jak w _Label Encoding_) jest niemożliwe. Jedynie _Target Encoding_ zapewnił prawidłowe, numeryczne zakodowanie zmiennych kategorycznych, co poskutkowało zmniejszeniem błędu kwadratowego oraz ogromną poprawą współczynnika determinacji, który pokazuje, że zdecydowana większość wariancji w próbie jest wyjaśniona przez model. 
+
+```{r, cache=TRUE, warning=FALSE}
+
+rownames(results_reg) <- c("Label", "Binary", "Target")
+
+results_reg
+
+
+```
