@@ -3,7 +3,6 @@
 1.	https://archive.ics.uci.edu/ml/datasets/Online+Shoppers+Purchasing+Intention+Dataset#
 2.	http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones
 3.  https://archive.ics.uci.edu/ml/datasets/A+study+of++Asian+Religious+and+Biblical+Texts
-4.  TBA
 
 ### Dodatkowe informacje:  
 Do każdego projektu proszę przygotować:  
