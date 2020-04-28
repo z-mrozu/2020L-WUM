@@ -1,0 +1,1001 @@
+checking_account_status,duration,credit_history,purpose,credit_amount,savings,present_employment,installment_rate,personal,other_debtors,present_residence,property,age,other_installment_plans,housing,existing_credits,job,dependents,telephone,foreign_worker,customer_type,sex,checking_account_exists,savings_account_exists
+A11,6,A34,radio/television,1169.0,A65,A75,4.0,A93,none,4.0,A121,67.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,0
+A12,48,A32,radio/television,5951.0,A61,A73,2.0,A92,none,2.0,A121,22.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,1
+A14,12,A34,education,2096.0,A61,A74,2.0,A93,none,3.0,A121,49.0,none,own,1.0,unskilled-resident,2,0,1,1,1,0,1
+A11,42,A32,furniture/equipment,7882.0,A61,A74,2.0,A93,guarantor,4.0,A122,45.0,none,free,1.0,skilled_employee,2,0,1,1,1,1,1
+A11,24,A33,new car,4870.0,A61,A73,3.0,A93,none,4.0,A124,53.0,none,free,2.0,skilled_employee,2,0,1,0,1,1,1
+A14,36,A32,education,9055.0,A65,A73,2.0,A93,none,4.0,A124,35.0,none,free,1.0,unskilled-resident,2,1,1,1,1,0,0
+A14,24,A32,furniture/equipment,2835.0,A63,A75,3.0,A93,none,4.0,A122,53.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A12,36,A32,used car,6948.0,A61,A73,2.0,A93,none,2.0,A123,35.0,none,rent,1.0,management/self-employed,1,1,1,1,1,1,1
+A14,12,A32,radio/television,3059.0,A64,A74,2.0,A91,none,4.0,A121,61.0,none,own,1.0,unskilled-resident,1,0,1,1,1,0,1
+A12,30,A34,new car,5234.0,A61,A71,4.0,A94,none,2.0,A123,28.0,none,own,2.0,management/self-employed,1,0,1,0,1,1,1
+A12,12,A32,new car,1295.0,A61,A72,3.0,A92,none,1.0,A123,25.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A11,48,A32,business,4308.0,A61,A72,3.0,A92,none,4.0,A122,24.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A12,12,A32,radio/television,1567.0,A61,A73,1.0,A92,none,1.0,A123,22.0,none,own,1.0,skilled_employee,1,1,1,1,0,1,1
+A11,24,A34,new car,1199.0,A61,A75,4.0,A93,none,4.0,A123,60.0,none,own,2.0,unskilled-resident,1,0,1,0,1,1,1
+A11,15,A32,new car,1403.0,A61,A73,2.0,A92,none,4.0,A123,28.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,1
+A11,24,A32,radio/television,1282.0,A62,A73,4.0,A92,none,2.0,A123,32.0,none,own,1.0,unskilled-resident,1,0,1,0,0,1,1
+A14,24,A34,radio/television,2424.0,A65,A75,4.0,A93,none,4.0,A122,53.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,0
+A11,30,A30,business,8072.0,A65,A72,2.0,A93,none,3.0,A123,25.0,bank,own,3.0,skilled_employee,1,0,1,1,1,1,0
+A12,24,A32,used car,12579.0,A61,A75,4.0,A92,none,2.0,A124,44.0,none,free,1.0,management/self-employed,1,1,1,0,0,1,1
+A14,24,A32,radio/television,3430.0,A63,A75,3.0,A93,none,2.0,A123,31.0,none,own,1.0,skilled_employee,2,1,1,1,1,0,1
+A14,9,A34,new car,2134.0,A61,A73,4.0,A93,none,4.0,A123,48.0,none,own,3.0,skilled_employee,1,1,1,1,1,0,1
+A11,6,A32,radio/television,2647.0,A63,A73,2.0,A93,none,3.0,A121,44.0,none,rent,1.0,skilled_employee,2,0,1,1,1,1,1
+A11,10,A34,new car,2241.0,A61,A72,1.0,A93,none,3.0,A121,48.0,none,rent,2.0,unskilled-resident,2,0,0,1,1,1,1
+A12,12,A34,used car,1804.0,A62,A72,3.0,A93,none,4.0,A122,44.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,10,A34,furniture/equipment,2069.0,A65,A73,2.0,A94,none,1.0,A123,26.0,none,own,2.0,skilled_employee,1,0,0,1,1,0,0
+A11,6,A32,furniture/equipment,1374.0,A61,A73,1.0,A93,none,2.0,A121,36.0,bank,own,1.0,unskilled-resident,1,1,1,1,1,1,1
+A14,6,A30,radio/television,426.0,A61,A75,4.0,A94,none,4.0,A123,39.0,none,own,1.0,unskilled-resident,1,0,1,1,1,0,1
+A13,12,A31,radio/television,409.0,A64,A73,3.0,A92,none,3.0,A121,42.0,none,rent,2.0,skilled_employee,1,0,1,1,0,1,1
+A12,7,A32,radio/television,2415.0,A61,A73,3.0,A93,guarantor,2.0,A121,34.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,60,A33,business,6836.0,A61,A75,3.0,A93,none,4.0,A124,63.0,none,own,2.0,skilled_employee,1,1,1,0,1,1,1
+A12,18,A32,business,1913.0,A64,A72,3.0,A94,none,3.0,A121,36.0,bank,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A11,24,A32,furniture/equipment,4020.0,A61,A73,2.0,A93,none,2.0,A123,27.0,stores,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,18,A32,new car,5866.0,A62,A73,2.0,A93,none,2.0,A123,30.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A14,12,A34,business,1264.0,A65,A75,4.0,A93,none,4.0,A124,57.0,none,rent,1.0,unskilled-resident,1,0,1,1,1,0,0
+A13,12,A32,furniture/equipment,1474.0,A61,A72,4.0,A92,none,1.0,A122,33.0,bank,own,1.0,management/self-employed,1,1,1,1,0,1,1
+A12,45,A34,radio/television,4746.0,A61,A72,4.0,A93,none,2.0,A122,25.0,none,own,2.0,unskilled-resident,1,0,1,0,1,1,1
+A14,48,A34,education,6110.0,A61,A73,1.0,A93,none,3.0,A124,31.0,bank,free,1.0,skilled_employee,1,1,1,1,1,0,1
+A13,18,A32,radio/television,2100.0,A61,A73,4.0,A93,co-applicant,2.0,A121,37.0,stores,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A13,10,A32,domestic appliances,1225.0,A61,A73,2.0,A93,none,2.0,A123,37.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A12,9,A32,radio/television,458.0,A61,A73,4.0,A93,none,3.0,A121,24.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,30,A32,radio/television,2333.0,A63,A75,4.0,A93,none,2.0,A123,30.0,bank,own,1.0,management/self-employed,1,0,1,1,1,0,1
+A12,12,A32,radio/television,1158.0,A63,A73,3.0,A91,none,1.0,A123,26.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A12,18,A33,repairs,6204.0,A61,A73,2.0,A93,none,4.0,A121,44.0,none,own,1.0,unskilled-resident,2,1,1,1,1,1,1
+A11,30,A34,used car,6187.0,A62,A74,1.0,A94,none,4.0,A123,24.0,none,rent,2.0,skilled_employee,1,0,1,1,1,1,1
+A11,48,A34,used car,6143.0,A61,A75,4.0,A92,none,4.0,A124,58.0,stores,free,2.0,unskilled-resident,1,0,1,0,0,1,1
+A14,11,A34,new car,1393.0,A61,A72,4.0,A92,none,4.0,A123,35.0,none,own,2.0,management/self-employed,1,0,1,1,0,0,1
+A14,36,A32,radio/television,2299.0,A63,A75,4.0,A93,none,4.0,A123,39.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A11,6,A32,used car,1352.0,A63,A71,1.0,A92,none,2.0,A122,23.0,none,rent,1.0,unemployed/unskilled,1,1,1,1,0,1,1
+A14,11,A34,new car,7228.0,A61,A73,1.0,A93,none,4.0,A122,39.0,none,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A14,12,A32,radio/television,2073.0,A62,A73,4.0,A92,co-applicant,2.0,A121,28.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A12,24,A33,furniture/equipment,2333.0,A65,A72,4.0,A93,none,2.0,A122,29.0,bank,own,1.0,unskilled-resident,1,0,1,1,1,1,0
+A12,27,A33,used car,5965.0,A61,A75,1.0,A93,none,2.0,A123,30.0,none,own,2.0,management/self-employed,1,1,1,1,1,1,1
+A14,12,A32,radio/television,1262.0,A61,A73,3.0,A93,none,2.0,A123,25.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,18,A32,used car,3378.0,A65,A73,2.0,A93,none,1.0,A122,31.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,0
+A12,36,A33,new car,2225.0,A61,A75,4.0,A93,none,4.0,A124,57.0,bank,free,2.0,skilled_employee,1,1,1,0,1,1,1
+A14,6,A31,new car,783.0,A65,A73,1.0,A93,guarantor,2.0,A121,26.0,stores,own,1.0,unskilled-resident,2,0,1,1,1,0,0
+A12,12,A32,radio/television,6468.0,A65,A71,2.0,A93,none,1.0,A124,52.0,none,own,1.0,management/self-employed,1,1,1,0,1,1,0
+A14,36,A34,radio/television,9566.0,A61,A73,2.0,A92,none,2.0,A123,31.0,stores,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A13,18,A32,new car,1961.0,A61,A75,3.0,A92,none,2.0,A123,23.0,none,own,1.0,management/self-employed,1,0,1,1,0,1,1
+A11,36,A34,furniture/equipment,6229.0,A61,A72,4.0,A92,co-applicant,4.0,A124,23.0,none,rent,2.0,unskilled-resident,1,1,1,0,0,1,1
+A12,9,A32,business,1391.0,A61,A73,2.0,A94,none,1.0,A121,27.0,bank,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A12,15,A34,radio/television,1537.0,A65,A75,4.0,A93,guarantor,4.0,A121,50.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,0
+A12,36,A30,business,1953.0,A61,A75,4.0,A93,none,4.0,A124,61.0,none,free,1.0,management/self-employed,1,1,1,0,1,1,1
+A12,48,A30,business,14421.0,A61,A73,2.0,A93,none,2.0,A123,25.0,none,own,1.0,skilled_employee,1,1,1,0,1,1,1
+A14,24,A32,radio/television,3181.0,A61,A72,4.0,A92,none,4.0,A122,26.0,none,own,1.0,skilled_employee,1,1,1,1,0,0,1
+A14,27,A32,repairs,5190.0,A65,A75,4.0,A93,none,4.0,A122,48.0,none,own,4.0,skilled_employee,2,1,1,1,1,0,0
+A14,12,A32,radio/television,2171.0,A61,A72,2.0,A92,none,2.0,A123,29.0,bank,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A12,12,A32,new car,1007.0,A64,A73,4.0,A94,none,1.0,A121,22.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,36,A32,education,1819.0,A61,A73,4.0,A93,none,4.0,A124,37.0,stores,free,1.0,skilled_employee,1,1,1,0,1,0,1
+A14,36,A32,radio/television,2394.0,A65,A73,4.0,A92,none,4.0,A123,25.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,0
+A14,36,A32,used car,8133.0,A61,A73,1.0,A92,none,2.0,A122,30.0,bank,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A14,7,A34,radio/television,730.0,A65,A75,4.0,A93,none,2.0,A122,46.0,none,rent,2.0,unskilled-resident,1,1,1,1,1,0,0
+A11,8,A34,others,1164.0,A61,A75,3.0,A93,none,4.0,A124,51.0,bank,free,2.0,management/self-employed,2,1,1,1,1,1,1
+A12,42,A34,business,5954.0,A61,A74,2.0,A92,none,1.0,A121,41.0,bank,own,2.0,unskilled-resident,1,0,1,1,0,1,1
+A11,36,A32,education,1977.0,A65,A75,4.0,A93,none,4.0,A124,40.0,none,own,1.0,management/self-employed,1,1,1,0,1,1,0
+A11,12,A34,used car,1526.0,A61,A75,4.0,A93,none,4.0,A124,66.0,none,free,2.0,management/self-employed,1,0,1,1,1,1,1
+A11,42,A32,radio/television,3965.0,A61,A72,4.0,A93,none,3.0,A123,34.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A12,11,A33,radio/television,4771.0,A61,A74,2.0,A93,none,4.0,A122,51.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,54,A30,used car,9436.0,A65,A73,2.0,A93,none,2.0,A122,39.0,none,own,1.0,unskilled-resident,2,0,1,1,1,0,0
+A12,30,A32,furniture/equipment,3832.0,A61,A72,2.0,A94,none,1.0,A122,22.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,24,A32,radio/television,5943.0,A65,A72,1.0,A92,none,1.0,A123,44.0,none,own,2.0,skilled_employee,1,1,1,0,0,0,0
+A14,15,A32,radio/television,1213.0,A63,A75,4.0,A93,none,3.0,A122,47.0,stores,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A14,18,A32,business,1568.0,A62,A73,3.0,A92,none,4.0,A122,24.0,none,rent,1.0,unskilled-resident,1,0,1,1,0,0,1
+A11,24,A32,others,1755.0,A61,A75,4.0,A92,guarantor,4.0,A121,58.0,none,own,1.0,unskilled-resident,1,1,1,1,0,1,1
+A11,10,A32,radio/television,2315.0,A61,A75,3.0,A93,none,4.0,A121,52.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A14,12,A34,business,1412.0,A61,A73,4.0,A92,guarantor,2.0,A121,29.0,none,own,2.0,management/self-employed,1,1,1,1,0,0,1
+A12,18,A34,furniture/equipment,1295.0,A61,A72,4.0,A92,none,1.0,A122,27.0,none,own,2.0,skilled_employee,1,0,1,1,0,1,1
+A12,36,A32,education,12612.0,A62,A73,1.0,A93,none,4.0,A124,47.0,none,free,1.0,skilled_employee,2,1,1,0,1,1,1
+A11,18,A32,new car,2249.0,A62,A74,4.0,A93,none,3.0,A123,30.0,none,own,1.0,management/self-employed,2,1,1,1,1,1,1
+A11,12,A30,repairs,1108.0,A61,A74,4.0,A93,none,3.0,A121,28.0,none,own,2.0,skilled_employee,1,0,1,0,1,1,1
+A14,12,A34,radio/television,618.0,A61,A75,4.0,A93,none,4.0,A121,56.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A11,12,A34,used car,1409.0,A61,A75,4.0,A93,none,3.0,A121,54.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,12,A34,radio/television,797.0,A65,A75,4.0,A92,none,3.0,A122,33.0,bank,own,1.0,unskilled-resident,2,0,1,0,0,0,0
+A13,24,A34,furniture/equipment,3617.0,A65,A75,4.0,A93,co-applicant,4.0,A124,20.0,none,rent,2.0,skilled_employee,1,0,1,1,1,1,0
+A12,12,A32,new car,1318.0,A64,A75,4.0,A93,none,4.0,A121,54.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A12,54,A30,business,15945.0,A61,A72,3.0,A93,none,4.0,A124,58.0,none,rent,1.0,skilled_employee,1,1,1,0,1,1,1
+A14,12,A34,education,2012.0,A65,A74,4.0,A92,none,2.0,A123,61.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,0
+A12,18,A32,business,2622.0,A62,A73,4.0,A93,none,4.0,A123,34.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,36,A34,radio/television,2337.0,A61,A75,4.0,A93,none,4.0,A121,36.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,20,A33,used car,7057.0,A65,A74,3.0,A93,none,4.0,A122,36.0,bank,rent,2.0,management/self-employed,2,1,1,1,1,1,0
+A14,24,A32,new car,1469.0,A62,A75,4.0,A94,none,4.0,A121,41.0,none,rent,1.0,unskilled-resident,1,0,1,1,1,0,1
+A12,36,A32,radio/television,2323.0,A61,A74,4.0,A93,none,4.0,A123,24.0,none,rent,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,6,A33,radio/television,932.0,A61,A73,3.0,A92,none,2.0,A121,24.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A12,9,A34,furniture/equipment,1919.0,A61,A74,4.0,A93,none,3.0,A123,35.0,none,rent,1.0,skilled_employee,1,1,1,1,1,1,1
+A14,12,A32,used car,2445.0,A65,A72,2.0,A94,none,4.0,A123,26.0,none,rent,1.0,skilled_employee,1,1,1,1,1,0,0
+A12,24,A34,others,11938.0,A61,A73,2.0,A93,co-applicant,3.0,A123,39.0,none,own,2.0,management/self-employed,2,1,1,0,1,1,1
+A14,18,A31,new car,6458.0,A61,A75,2.0,A93,none,4.0,A124,39.0,bank,own,2.0,management/self-employed,2,1,1,0,1,0,1
+A12,12,A32,new car,6078.0,A61,A74,2.0,A93,none,2.0,A123,32.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,24,A32,furniture/equipment,7721.0,A65,A72,1.0,A92,none,2.0,A122,30.0,none,own,1.0,skilled_employee,1,1,0,1,0,1,0
+A12,14,A32,business,1410.0,A63,A75,1.0,A94,none,2.0,A121,35.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A12,6,A33,business,1449.0,A62,A75,1.0,A91,none,2.0,A123,31.0,bank,own,2.0,skilled_employee,2,0,1,1,1,1,1
+A13,15,A32,education,392.0,A61,A72,4.0,A92,none,4.0,A122,23.0,none,rent,1.0,skilled_employee,1,1,1,1,0,1,1
+A12,18,A32,new car,6260.0,A61,A74,3.0,A93,none,3.0,A121,28.0,none,rent,1.0,unskilled-resident,1,0,1,1,1,1,1
+A14,36,A34,new car,7855.0,A61,A73,4.0,A92,none,2.0,A121,25.0,stores,own,2.0,skilled_employee,1,1,1,0,0,0,1
+A11,12,A32,radio/television,1680.0,A63,A75,3.0,A94,none,1.0,A121,35.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,48,A34,radio/television,3578.0,A65,A75,4.0,A93,none,1.0,A121,47.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,0
+A11,42,A32,radio/television,7174.0,A65,A74,4.0,A92,none,3.0,A123,30.0,none,own,1.0,management/self-employed,1,1,1,0,0,1,0
+A11,10,A34,furniture/equipment,2132.0,A65,A72,2.0,A92,co-applicant,3.0,A121,27.0,none,rent,2.0,skilled_employee,1,0,0,1,0,1,0
+A11,33,A34,furniture/equipment,4281.0,A63,A73,1.0,A92,none,4.0,A123,23.0,none,own,2.0,skilled_employee,1,0,1,0,0,1,1
+A12,12,A34,new car,2366.0,A63,A74,3.0,A91,none,3.0,A123,36.0,none,own,1.0,management/self-employed,1,1,1,1,1,1,1
+A11,21,A32,radio/television,1835.0,A61,A73,3.0,A92,none,2.0,A121,25.0,none,own,2.0,skilled_employee,1,1,1,0,0,1,1
+A14,24,A34,used car,3868.0,A61,A75,4.0,A92,none,2.0,A123,41.0,none,rent,2.0,management/self-employed,1,1,1,1,0,0,1
+A14,12,A32,furniture/equipment,1768.0,A61,A73,3.0,A93,none,2.0,A121,24.0,none,rent,1.0,unskilled-resident,1,0,1,1,1,0,1
+A13,10,A34,new car,781.0,A61,A75,4.0,A93,none,4.0,A124,63.0,none,free,2.0,skilled_employee,1,1,1,1,1,1,1
+A12,18,A32,furniture/equipment,1924.0,A65,A72,4.0,A92,none,3.0,A121,27.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,0
+A11,12,A34,new car,2121.0,A61,A73,4.0,A93,none,2.0,A122,30.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A11,12,A32,radio/television,701.0,A61,A73,4.0,A94,none,2.0,A121,40.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A12,12,A32,repairs,639.0,A61,A73,4.0,A93,none,2.0,A123,30.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A12,12,A34,used car,1860.0,A61,A71,4.0,A93,none,2.0,A123,34.0,none,own,2.0,management/self-employed,1,1,1,1,1,1,1
+A11,12,A34,new car,3499.0,A61,A73,3.0,A92,co-applicant,2.0,A121,29.0,none,own,2.0,skilled_employee,1,0,1,0,0,1,1
+A12,48,A32,new car,8487.0,A65,A74,1.0,A92,none,2.0,A123,24.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,0
+A11,36,A33,education,6887.0,A61,A73,4.0,A93,none,3.0,A122,29.0,stores,own,1.0,skilled_employee,1,1,1,0,1,1,1
+A14,15,A32,furniture/equipment,2708.0,A61,A72,2.0,A93,none,3.0,A122,27.0,bank,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A14,18,A32,furniture/equipment,1984.0,A61,A73,4.0,A93,none,4.0,A124,47.0,bank,free,2.0,skilled_employee,1,0,1,1,1,0,1
+A14,60,A32,radio/television,10144.0,A62,A74,2.0,A92,none,4.0,A121,21.0,none,own,1.0,skilled_employee,1,1,1,1,0,0,1
+A14,12,A34,radio/television,1240.0,A65,A75,4.0,A92,none,2.0,A121,38.0,none,own,2.0,skilled_employee,1,1,1,1,0,0,0
+A14,27,A33,used car,8613.0,A64,A73,2.0,A93,none,2.0,A123,27.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A12,12,A32,radio/television,766.0,A63,A73,4.0,A93,none,3.0,A121,66.0,none,own,1.0,unskilled-resident,1,0,1,0,1,1,1
+A12,15,A34,radio/television,2728.0,A65,A74,4.0,A93,guarantor,2.0,A121,35.0,bank,own,3.0,skilled_employee,1,1,1,1,1,1,0
+A13,12,A32,radio/television,1881.0,A61,A73,2.0,A92,none,2.0,A123,44.0,none,rent,1.0,unskilled-resident,1,1,1,1,0,1,1
+A13,6,A32,new car,709.0,A64,A72,2.0,A94,none,2.0,A121,27.0,none,own,1.0,unemployed/unskilled,1,0,0,1,1,1,1
+A12,36,A32,radio/television,4795.0,A61,A72,4.0,A92,none,1.0,A124,30.0,none,own,1.0,management/self-employed,1,1,1,1,0,1,1
+A11,27,A32,radio/television,3416.0,A61,A73,3.0,A93,none,2.0,A123,27.0,none,own,1.0,management/self-employed,1,0,1,1,1,1,1
+A11,18,A32,furniture/equipment,2462.0,A61,A73,2.0,A93,none,2.0,A123,22.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,21,A34,furniture/equipment,2288.0,A61,A72,4.0,A92,none,4.0,A122,23.0,none,own,1.0,skilled_employee,1,1,1,1,0,0,1
+A12,48,A31,business,3566.0,A62,A74,4.0,A93,none,2.0,A123,30.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,6,A34,new car,860.0,A61,A75,1.0,A92,none,4.0,A124,39.0,none,own,2.0,skilled_employee,1,1,1,1,0,1,1
+A14,12,A34,new car,682.0,A62,A74,4.0,A92,none,3.0,A123,51.0,none,own,2.0,skilled_employee,1,1,1,1,0,0,1
+A11,36,A34,furniture/equipment,5371.0,A61,A73,3.0,A93,guarantor,2.0,A122,28.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A14,18,A34,radio/television,1582.0,A64,A75,4.0,A93,none,4.0,A123,46.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A14,6,A32,radio/television,1346.0,A62,A75,2.0,A93,none,4.0,A124,42.0,bank,free,1.0,skilled_employee,2,1,1,1,1,0,1
+A14,10,A32,radio/television,1924.0,A61,A73,1.0,A93,none,4.0,A122,38.0,none,own,1.0,skilled_employee,1,1,0,1,1,0,1
+A13,36,A32,radio/television,5848.0,A61,A73,4.0,A93,none,1.0,A123,24.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,24,A34,used car,7758.0,A64,A75,2.0,A92,none,4.0,A124,29.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,1
+A12,24,A33,business,6967.0,A62,A74,4.0,A93,none,4.0,A123,36.0,none,rent,1.0,management/self-employed,1,1,1,1,1,1,1
+A11,12,A32,furniture/equipment,1282.0,A61,A73,2.0,A92,none,4.0,A123,20.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A11,9,A34,repairs,1288.0,A62,A75,3.0,A93,guarantor,4.0,A121,48.0,none,own,2.0,skilled_employee,2,0,0,1,1,1,1
+A11,12,A31,retraining,339.0,A61,A75,4.0,A94,none,1.0,A123,45.0,bank,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A12,24,A32,new car,3512.0,A62,A74,2.0,A93,none,3.0,A123,38.0,bank,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A14,6,A34,radio/television,1898.0,A65,A73,1.0,A93,none,2.0,A121,34.0,none,own,2.0,unskilled-resident,2,0,1,1,1,0,0
+A14,24,A34,radio/television,2872.0,A62,A75,3.0,A93,none,4.0,A121,36.0,none,own,1.0,skilled_employee,2,1,1,1,1,0,1
+A14,18,A34,new car,1055.0,A61,A72,4.0,A92,none,1.0,A122,30.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A14,15,A32,domestic appliances,1262.0,A63,A74,4.0,A93,none,3.0,A122,36.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A12,10,A32,new car,7308.0,A61,A71,2.0,A93,none,4.0,A124,70.0,bank,free,1.0,management/self-employed,1,1,1,1,1,1,1
+A14,36,A32,new car,909.0,A63,A75,4.0,A93,none,4.0,A122,36.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,6,A32,furniture/equipment,2978.0,A63,A73,1.0,A93,none,2.0,A123,32.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A11,18,A32,furniture/equipment,1131.0,A61,A71,4.0,A92,none,2.0,A123,33.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,1
+A12,11,A32,furniture/equipment,1577.0,A64,A72,4.0,A92,none,1.0,A121,20.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A14,24,A32,furniture/equipment,3972.0,A61,A74,2.0,A92,none,4.0,A122,25.0,none,rent,1.0,skilled_employee,1,1,1,1,0,0,1
+A12,24,A34,business,1935.0,A61,A75,4.0,A91,none,4.0,A121,31.0,none,own,2.0,skilled_employee,1,1,1,0,1,1,1
+A11,15,A30,new car,950.0,A61,A75,4.0,A93,none,3.0,A123,33.0,none,rent,2.0,skilled_employee,2,0,1,0,1,1,1
+A14,12,A32,furniture/equipment,763.0,A61,A73,4.0,A92,none,1.0,A121,26.0,none,own,1.0,skilled_employee,1,1,1,1,0,0,1
+A12,24,A33,furniture/equipment,2064.0,A61,A71,3.0,A92,none,2.0,A122,34.0,none,own,1.0,management/self-employed,1,1,1,0,0,1,1
+A12,8,A32,radio/television,1414.0,A61,A73,4.0,A93,guarantor,2.0,A121,33.0,none,own,1.0,skilled_employee,1,0,0,1,1,1,1
+A11,21,A33,education,3414.0,A61,A72,2.0,A93,none,1.0,A122,26.0,none,own,2.0,skilled_employee,1,0,1,0,1,1,1
+A14,30,A31,used car,7485.0,A65,A71,4.0,A92,none,1.0,A121,53.0,bank,own,1.0,management/self-employed,1,1,1,0,0,0,0
+A11,12,A32,furniture/equipment,2577.0,A61,A73,2.0,A91,none,1.0,A123,42.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,6,A34,radio/television,338.0,A63,A75,4.0,A93,none,4.0,A123,52.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A14,12,A32,radio/television,1963.0,A61,A74,4.0,A93,none,2.0,A123,31.0,none,rent,2.0,management/self-employed,2,1,1,1,1,0,1
+A11,21,A34,new car,571.0,A61,A75,4.0,A93,none,4.0,A121,65.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A14,36,A33,business,9572.0,A61,A72,1.0,A91,none,1.0,A123,28.0,none,own,2.0,skilled_employee,1,0,1,0,1,0,1
+A12,36,A33,business,4455.0,A61,A73,2.0,A91,none,2.0,A121,30.0,stores,own,2.0,management/self-employed,1,1,1,0,1,1,1
+A11,21,A31,new car,1647.0,A65,A73,4.0,A93,none,2.0,A122,40.0,none,own,2.0,unskilled-resident,2,0,1,0,1,1,0
+A14,24,A34,furniture/equipment,3777.0,A64,A73,4.0,A93,none,4.0,A121,50.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A12,18,A34,new car,884.0,A61,A75,4.0,A93,none,4.0,A123,36.0,bank,own,1.0,skilled_employee,2,1,1,0,1,1,1
+A14,15,A34,radio/television,1360.0,A61,A73,4.0,A93,none,2.0,A122,31.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A12,9,A31,used car,5129.0,A61,A75,2.0,A92,none,4.0,A124,74.0,bank,free,1.0,management/self-employed,2,1,1,0,0,1,1
+A12,16,A34,new car,1175.0,A61,A71,2.0,A93,none,3.0,A123,68.0,none,free,3.0,unemployed/unskilled,1,1,1,1,1,1,1
+A11,12,A32,radio/television,674.0,A62,A74,4.0,A94,none,1.0,A122,20.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A12,18,A30,furniture/equipment,3244.0,A61,A73,1.0,A92,none,4.0,A123,33.0,bank,own,2.0,skilled_employee,1,1,1,1,0,1,1
+A14,24,A32,business,4591.0,A64,A73,2.0,A93,none,3.0,A122,54.0,none,own,3.0,management/self-employed,1,1,1,0,1,0,1
+A12,48,A30,business,3844.0,A62,A74,4.0,A93,none,4.0,A124,34.0,none,free,1.0,unskilled-resident,2,0,1,0,1,1,1
+A12,27,A32,business,3915.0,A61,A73,4.0,A93,none,2.0,A123,36.0,none,own,1.0,skilled_employee,2,1,1,0,1,1,1
+A14,6,A32,radio/television,2108.0,A61,A74,2.0,A94,none,2.0,A121,29.0,none,rent,1.0,skilled_employee,1,0,1,1,1,0,1
+A12,45,A32,radio/television,3031.0,A62,A73,4.0,A93,guarantor,4.0,A122,21.0,none,rent,1.0,skilled_employee,1,0,1,0,1,1,1
+A12,9,A34,education,1501.0,A61,A75,2.0,A92,none,3.0,A123,34.0,none,own,2.0,management/self-employed,1,1,1,0,0,1,1
+A14,6,A34,radio/television,1382.0,A61,A73,1.0,A92,none,1.0,A123,28.0,none,own,2.0,skilled_employee,1,1,1,1,0,0,1
+A12,12,A32,furniture/equipment,951.0,A62,A72,4.0,A92,none,4.0,A123,27.0,bank,rent,4.0,skilled_employee,1,0,1,0,0,1,1
+A12,24,A32,used car,2760.0,A65,A75,4.0,A93,none,4.0,A124,36.0,bank,free,1.0,skilled_employee,1,1,1,1,1,1,0
+A12,18,A33,furniture/equipment,4297.0,A61,A75,4.0,A91,none,3.0,A124,40.0,none,own,1.0,management/self-employed,1,1,1,0,1,1,1
+A14,9,A34,education,936.0,A63,A75,4.0,A93,none,2.0,A123,52.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A11,12,A32,new car,1168.0,A61,A73,4.0,A94,none,3.0,A121,27.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A14,27,A33,business,5117.0,A61,A74,3.0,A93,none,4.0,A123,26.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A11,12,A32,retraining,902.0,A61,A74,4.0,A94,none,4.0,A122,21.0,none,rent,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,12,A34,new car,1495.0,A61,A75,4.0,A93,none,1.0,A121,38.0,none,own,2.0,unskilled-resident,2,0,1,1,1,0,1
+A11,30,A34,used car,10623.0,A61,A75,3.0,A93,none,4.0,A124,38.0,none,free,3.0,management/self-employed,2,1,1,1,1,1,1
+A14,12,A34,furniture/equipment,1935.0,A61,A75,4.0,A93,none,4.0,A121,43.0,none,own,3.0,skilled_employee,1,1,1,1,1,0,1
+A12,12,A34,domestic appliances,1424.0,A61,A74,4.0,A93,none,3.0,A122,26.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,24,A32,business,6568.0,A61,A73,2.0,A94,none,2.0,A123,21.0,stores,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A14,12,A32,used car,1413.0,A64,A74,3.0,A93,none,2.0,A122,55.0,none,own,1.0,skilled_employee,1,0,0,1,1,0,1
+A14,9,A34,radio/television,3074.0,A65,A73,1.0,A93,none,2.0,A121,33.0,none,own,2.0,skilled_employee,2,0,1,1,1,0,0
+A14,36,A32,radio/television,3835.0,A65,A75,2.0,A92,none,4.0,A121,45.0,none,own,1.0,unskilled-resident,1,1,1,1,0,0,0
+A11,27,A30,business,5293.0,A61,A71,2.0,A93,none,4.0,A122,50.0,stores,own,2.0,skilled_employee,1,1,1,0,1,1,1
+A13,30,A33,business,1908.0,A61,A75,4.0,A93,none,4.0,A121,66.0,none,own,1.0,management/self-employed,1,1,1,0,1,1,1
+A14,36,A34,radio/television,3342.0,A65,A75,4.0,A93,none,2.0,A123,51.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,0
+A12,6,A34,retraining,932.0,A65,A74,1.0,A92,none,3.0,A122,39.0,none,own,2.0,unskilled-resident,1,0,1,1,0,1,0
+A11,18,A30,business,3104.0,A61,A74,3.0,A93,none,1.0,A122,31.0,bank,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A13,36,A32,radio/television,3913.0,A61,A73,2.0,A93,none,2.0,A121,23.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A11,24,A32,furniture/equipment,3021.0,A61,A73,2.0,A91,none,2.0,A121,24.0,none,rent,1.0,unskilled-resident,1,0,1,1,1,1,1
+A14,10,A32,new car,1364.0,A61,A73,2.0,A92,none,4.0,A123,64.0,none,own,1.0,skilled_employee,1,1,1,1,0,0,1
+A12,12,A32,radio/television,625.0,A61,A72,4.0,A94,guarantor,1.0,A121,26.0,bank,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A11,12,A32,education,1200.0,A65,A73,4.0,A92,none,4.0,A122,23.0,bank,rent,1.0,skilled_employee,1,1,1,1,0,1,0
+A14,12,A32,radio/television,707.0,A61,A73,4.0,A93,none,2.0,A121,30.0,bank,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A14,24,A33,business,2978.0,A65,A73,4.0,A93,none,4.0,A121,32.0,none,own,2.0,skilled_employee,2,1,1,1,1,0,0
+A14,15,A32,used car,4657.0,A61,A73,3.0,A93,none,2.0,A123,30.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A14,36,A30,repairs,2613.0,A61,A73,4.0,A93,none,2.0,A123,27.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A12,48,A32,radio/television,10961.0,A64,A74,1.0,A93,co-applicant,2.0,A124,27.0,bank,own,2.0,skilled_employee,1,1,1,0,1,1,1
+A11,12,A32,furniture/equipment,7865.0,A61,A75,4.0,A93,none,4.0,A124,53.0,none,free,1.0,management/self-employed,1,1,1,0,1,1,1
+A14,9,A32,radio/television,1478.0,A61,A74,4.0,A93,none,2.0,A123,22.0,none,own,1.0,skilled_employee,1,0,1,0,1,0,1
+A11,24,A32,furniture/equipment,3149.0,A61,A72,4.0,A93,none,1.0,A124,22.0,bank,free,1.0,skilled_employee,1,0,1,1,1,1,1
+A13,36,A32,radio/television,4210.0,A61,A73,4.0,A93,none,2.0,A123,26.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,9,A32,new car,2507.0,A63,A75,2.0,A93,none,4.0,A124,51.0,none,free,1.0,unskilled-resident,1,0,1,1,1,0,1
+A14,12,A32,radio/television,2141.0,A62,A74,3.0,A93,none,1.0,A124,35.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A12,18,A32,radio/television,866.0,A61,A73,4.0,A94,guarantor,2.0,A121,25.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A14,4,A34,radio/television,1544.0,A61,A74,2.0,A93,none,1.0,A121,42.0,none,own,3.0,unskilled-resident,2,0,1,1,1,0,1
+A11,24,A32,radio/television,1823.0,A61,A71,4.0,A93,none,2.0,A123,30.0,stores,own,1.0,management/self-employed,2,0,1,0,1,1,1
+A12,6,A32,new car,14555.0,A65,A71,1.0,A93,none,2.0,A122,23.0,none,own,1.0,unemployed/unskilled,1,1,1,0,1,1,0
+A12,21,A32,business,2767.0,A62,A75,4.0,A91,none,2.0,A123,61.0,bank,rent,2.0,unskilled-resident,1,0,1,0,1,1,1
+A14,12,A34,radio/television,1291.0,A61,A73,4.0,A92,none,2.0,A122,35.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A11,30,A32,radio/television,2522.0,A61,A75,1.0,A93,guarantor,3.0,A122,39.0,none,own,1.0,skilled_employee,2,0,1,1,1,1,1
+A11,24,A32,new car,915.0,A65,A75,4.0,A92,none,2.0,A123,29.0,bank,own,1.0,skilled_employee,1,0,1,0,0,1,0
+A14,6,A32,radio/television,1595.0,A61,A74,3.0,A93,none,2.0,A122,51.0,none,own,1.0,skilled_employee,2,0,1,1,1,0,1
+A11,48,A30,used car,4605.0,A61,A75,3.0,A93,none,4.0,A124,24.0,none,free,2.0,skilled_employee,2,0,1,0,1,1,1
+A14,12,A34,business,1185.0,A61,A73,3.0,A92,none,2.0,A121,27.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A14,12,A31,retraining,3447.0,A63,A73,4.0,A92,none,3.0,A121,35.0,none,own,1.0,unskilled-resident,2,0,1,1,0,0,1
+A14,24,A32,business,1258.0,A61,A74,4.0,A93,none,1.0,A121,25.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A14,12,A34,radio/television,717.0,A61,A75,4.0,A93,none,4.0,A121,52.0,none,own,3.0,skilled_employee,1,0,1,1,1,0,1
+A14,6,A30,new car,1204.0,A62,A73,4.0,A93,none,1.0,A124,35.0,bank,rent,1.0,skilled_employee,1,0,0,1,1,0,1
+A13,24,A32,furniture/equipment,1925.0,A61,A73,2.0,A93,none,2.0,A121,26.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,18,A32,radio/television,433.0,A61,A71,3.0,A92,co-applicant,4.0,A121,22.0,none,rent,1.0,skilled_employee,1,0,1,0,0,0,1
+A11,6,A34,new car,666.0,A64,A74,3.0,A92,none,4.0,A121,39.0,none,own,2.0,unskilled-resident,1,1,1,1,0,1,1
+A13,12,A32,furniture/equipment,2251.0,A61,A73,1.0,A92,none,2.0,A123,46.0,none,own,1.0,unskilled-resident,1,0,1,1,0,1,1
+A12,30,A32,new car,2150.0,A61,A73,4.0,A92,guarantor,2.0,A124,24.0,bank,own,1.0,skilled_employee,1,0,1,0,0,1,1
+A14,24,A33,furniture/equipment,4151.0,A62,A73,2.0,A93,none,3.0,A122,35.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A12,9,A32,furniture/equipment,2030.0,A65,A74,2.0,A93,none,1.0,A123,24.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,0
+A12,60,A33,radio/television,7418.0,A65,A73,1.0,A93,none,1.0,A121,27.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,0
+A14,24,A34,radio/television,2684.0,A61,A73,4.0,A93,none,2.0,A121,35.0,none,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A11,12,A31,radio/television,2149.0,A61,A73,4.0,A91,none,1.0,A124,29.0,none,free,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,15,A32,used car,3812.0,A62,A72,1.0,A92,none,4.0,A123,23.0,none,own,1.0,skilled_employee,1,1,1,1,0,0,1
+A14,11,A34,radio/television,1154.0,A62,A71,4.0,A92,none,4.0,A121,57.0,none,own,3.0,unskilled-resident,1,0,1,1,0,0,1
+A11,12,A32,furniture/equipment,1657.0,A61,A73,2.0,A93,none,2.0,A121,27.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,24,A32,radio/television,1603.0,A61,A75,4.0,A92,none,4.0,A123,55.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A11,18,A34,new car,5302.0,A61,A75,2.0,A93,none,4.0,A124,36.0,none,free,3.0,management/self-employed,1,1,1,1,1,1,1
+A14,12,A34,education,2748.0,A61,A75,2.0,A92,none,4.0,A124,57.0,bank,free,3.0,unskilled-resident,1,0,1,1,0,0,1
+A14,10,A34,new car,1231.0,A61,A75,3.0,A93,none,4.0,A121,32.0,none,own,2.0,unskilled-resident,2,0,0,1,1,0,1
+A12,15,A32,radio/television,802.0,A61,A75,4.0,A93,none,3.0,A123,37.0,none,own,1.0,skilled_employee,2,0,1,0,1,1,1
+A14,36,A34,business,6304.0,A65,A75,4.0,A93,none,4.0,A121,36.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,0
+A14,24,A32,radio/television,1533.0,A61,A72,4.0,A92,none,3.0,A123,38.0,stores,own,1.0,skilled_employee,1,1,1,1,0,0,1
+A11,14,A32,new car,8978.0,A61,A75,1.0,A91,none,4.0,A122,45.0,none,own,1.0,management/self-employed,1,1,0,0,1,1,1
+A14,24,A32,radio/television,999.0,A65,A75,4.0,A93,none,2.0,A123,25.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,0
+A14,18,A32,new car,2662.0,A65,A74,4.0,A93,none,3.0,A122,32.0,none,own,1.0,skilled_employee,1,0,0,1,1,0,0
+A14,12,A34,furniture/equipment,1402.0,A63,A74,3.0,A92,none,4.0,A123,37.0,none,rent,1.0,skilled_employee,1,1,1,1,0,0,1
+A12,48,A31,new car,12169.0,A65,A71,4.0,A93,co-applicant,4.0,A124,36.0,none,free,1.0,management/self-employed,1,1,1,1,1,1,0
+A12,48,A32,radio/television,3060.0,A61,A74,4.0,A93,none,4.0,A121,28.0,none,own,2.0,skilled_employee,1,0,1,0,1,1,1
+A11,30,A32,repairs,11998.0,A61,A72,1.0,A91,none,1.0,A124,34.0,none,own,1.0,unskilled-resident,1,1,1,0,1,1,1
+A14,9,A32,radio/television,2697.0,A61,A73,1.0,A93,none,2.0,A121,32.0,none,own,1.0,skilled_employee,2,0,1,1,1,0,1
+A14,18,A34,radio/television,2404.0,A61,A73,2.0,A92,none,2.0,A123,26.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A11,12,A32,furniture/equipment,1262.0,A65,A75,2.0,A91,none,4.0,A122,49.0,none,own,1.0,unskilled-resident,1,1,1,1,1,1,0
+A14,6,A32,furniture/equipment,4611.0,A61,A72,1.0,A92,none,4.0,A122,32.0,none,own,1.0,skilled_employee,1,0,1,0,0,0,1
+A14,24,A32,radio/television,1901.0,A62,A73,4.0,A93,none,4.0,A123,29.0,none,rent,1.0,management/self-employed,1,1,1,1,1,0,1
+A14,15,A34,used car,3368.0,A64,A75,3.0,A93,none,4.0,A124,23.0,none,rent,2.0,skilled_employee,1,1,1,1,1,0,1
+A14,12,A32,furniture/equipment,1574.0,A61,A73,4.0,A93,none,2.0,A121,50.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A13,18,A31,radio/television,1445.0,A65,A74,4.0,A93,none,4.0,A123,49.0,bank,own,1.0,unskilled-resident,1,0,1,1,1,1,0
+A14,15,A34,furniture/equipment,1520.0,A65,A75,4.0,A93,none,4.0,A122,63.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,0
+A12,24,A34,new car,3878.0,A62,A72,4.0,A91,none,2.0,A123,37.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A11,47,A32,new car,10722.0,A61,A72,1.0,A92,none,1.0,A121,35.0,none,own,1.0,unskilled-resident,1,1,1,1,0,1,1
+A11,48,A32,used car,4788.0,A61,A74,4.0,A93,none,3.0,A122,26.0,none,own,1.0,skilled_employee,2,0,1,1,1,1,1
+A12,48,A33,others,7582.0,A62,A71,2.0,A93,none,4.0,A124,31.0,none,free,1.0,management/self-employed,1,1,1,1,1,1,1
+A12,12,A32,radio/television,1092.0,A61,A73,4.0,A92,guarantor,4.0,A121,49.0,none,own,2.0,skilled_employee,1,1,1,1,0,1,1
+A11,24,A33,radio/television,1024.0,A61,A72,4.0,A94,none,4.0,A121,48.0,stores,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,12,A32,business,1076.0,A61,A73,2.0,A94,none,2.0,A121,26.0,none,own,1.0,skilled_employee,1,1,0,1,1,0,1
+A12,36,A32,used car,9398.0,A61,A72,1.0,A94,none,4.0,A123,28.0,none,rent,1.0,management/self-employed,1,1,1,0,1,1,1
+A11,24,A34,used car,6419.0,A61,A75,2.0,A92,none,4.0,A124,44.0,none,free,2.0,management/self-employed,2,1,1,1,0,1,1
+A13,42,A34,used car,4796.0,A61,A75,4.0,A93,none,4.0,A124,56.0,none,free,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,48,A34,business,7629.0,A65,A75,4.0,A91,none,2.0,A123,46.0,bank,own,2.0,management/self-employed,2,0,1,1,1,0,0
+A12,48,A32,furniture/equipment,9960.0,A61,A72,1.0,A92,none,2.0,A123,26.0,none,own,1.0,skilled_employee,1,1,1,0,0,1,1
+A14,12,A32,used car,4675.0,A65,A72,1.0,A92,none,4.0,A123,20.0,none,rent,1.0,skilled_employee,1,0,1,1,0,0,0
+A14,10,A32,new car,1287.0,A65,A75,4.0,A93,co-applicant,2.0,A122,45.0,none,own,1.0,unskilled-resident,1,0,0,1,1,0,0
+A14,18,A32,furniture/equipment,2515.0,A61,A73,3.0,A93,none,4.0,A121,43.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A12,21,A34,furniture/equipment,2745.0,A64,A74,3.0,A93,none,2.0,A123,32.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A14,6,A32,new car,672.0,A61,A71,1.0,A92,none,4.0,A121,54.0,none,own,1.0,unemployed/unskilled,1,1,1,1,0,0,1
+A12,36,A30,radio/television,3804.0,A61,A73,4.0,A92,none,1.0,A123,42.0,none,own,1.0,skilled_employee,1,1,1,0,0,1,1
+A13,24,A34,new car,1344.0,A65,A74,4.0,A93,none,2.0,A121,37.0,bank,own,2.0,unskilled-resident,2,0,1,0,1,1,0
+A11,10,A34,new car,1038.0,A61,A74,4.0,A93,co-applicant,3.0,A122,49.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A14,48,A34,new car,10127.0,A63,A73,2.0,A93,none,2.0,A124,44.0,bank,free,1.0,skilled_employee,1,0,1,0,1,0,1
+A14,6,A32,furniture/equipment,1543.0,A64,A73,4.0,A91,none,2.0,A121,33.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,30,A32,used car,4811.0,A65,A74,2.0,A92,none,4.0,A122,24.0,stores,rent,1.0,unskilled-resident,1,0,1,1,0,0,0
+A11,12,A32,radio/television,727.0,A62,A72,4.0,A94,none,3.0,A124,33.0,none,own,1.0,unskilled-resident,1,1,1,0,1,1,1
+A12,8,A32,furniture/equipment,1237.0,A61,A73,3.0,A92,none,4.0,A121,24.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,1
+A12,9,A32,new car,276.0,A61,A73,4.0,A94,none,4.0,A121,22.0,none,rent,1.0,unskilled-resident,1,0,1,1,1,1,1
+A12,48,A32,others,5381.0,A65,A71,3.0,A93,none,4.0,A124,40.0,bank,free,1.0,unemployed/unskilled,1,1,1,1,1,1,0
+A14,24,A32,furniture/equipment,5511.0,A62,A73,4.0,A93,none,1.0,A123,25.0,stores,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A13,24,A32,furniture/equipment,3749.0,A61,A72,2.0,A92,none,4.0,A123,26.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A12,12,A32,new car,685.0,A61,A74,2.0,A94,none,3.0,A123,25.0,bank,own,1.0,unskilled-resident,1,0,1,0,1,1,1
+A13,4,A32,new car,1494.0,A65,A72,1.0,A93,none,2.0,A121,29.0,none,own,1.0,unskilled-resident,2,0,0,1,1,1,0
+A11,36,A31,furniture/equipment,2746.0,A61,A75,4.0,A93,none,4.0,A123,31.0,bank,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A11,12,A32,furniture/equipment,708.0,A61,A73,2.0,A93,guarantor,3.0,A122,38.0,none,own,1.0,unskilled-resident,2,0,1,1,1,1,1
+A12,24,A32,furniture/equipment,4351.0,A65,A73,1.0,A92,none,4.0,A122,48.0,none,own,1.0,unskilled-resident,1,1,1,1,0,1,0
+A14,12,A34,education,701.0,A61,A73,4.0,A93,none,2.0,A123,32.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A11,15,A33,furniture/equipment,3643.0,A61,A75,1.0,A92,none,4.0,A122,27.0,none,own,2.0,unskilled-resident,1,0,1,1,0,1,1
+A12,30,A34,new car,4249.0,A61,A71,4.0,A94,none,2.0,A123,28.0,none,own,2.0,management/self-employed,1,0,1,0,1,1,1
+A11,24,A32,radio/television,1938.0,A61,A72,4.0,A91,none,3.0,A122,32.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A11,24,A32,used car,2910.0,A61,A74,2.0,A93,none,1.0,A124,34.0,none,free,1.0,management/self-employed,1,1,1,1,1,1,1
+A11,18,A32,furniture/equipment,2659.0,A64,A73,4.0,A93,none,2.0,A123,28.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,18,A34,new car,1028.0,A61,A73,4.0,A92,none,3.0,A121,36.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A11,8,A34,new car,3398.0,A61,A74,1.0,A93,none,4.0,A121,39.0,none,own,2.0,unskilled-resident,1,0,0,1,1,1,1
+A14,12,A34,furniture/equipment,5801.0,A65,A75,2.0,A93,none,4.0,A122,49.0,none,rent,1.0,skilled_employee,1,1,1,1,1,0,0
+A14,24,A32,new car,1525.0,A64,A74,4.0,A92,none,3.0,A123,34.0,none,own,1.0,skilled_employee,2,1,1,1,0,0,1
+A13,36,A32,radio/television,4473.0,A61,A75,4.0,A93,none,2.0,A123,31.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,6,A32,radio/television,1068.0,A61,A75,4.0,A93,none,4.0,A123,28.0,none,own,1.0,skilled_employee,2,0,1,1,1,1,1
+A11,24,A34,used car,6615.0,A61,A71,2.0,A93,none,4.0,A124,75.0,none,free,2.0,management/self-employed,1,1,1,1,1,1,1
+A14,18,A34,education,1864.0,A62,A73,4.0,A92,none,2.0,A121,30.0,none,own,2.0,skilled_employee,1,0,1,0,0,0,1
+A12,60,A32,new car,7408.0,A62,A72,4.0,A92,none,2.0,A122,24.0,none,own,1.0,management/self-employed,1,0,1,0,0,1,1
+A14,48,A34,used car,11590.0,A62,A73,2.0,A92,none,4.0,A123,24.0,bank,rent,2.0,unskilled-resident,1,0,1,0,0,0,1
+A11,24,A30,furniture/equipment,4110.0,A61,A75,3.0,A93,none,4.0,A124,23.0,bank,rent,2.0,skilled_employee,2,0,1,0,1,1,1
+A11,6,A34,furniture/equipment,3384.0,A61,A73,1.0,A91,none,4.0,A121,44.0,none,rent,1.0,management/self-employed,1,1,1,0,1,1,1
+A12,13,A32,radio/television,2101.0,A61,A72,2.0,A92,guarantor,4.0,A122,23.0,none,own,1.0,unskilled-resident,1,0,1,1,0,1,1
+A11,15,A32,domestic appliances,1275.0,A65,A73,4.0,A92,none,2.0,A123,24.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,0
+A11,24,A32,furniture/equipment,4169.0,A61,A73,4.0,A93,none,4.0,A122,28.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,10,A32,furniture/equipment,1521.0,A61,A73,4.0,A91,none,2.0,A123,31.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A12,24,A34,education,5743.0,A61,A72,2.0,A92,none,4.0,A124,24.0,none,free,2.0,skilled_employee,1,1,1,1,0,1,1
+A11,21,A32,furniture/equipment,3599.0,A61,A74,1.0,A92,none,4.0,A123,26.0,none,rent,1.0,unskilled-resident,1,0,1,1,0,1,1
+A12,18,A32,radio/television,3213.0,A63,A72,1.0,A94,none,3.0,A121,25.0,none,rent,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,18,A32,business,4439.0,A61,A75,1.0,A93,co-applicant,1.0,A121,33.0,bank,own,1.0,management/self-employed,1,1,1,1,1,1,1
+A13,10,A32,new car,3949.0,A61,A72,1.0,A93,guarantor,1.0,A122,37.0,none,own,1.0,unskilled-resident,2,0,1,1,1,1,1
+A14,15,A34,radio/television,1459.0,A61,A73,4.0,A92,none,2.0,A123,43.0,none,own,1.0,unskilled-resident,1,0,1,1,0,0,1
+A12,13,A34,radio/television,882.0,A61,A72,4.0,A93,guarantor,4.0,A121,23.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A12,24,A32,radio/television,3758.0,A63,A71,1.0,A92,none,4.0,A124,23.0,none,rent,1.0,unemployed/unskilled,1,0,1,1,0,1,1
+A14,6,A33,business,1743.0,A62,A73,1.0,A93,none,2.0,A121,34.0,none,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A12,9,A34,education,1136.0,A64,A75,4.0,A93,none,3.0,A124,32.0,none,free,2.0,skilled_employee,2,0,1,0,1,1,1
+A14,9,A32,domestic appliances,1236.0,A61,A72,1.0,A92,none,4.0,A121,23.0,none,rent,1.0,skilled_employee,1,1,1,1,0,0,1
+A12,9,A32,furniture/equipment,959.0,A61,A73,1.0,A92,none,2.0,A123,29.0,none,own,1.0,skilled_employee,1,0,0,0,0,1,1
+A14,18,A34,used car,3229.0,A65,A71,2.0,A93,none,4.0,A124,38.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,0
+A11,12,A30,radio/television,6199.0,A61,A73,4.0,A93,none,2.0,A122,28.0,none,rent,2.0,skilled_employee,1,1,1,0,1,1,1
+A14,10,A32,education,727.0,A63,A75,4.0,A93,none,4.0,A124,46.0,none,free,1.0,skilled_employee,1,1,1,1,1,0,1
+A12,24,A32,new car,1246.0,A61,A72,4.0,A93,none,2.0,A121,23.0,stores,own,1.0,unskilled-resident,1,0,1,0,1,1,1
+A14,12,A34,radio/television,2331.0,A65,A75,1.0,A93,co-applicant,4.0,A121,49.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,0
+A14,36,A33,radio/television,4463.0,A61,A73,4.0,A93,none,2.0,A123,26.0,none,own,2.0,management/self-employed,1,1,1,0,1,0,1
+A14,12,A32,radio/television,776.0,A61,A73,4.0,A94,none,2.0,A121,28.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A11,30,A32,furniture/equipment,2406.0,A61,A74,4.0,A92,none,4.0,A121,23.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A12,18,A32,education,1239.0,A65,A73,4.0,A93,none,4.0,A124,61.0,none,free,1.0,skilled_employee,1,0,1,1,1,1,0
+A13,12,A32,radio/television,3399.0,A65,A75,2.0,A93,none,3.0,A123,37.0,none,own,1.0,management/self-employed,1,0,1,1,1,1,0
+A13,12,A33,new car,2247.0,A61,A73,2.0,A92,none,2.0,A123,36.0,stores,own,2.0,skilled_employee,1,1,1,1,0,1,1
+A14,6,A32,furniture/equipment,1766.0,A61,A73,1.0,A94,none,2.0,A122,21.0,none,rent,1.0,skilled_employee,1,0,1,1,1,0,1
+A11,18,A32,furniture/equipment,2473.0,A61,A71,4.0,A93,none,1.0,A123,25.0,none,own,1.0,unemployed/unskilled,1,0,1,0,1,1,1
+A14,12,A32,business,1542.0,A61,A74,2.0,A93,none,4.0,A123,36.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A14,18,A34,used car,3850.0,A61,A74,3.0,A93,none,1.0,A123,27.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A11,18,A32,furniture/equipment,3650.0,A61,A72,1.0,A92,none,4.0,A123,22.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,1
+A11,36,A32,furniture/equipment,3446.0,A61,A75,4.0,A93,none,2.0,A123,42.0,none,own,1.0,skilled_employee,2,0,1,0,1,1,1
+A12,18,A32,furniture/equipment,3001.0,A61,A74,2.0,A92,none,4.0,A121,40.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,1
+A14,36,A32,new car,3079.0,A65,A73,4.0,A93,none,4.0,A121,36.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,0
+A14,18,A34,radio/television,6070.0,A61,A75,3.0,A93,none,4.0,A123,33.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A14,10,A34,furniture/equipment,2146.0,A61,A72,1.0,A92,none,3.0,A121,23.0,none,rent,2.0,skilled_employee,1,0,1,1,0,0,1
+A14,60,A34,new car,13756.0,A65,A75,2.0,A93,none,4.0,A124,63.0,bank,free,1.0,management/self-employed,1,1,1,1,1,0,0
+A12,60,A31,others,14782.0,A62,A75,3.0,A92,none,4.0,A124,60.0,bank,free,2.0,management/self-employed,1,1,1,0,0,1,1
+A11,48,A31,business,7685.0,A61,A74,2.0,A92,guarantor,4.0,A123,37.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A14,18,A33,radio/television,2320.0,A61,A71,2.0,A94,none,3.0,A121,34.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A14,7,A33,radio/television,846.0,A65,A75,3.0,A93,none,4.0,A124,36.0,none,free,1.0,skilled_employee,1,0,1,1,1,0,0
+A12,36,A32,new car,14318.0,A61,A75,4.0,A93,none,2.0,A124,57.0,none,free,1.0,management/self-employed,1,1,1,0,1,1,1
+A14,6,A34,new car,362.0,A62,A73,4.0,A92,none,4.0,A123,52.0,none,own,2.0,unskilled-resident,1,0,1,1,0,0,1
+A11,20,A32,furniture/equipment,2212.0,A65,A74,4.0,A93,none,4.0,A123,39.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,0
+A12,18,A32,used car,12976.0,A61,A71,3.0,A92,none,4.0,A124,38.0,none,free,1.0,management/self-employed,1,1,1,0,0,1,1
+A14,22,A32,new car,1283.0,A65,A74,4.0,A92,none,4.0,A122,25.0,none,rent,1.0,skilled_employee,1,0,1,1,0,0,0
+A13,12,A32,new car,1330.0,A61,A72,4.0,A93,none,1.0,A121,26.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,30,A33,business,4272.0,A62,A73,2.0,A93,none,2.0,A122,26.0,none,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A14,18,A34,radio/television,2238.0,A61,A73,2.0,A92,none,1.0,A123,25.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A14,18,A32,radio/television,1126.0,A65,A72,4.0,A92,none,2.0,A121,21.0,none,rent,1.0,skilled_employee,1,1,1,1,0,0,0
+A12,18,A34,furniture/equipment,7374.0,A61,A71,4.0,A93,none,4.0,A122,40.0,stores,own,2.0,management/self-employed,1,1,1,1,1,1,1
+A12,15,A34,business,2326.0,A63,A73,2.0,A93,none,4.0,A123,27.0,bank,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,9,A32,business,1449.0,A61,A74,3.0,A92,none,2.0,A123,27.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A14,18,A32,new car,1820.0,A61,A73,2.0,A94,none,2.0,A122,30.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A12,12,A32,furniture/equipment,983.0,A64,A72,1.0,A92,none,4.0,A121,19.0,none,rent,1.0,unskilled-resident,1,0,1,1,0,1,1
+A11,36,A32,new car,3249.0,A61,A74,2.0,A93,none,4.0,A124,39.0,bank,free,1.0,management/self-employed,2,1,1,1,1,1,1
+A11,6,A34,radio/television,1957.0,A61,A74,1.0,A92,none,4.0,A123,31.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A14,9,A34,furniture/equipment,2406.0,A61,A71,2.0,A93,none,3.0,A123,31.0,none,own,1.0,management/self-employed,1,0,1,1,1,0,1
+A12,39,A33,education,11760.0,A62,A74,2.0,A93,none,3.0,A124,32.0,none,rent,1.0,skilled_employee,1,1,1,1,1,1,1
+A11,12,A32,furniture/equipment,2578.0,A61,A71,3.0,A92,none,4.0,A124,55.0,none,free,1.0,management/self-employed,1,0,1,1,0,1,1
+A11,36,A34,furniture/equipment,2348.0,A61,A73,3.0,A94,none,2.0,A122,46.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A12,12,A32,new car,1223.0,A61,A75,1.0,A91,none,1.0,A121,46.0,none,rent,2.0,skilled_employee,1,0,1,0,1,1,1
+A14,24,A34,radio/television,1516.0,A64,A73,4.0,A92,none,1.0,A121,43.0,none,own,2.0,unskilled-resident,1,0,1,1,0,0,1
+A14,18,A32,radio/television,1473.0,A61,A72,3.0,A94,none,4.0,A121,39.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A12,18,A34,business,1887.0,A65,A73,4.0,A94,none,4.0,A121,28.0,bank,own,2.0,skilled_employee,1,0,1,1,1,1,0
+A14,24,A33,business,8648.0,A61,A72,2.0,A93,none,2.0,A123,27.0,bank,own,2.0,skilled_employee,1,1,1,0,1,0,1
+A14,14,A33,new car,802.0,A61,A73,4.0,A93,none,2.0,A123,27.0,none,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A12,18,A33,new car,2899.0,A65,A75,4.0,A93,none,4.0,A123,43.0,none,own,1.0,skilled_employee,2,0,1,1,1,1,0
+A12,24,A32,radio/television,2039.0,A61,A72,1.0,A94,none,1.0,A122,22.0,none,own,1.0,skilled_employee,1,1,1,0,1,1,1
+A14,24,A34,used car,2197.0,A65,A74,4.0,A93,none,4.0,A123,43.0,none,own,2.0,skilled_employee,2,1,1,1,1,0,0
+A11,15,A32,radio/television,1053.0,A61,A72,4.0,A94,none,2.0,A121,27.0,none,own,1.0,skilled_employee,1,0,0,1,1,1,1
+A14,24,A32,radio/television,3235.0,A63,A75,3.0,A91,none,2.0,A123,26.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A13,12,A34,new car,939.0,A63,A74,4.0,A94,none,2.0,A121,28.0,none,own,3.0,skilled_employee,1,1,1,0,1,1,1
+A12,24,A32,radio/television,1967.0,A61,A75,4.0,A92,none,4.0,A123,20.0,none,own,1.0,skilled_employee,1,1,1,1,0,1,1
+A14,33,A34,used car,7253.0,A61,A74,3.0,A93,none,2.0,A123,35.0,none,own,2.0,management/self-employed,1,1,1,1,1,0,1
+A14,12,A34,business,2292.0,A61,A71,4.0,A93,none,2.0,A123,42.0,stores,own,2.0,management/self-employed,1,1,1,0,1,0,1
+A14,10,A32,new car,1597.0,A63,A73,3.0,A93,none,2.0,A124,40.0,none,rent,1.0,unskilled-resident,2,0,0,1,1,0,1
+A11,24,A32,new car,1381.0,A65,A73,4.0,A92,none,2.0,A122,35.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,0
+A14,36,A34,used car,5842.0,A61,A75,2.0,A93,none,2.0,A122,35.0,none,own,2.0,skilled_employee,2,1,1,1,1,0,1
+A11,12,A32,new car,2579.0,A61,A72,4.0,A93,none,1.0,A121,33.0,none,own,1.0,unskilled-resident,2,0,1,0,1,1,1
+A11,18,A33,education,8471.0,A65,A73,1.0,A92,none,2.0,A123,23.0,none,rent,2.0,skilled_employee,1,1,1,1,0,1,0
+A14,21,A32,new car,2782.0,A63,A74,1.0,A92,none,2.0,A123,31.0,bank,own,1.0,management/self-employed,1,0,1,1,0,0,1
+A12,18,A32,new car,1042.0,A65,A73,4.0,A92,none,2.0,A122,33.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,0
+A14,15,A32,new car,3186.0,A64,A74,2.0,A92,none,3.0,A123,20.0,none,rent,1.0,skilled_employee,1,0,1,1,0,0,1
+A12,12,A32,used car,2028.0,A65,A73,4.0,A93,none,2.0,A123,30.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,0
+A12,12,A34,new car,958.0,A61,A74,2.0,A93,none,3.0,A121,47.0,none,own,2.0,unskilled-resident,2,0,1,1,1,1,1
+A14,21,A33,furniture/equipment,1591.0,A62,A74,4.0,A93,none,3.0,A121,34.0,none,own,2.0,management/self-employed,1,0,1,1,1,0,1
+A12,12,A32,furniture/equipment,2762.0,A65,A75,1.0,A92,none,2.0,A122,25.0,bank,own,1.0,skilled_employee,1,1,1,0,0,1,0
+A12,18,A32,used car,2779.0,A61,A73,1.0,A94,none,3.0,A123,21.0,none,rent,1.0,skilled_employee,1,1,1,1,1,1,1
+A14,28,A34,radio/television,2743.0,A61,A75,4.0,A93,none,2.0,A123,29.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A14,18,A34,radio/television,1149.0,A64,A73,4.0,A93,none,3.0,A121,46.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A14,9,A32,furniture/equipment,1313.0,A61,A75,1.0,A93,none,4.0,A123,20.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A11,18,A34,repairs,1190.0,A61,A71,2.0,A92,none,4.0,A124,55.0,none,free,3.0,unemployed/unskilled,2,0,1,0,0,1,1
+A14,5,A32,business,3448.0,A61,A74,1.0,A93,none,4.0,A121,74.0,none,own,1.0,unskilled-resident,1,0,1,1,1,0,1
+A12,24,A32,others,11328.0,A61,A73,2.0,A93,co-applicant,3.0,A123,29.0,bank,own,2.0,management/self-employed,1,1,1,0,1,1,1
+A11,6,A34,furniture/equipment,1872.0,A61,A71,4.0,A93,none,4.0,A124,36.0,none,free,3.0,management/self-employed,1,1,1,1,1,1,1
+A14,24,A34,repairs,2058.0,A61,A73,4.0,A91,none,2.0,A121,33.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A11,9,A32,furniture/equipment,2136.0,A61,A73,3.0,A93,none,2.0,A121,25.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,12,A32,radio/television,1484.0,A65,A73,2.0,A94,none,1.0,A121,25.0,none,own,1.0,skilled_employee,1,1,1,0,1,1,0
+A14,6,A32,repairs,660.0,A63,A74,2.0,A94,none,4.0,A121,23.0,none,rent,1.0,unskilled-resident,1,0,1,1,1,0,1
+A14,24,A34,new car,1287.0,A64,A75,4.0,A92,none,4.0,A121,37.0,none,own,2.0,skilled_employee,1,1,1,1,0,0,1
+A11,42,A34,repairs,3394.0,A61,A71,4.0,A93,co-applicant,4.0,A123,65.0,none,own,2.0,unemployed/unskilled,1,0,1,1,1,1,1
+A13,12,A31,business,609.0,A61,A72,4.0,A92,none,1.0,A121,26.0,none,own,1.0,unemployed/unskilled,1,0,1,0,0,1,1
+A14,12,A32,new car,1884.0,A61,A75,4.0,A93,none,4.0,A123,39.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A11,12,A32,furniture/equipment,1620.0,A61,A73,2.0,A92,co-applicant,3.0,A122,30.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A12,20,A33,others,2629.0,A61,A73,2.0,A93,none,3.0,A123,29.0,bank,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A14,12,A32,education,719.0,A61,A75,4.0,A93,none,4.0,A123,41.0,bank,own,1.0,unskilled-resident,2,0,1,0,1,0,1
+A12,48,A34,furniture/equipment,5096.0,A61,A73,2.0,A92,none,3.0,A123,30.0,none,own,1.0,management/self-employed,1,1,1,0,0,1,1
+A14,9,A34,education,1244.0,A65,A75,4.0,A92,none,4.0,A122,41.0,none,rent,2.0,unskilled-resident,1,0,1,1,0,0,0
+A11,36,A32,new car,1842.0,A61,A72,4.0,A92,none,4.0,A123,34.0,none,own,1.0,skilled_employee,1,1,1,0,0,1,1
+A12,7,A32,radio/television,2576.0,A61,A73,2.0,A93,guarantor,2.0,A121,35.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A13,12,A32,furniture/equipment,1424.0,A65,A75,3.0,A92,none,4.0,A121,55.0,none,own,1.0,management/self-employed,1,1,1,1,0,1,0
+A12,15,A33,repairs,1512.0,A64,A73,3.0,A94,none,3.0,A122,61.0,stores,own,2.0,skilled_employee,1,0,1,0,1,1,1
+A14,36,A34,used car,11054.0,A65,A73,4.0,A93,none,2.0,A123,30.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,0
+A14,6,A32,radio/television,518.0,A61,A73,3.0,A92,none,1.0,A121,29.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A14,12,A30,furniture/equipment,2759.0,A61,A75,2.0,A93,none,4.0,A122,34.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A14,24,A32,used car,2670.0,A61,A75,4.0,A93,none,4.0,A123,35.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A11,24,A32,new car,4817.0,A61,A74,2.0,A93,co-applicant,3.0,A122,31.0,none,own,1.0,skilled_employee,1,1,1,0,1,1,1
+A14,24,A32,used car,2679.0,A61,A72,4.0,A92,none,1.0,A124,29.0,none,own,1.0,management/self-employed,1,1,1,1,0,0,1
+A11,11,A34,new car,3905.0,A61,A73,2.0,A93,none,2.0,A121,36.0,none,rent,2.0,skilled_employee,2,0,1,1,1,1,1
+A11,12,A32,used car,3386.0,A61,A75,3.0,A93,none,4.0,A124,35.0,none,free,1.0,skilled_employee,1,1,1,0,1,1,1
+A11,6,A32,domestic appliances,343.0,A61,A72,4.0,A92,none,1.0,A121,27.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A14,18,A32,radio/television,4594.0,A61,A72,3.0,A93,none,2.0,A123,32.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A11,36,A32,furniture/equipment,3620.0,A61,A73,1.0,A93,guarantor,2.0,A122,37.0,none,own,1.0,skilled_employee,2,0,1,1,1,1,1
+A11,15,A32,new car,1721.0,A61,A72,2.0,A93,none,3.0,A121,36.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,12,A32,furniture/equipment,3017.0,A61,A72,3.0,A92,none,1.0,A121,34.0,none,rent,1.0,management/self-employed,1,0,1,1,0,1,1
+A12,12,A32,retraining,754.0,A65,A75,4.0,A93,none,4.0,A122,38.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,0
+A14,18,A32,business,1950.0,A61,A74,4.0,A93,none,1.0,A123,34.0,stores,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A11,24,A32,used car,2924.0,A61,A73,3.0,A93,guarantor,4.0,A124,63.0,bank,own,1.0,skilled_employee,2,1,1,1,1,1,1
+A11,24,A33,radio/television,1659.0,A61,A72,4.0,A92,none,2.0,A123,29.0,none,rent,1.0,unskilled-resident,1,1,1,0,0,1,1
+A14,48,A33,radio/television,7238.0,A65,A75,3.0,A93,none,3.0,A123,32.0,bank,own,2.0,skilled_employee,2,0,1,1,1,0,0
+A14,33,A33,business,2764.0,A61,A73,2.0,A92,none,2.0,A123,26.0,none,own,2.0,skilled_employee,1,1,1,1,0,0,1
+A14,24,A33,used car,4679.0,A61,A74,3.0,A93,none,3.0,A123,35.0,none,own,2.0,unskilled-resident,1,1,1,1,1,0,1
+A12,24,A32,radio/television,3092.0,A62,A72,3.0,A94,none,2.0,A123,22.0,none,rent,1.0,skilled_employee,1,1,1,0,1,1,1
+A11,6,A32,education,448.0,A61,A72,4.0,A92,none,4.0,A122,23.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,1
+A11,9,A32,new car,654.0,A61,A73,4.0,A93,none,3.0,A123,28.0,none,own,1.0,unskilled-resident,1,0,1,0,1,1,1
+A14,6,A32,retraining,1238.0,A65,A71,4.0,A93,none,4.0,A122,36.0,none,own,1.0,management/self-employed,2,1,1,1,1,0,0
+A12,18,A34,radio/television,1245.0,A61,A73,4.0,A94,none,2.0,A123,33.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A11,18,A30,furniture/equipment,3114.0,A61,A72,1.0,A92,none,4.0,A122,26.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A14,39,A32,used car,2569.0,A63,A73,4.0,A93,none,4.0,A123,24.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A13,24,A32,radio/television,5152.0,A61,A74,4.0,A93,none,2.0,A123,25.0,bank,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,12,A32,business,1037.0,A62,A74,3.0,A93,none,4.0,A121,39.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A11,15,A34,furniture/equipment,1478.0,A61,A75,4.0,A93,none,4.0,A123,44.0,none,own,2.0,skilled_employee,2,1,1,1,1,1,1
+A12,12,A34,radio/television,3573.0,A61,A73,1.0,A92,none,1.0,A121,23.0,none,own,1.0,unskilled-resident,1,0,1,1,0,1,1
+A12,24,A32,new car,1201.0,A61,A72,4.0,A93,none,1.0,A122,26.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,30,A32,furniture/equipment,3622.0,A64,A75,4.0,A92,none,4.0,A122,57.0,none,rent,2.0,skilled_employee,1,1,1,1,0,1,1
+A14,15,A33,furniture/equipment,960.0,A64,A74,3.0,A92,none,2.0,A122,30.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A14,12,A34,new car,1163.0,A63,A73,4.0,A93,none,4.0,A121,44.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A12,6,A33,new car,1209.0,A61,A71,4.0,A93,none,4.0,A122,47.0,none,own,1.0,management/self-employed,1,1,1,0,1,1,1
+A14,12,A32,radio/television,3077.0,A61,A73,2.0,A93,none,4.0,A123,52.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A14,24,A32,new car,3757.0,A61,A75,4.0,A92,co-applicant,4.0,A124,62.0,none,free,1.0,skilled_employee,1,1,1,1,0,0,1
+A14,10,A32,new car,1418.0,A62,A73,3.0,A93,none,2.0,A121,35.0,none,rent,1.0,unskilled-resident,1,0,0,1,1,0,1
+A14,6,A32,new car,3518.0,A61,A73,2.0,A93,guarantor,3.0,A122,26.0,none,rent,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,12,A34,radio/television,1934.0,A61,A75,2.0,A93,none,2.0,A124,26.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A12,27,A30,business,8318.0,A61,A75,2.0,A92,none,4.0,A124,42.0,none,free,2.0,management/self-employed,1,1,1,0,0,1,1
+A14,6,A34,radio/television,1237.0,A62,A73,1.0,A92,none,1.0,A122,27.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A12,6,A32,radio/television,368.0,A65,A75,4.0,A93,none,4.0,A122,38.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,0
+A11,12,A34,new car,2122.0,A61,A73,3.0,A93,none,2.0,A121,39.0,none,rent,2.0,unskilled-resident,2,0,0,1,1,1,1
+A11,24,A32,furniture/equipment,2996.0,A65,A73,2.0,A94,none,4.0,A123,20.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,0
+A12,36,A32,furniture/equipment,9034.0,A62,A72,4.0,A93,co-applicant,1.0,A124,29.0,none,rent,1.0,management/self-employed,1,1,1,0,1,1,1
+A14,24,A34,furniture/equipment,1585.0,A61,A74,4.0,A93,none,3.0,A122,40.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A12,18,A32,radio/television,1301.0,A61,A75,4.0,A94,guarantor,2.0,A121,32.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A13,6,A34,new car,1323.0,A62,A75,2.0,A91,none,4.0,A123,28.0,none,own,2.0,skilled_employee,2,1,1,1,1,1,1
+A11,24,A32,new car,3123.0,A61,A72,4.0,A92,none,1.0,A122,27.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,1
+A11,36,A32,used car,5493.0,A61,A75,2.0,A93,none,4.0,A124,42.0,none,free,1.0,skilled_employee,2,0,1,1,1,1,1
+A13,9,A32,radio/television,1126.0,A62,A75,2.0,A91,none,4.0,A121,49.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,24,A34,radio/television,1216.0,A62,A72,4.0,A93,none,4.0,A124,38.0,bank,own,2.0,skilled_employee,2,0,1,0,1,1,1
+A11,24,A32,new car,1207.0,A61,A72,4.0,A92,none,4.0,A122,24.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A14,10,A32,new car,1309.0,A65,A73,4.0,A93,guarantor,4.0,A122,27.0,none,own,1.0,unskilled-resident,1,0,1,0,1,0,0
+A13,15,A34,used car,2360.0,A63,A73,2.0,A93,none,2.0,A123,36.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A12,15,A31,new car,6850.0,A62,A71,1.0,A93,none,2.0,A122,34.0,none,own,1.0,management/self-employed,2,1,1,0,1,1,1
+A14,24,A32,radio/television,1413.0,A61,A73,4.0,A94,none,2.0,A122,28.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,39,A32,used car,8588.0,A62,A75,4.0,A93,none,2.0,A123,45.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A11,12,A32,new car,759.0,A61,A74,4.0,A93,none,2.0,A121,26.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,36,A32,used car,4686.0,A61,A73,2.0,A93,none,2.0,A124,32.0,none,free,1.0,management/self-employed,1,1,1,1,1,0,1
+A13,15,A32,business,2687.0,A61,A74,2.0,A93,none,4.0,A122,26.0,none,rent,1.0,skilled_employee,1,1,1,1,1,1,1
+A12,12,A33,radio/television,585.0,A61,A73,4.0,A94,co-applicant,4.0,A121,20.0,none,rent,2.0,skilled_employee,1,0,1,1,1,1,1
+A14,24,A32,new car,2255.0,A65,A72,4.0,A93,none,1.0,A122,54.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,0
+A11,6,A34,new car,609.0,A61,A74,4.0,A92,none,3.0,A122,37.0,none,own,2.0,skilled_employee,1,0,0,1,0,1,1
+A11,6,A34,new car,1361.0,A61,A72,2.0,A93,none,4.0,A121,40.0,none,own,1.0,unskilled-resident,2,0,0,1,1,1,1
+A14,36,A34,furniture/equipment,7127.0,A61,A72,2.0,A92,none,4.0,A122,23.0,none,rent,2.0,skilled_employee,1,1,1,0,0,0,1
+A11,6,A32,new car,1203.0,A62,A75,3.0,A93,none,2.0,A122,43.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A14,6,A34,radio/television,700.0,A65,A75,4.0,A93,none,4.0,A124,36.0,none,free,2.0,skilled_employee,1,0,1,1,1,0,0
+A14,24,A34,repairs,5507.0,A61,A75,3.0,A93,none,4.0,A124,44.0,none,free,2.0,skilled_employee,1,0,1,1,1,0,1
+A11,18,A32,radio/television,3190.0,A61,A73,2.0,A92,none,2.0,A121,24.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,1
+A11,48,A30,furniture/equipment,7119.0,A61,A73,3.0,A93,none,4.0,A124,53.0,none,free,2.0,skilled_employee,2,0,1,0,1,1,1
+A14,24,A32,used car,3488.0,A62,A74,3.0,A92,none,4.0,A123,23.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A12,18,A32,radio/television,1113.0,A61,A73,4.0,A92,guarantor,4.0,A121,26.0,none,own,1.0,unskilled-resident,2,0,1,1,0,1,1
+A12,26,A32,used car,7966.0,A61,A72,2.0,A93,none,3.0,A123,30.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A14,15,A34,education,1532.0,A62,A73,4.0,A92,none,3.0,A123,31.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A14,4,A34,radio/television,1503.0,A61,A74,2.0,A93,none,1.0,A121,42.0,none,own,2.0,unskilled-resident,2,0,1,1,1,0,1
+A11,36,A32,radio/television,2302.0,A61,A73,4.0,A91,none,4.0,A123,31.0,none,rent,1.0,skilled_employee,1,0,1,0,1,1,1
+A11,6,A32,new car,662.0,A61,A72,3.0,A93,none,4.0,A121,41.0,none,own,1.0,unskilled-resident,2,1,1,1,1,1,1
+A12,36,A32,education,2273.0,A61,A74,3.0,A93,none,1.0,A123,32.0,none,own,2.0,skilled_employee,2,0,1,1,1,1,1
+A12,15,A32,new car,2631.0,A62,A73,2.0,A92,none,4.0,A123,28.0,none,rent,2.0,skilled_employee,1,1,1,0,0,1,1
+A14,12,A33,used car,1503.0,A61,A73,4.0,A94,none,4.0,A121,41.0,none,rent,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,24,A32,radio/television,1311.0,A62,A74,4.0,A94,none,3.0,A122,26.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A14,24,A32,radio/television,3105.0,A65,A72,4.0,A93,none,2.0,A123,25.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,0
+A13,21,A34,education,2319.0,A61,A72,2.0,A91,none,1.0,A123,33.0,none,rent,1.0,skilled_employee,1,0,1,0,1,1,1
+A11,6,A32,new car,1374.0,A65,A71,4.0,A92,none,3.0,A122,75.0,none,own,1.0,management/self-employed,1,1,1,1,0,1,0
+A12,18,A34,furniture/equipment,3612.0,A61,A75,3.0,A92,none,4.0,A122,37.0,none,own,1.0,skilled_employee,1,1,1,1,0,1,1
+A11,48,A32,new car,7763.0,A61,A75,4.0,A93,none,4.0,A124,42.0,bank,free,1.0,management/self-employed,1,0,1,0,1,1,1
+A13,18,A32,furniture/equipment,3049.0,A61,A72,1.0,A92,none,1.0,A122,45.0,stores,own,1.0,unskilled-resident,1,0,1,1,0,1,1
+A12,12,A32,radio/television,1534.0,A61,A72,1.0,A94,none,1.0,A121,23.0,none,rent,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,24,A33,new car,2032.0,A61,A75,4.0,A93,none,4.0,A124,60.0,none,free,2.0,skilled_employee,1,1,1,1,1,0,1
+A11,30,A32,furniture/equipment,6350.0,A65,A75,4.0,A93,none,4.0,A122,31.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,0
+A13,18,A32,furniture/equipment,2864.0,A61,A73,2.0,A93,none,1.0,A121,34.0,none,own,1.0,unskilled-resident,2,0,1,0,1,1,1
+A14,12,A34,new car,1255.0,A61,A75,4.0,A93,none,4.0,A121,61.0,none,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A11,24,A33,new car,1333.0,A61,A71,4.0,A93,none,2.0,A121,43.0,none,free,2.0,skilled_employee,2,0,1,0,1,1,1
+A14,24,A34,new car,2022.0,A61,A73,4.0,A92,none,4.0,A123,37.0,none,own,1.0,skilled_employee,1,1,1,1,0,0,1
+A14,24,A32,radio/television,1552.0,A61,A74,3.0,A93,none,1.0,A123,32.0,bank,own,1.0,skilled_employee,2,0,1,1,1,0,1
+A11,12,A31,radio/television,626.0,A61,A73,4.0,A92,none,4.0,A121,24.0,bank,own,1.0,unskilled-resident,1,0,1,0,0,1,1
+A14,48,A34,used car,8858.0,A65,A74,2.0,A93,none,1.0,A124,35.0,none,free,2.0,skilled_employee,1,1,1,1,1,0,0
+A14,12,A34,repairs,996.0,A65,A74,4.0,A92,none,4.0,A121,23.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,0
+A14,6,A31,radio/television,1750.0,A63,A75,2.0,A93,none,4.0,A122,45.0,bank,own,1.0,unskilled-resident,2,0,1,1,1,0,1
+A11,48,A32,radio/television,6999.0,A61,A74,1.0,A94,guarantor,1.0,A121,34.0,none,own,2.0,skilled_employee,1,1,1,0,1,1,1
+A12,12,A34,new car,1995.0,A62,A72,4.0,A93,none,1.0,A123,27.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,9,A32,education,1199.0,A61,A74,4.0,A92,none,4.0,A122,67.0,none,own,2.0,management/self-employed,1,1,1,1,0,1,1
+A12,12,A32,radio/television,1331.0,A61,A72,2.0,A93,none,1.0,A123,22.0,stores,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A12,18,A30,new car,2278.0,A62,A72,3.0,A92,none,3.0,A123,28.0,none,own,2.0,skilled_employee,1,0,1,0,0,1,1
+A14,21,A30,new car,5003.0,A65,A73,1.0,A92,none,4.0,A122,29.0,bank,own,2.0,skilled_employee,1,1,1,0,0,0,0
+A11,24,A31,furniture/equipment,3552.0,A61,A74,3.0,A93,none,4.0,A123,27.0,bank,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A12,18,A34,furniture/equipment,1928.0,A61,A72,2.0,A93,none,2.0,A121,31.0,none,own,2.0,unskilled-resident,1,0,1,0,1,1,1
+A11,24,A32,used car,2964.0,A65,A75,4.0,A93,none,4.0,A124,49.0,bank,free,1.0,skilled_employee,2,1,1,1,1,1,0
+A11,24,A31,radio/television,1546.0,A61,A74,4.0,A93,guarantor,4.0,A123,24.0,bank,rent,1.0,unskilled-resident,1,0,1,0,1,1,1
+A13,6,A33,radio/television,683.0,A61,A72,2.0,A92,none,1.0,A122,29.0,bank,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A12,36,A32,new car,12389.0,A65,A73,1.0,A93,none,4.0,A124,37.0,none,free,1.0,skilled_employee,1,1,1,0,1,1,0
+A12,24,A33,business,4712.0,A65,A73,4.0,A93,none,2.0,A122,37.0,bank,own,2.0,management/self-employed,1,1,1,1,1,1,0
+A12,24,A33,radio/television,1553.0,A62,A74,3.0,A92,none,2.0,A122,23.0,none,rent,2.0,skilled_employee,1,1,1,1,0,1,1
+A11,12,A32,new car,1372.0,A61,A74,2.0,A91,none,3.0,A123,36.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,24,A34,radio/television,2578.0,A64,A75,2.0,A93,none,2.0,A123,34.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A12,48,A32,radio/television,3979.0,A65,A74,4.0,A93,none,1.0,A123,41.0,none,own,2.0,skilled_employee,2,1,1,1,1,1,0
+A11,48,A32,radio/television,6758.0,A61,A73,3.0,A92,none,2.0,A123,31.0,none,own,1.0,skilled_employee,1,1,1,0,0,1,1
+A11,24,A32,furniture/equipment,3234.0,A61,A72,4.0,A92,none,4.0,A121,23.0,none,rent,1.0,unskilled-resident,1,1,1,0,0,1,1
+A14,30,A34,radio/television,5954.0,A61,A74,3.0,A93,co-applicant,2.0,A123,38.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,24,A32,used car,5433.0,A65,A71,2.0,A92,none,4.0,A122,26.0,none,rent,1.0,management/self-employed,1,1,1,1,0,0,0
+A11,15,A32,business,806.0,A61,A73,4.0,A92,none,4.0,A122,22.0,none,own,1.0,unskilled-resident,1,0,1,1,0,1,1
+A12,9,A32,radio/television,1082.0,A61,A75,4.0,A93,none,4.0,A123,27.0,none,own,2.0,unskilled-resident,1,0,1,1,1,1,1
+A14,15,A34,furniture/equipment,2788.0,A61,A74,2.0,A92,co-applicant,3.0,A123,24.0,bank,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A12,12,A32,radio/television,2930.0,A61,A74,2.0,A92,none,1.0,A121,27.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A14,24,A34,education,1927.0,A65,A73,3.0,A92,none,2.0,A123,33.0,none,own,2.0,skilled_employee,1,1,1,1,0,0,0
+A12,36,A34,new car,2820.0,A61,A72,4.0,A91,none,4.0,A123,27.0,none,own,2.0,skilled_employee,1,0,1,0,1,1,1
+A14,24,A32,retraining,937.0,A61,A72,4.0,A94,none,3.0,A123,27.0,none,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A12,18,A34,new car,1056.0,A61,A75,3.0,A93,guarantor,3.0,A121,30.0,bank,own,2.0,skilled_employee,1,0,1,0,1,1,1
+A12,12,A34,new car,3124.0,A61,A72,1.0,A93,none,3.0,A121,49.0,bank,own,2.0,unskilled-resident,2,0,1,1,1,1,1
+A14,9,A32,furniture/equipment,1388.0,A61,A73,4.0,A92,none,2.0,A121,26.0,none,rent,1.0,skilled_employee,1,0,1,1,0,0,1
+A12,36,A32,repairs,2384.0,A61,A72,4.0,A93,none,1.0,A124,33.0,none,rent,1.0,unskilled-resident,1,0,1,0,1,1,1
+A14,12,A32,new car,2133.0,A65,A75,4.0,A92,none,4.0,A124,52.0,none,free,1.0,management/self-employed,1,1,1,1,0,0,0
+A11,18,A32,furniture/equipment,2039.0,A61,A73,1.0,A92,none,4.0,A121,20.0,bank,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A11,9,A34,new car,2799.0,A61,A73,2.0,A93,none,2.0,A121,36.0,none,rent,2.0,skilled_employee,2,0,1,1,1,1,1
+A11,12,A32,furniture/equipment,1289.0,A61,A73,4.0,A93,guarantor,1.0,A122,21.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A11,18,A32,domestic appliances,1217.0,A61,A73,4.0,A94,none,3.0,A121,47.0,none,own,1.0,unskilled-resident,1,1,1,0,1,1,1
+A11,12,A34,furniture/equipment,2246.0,A61,A75,3.0,A93,none,3.0,A122,60.0,none,own,2.0,skilled_employee,1,0,1,0,1,1,1
+A11,12,A34,radio/television,385.0,A61,A74,4.0,A92,none,3.0,A121,58.0,none,own,4.0,unskilled-resident,1,1,1,1,0,1,1
+A12,24,A33,new car,1965.0,A65,A73,4.0,A92,none,4.0,A123,42.0,none,rent,2.0,skilled_employee,1,1,1,1,0,1,0
+A14,21,A32,business,1572.0,A64,A75,4.0,A92,none,4.0,A121,36.0,bank,own,1.0,unskilled-resident,1,0,1,1,0,0,1
+A12,24,A32,new car,2718.0,A61,A73,3.0,A92,none,4.0,A122,20.0,none,rent,1.0,unskilled-resident,1,1,1,0,0,1,1
+A11,24,A31,others,1358.0,A65,A75,4.0,A93,none,3.0,A123,40.0,stores,own,1.0,management/self-employed,1,1,1,0,1,1,0
+A12,6,A31,new car,931.0,A62,A72,1.0,A92,none,1.0,A122,32.0,stores,own,1.0,unskilled-resident,1,0,1,0,0,1,1
+A11,24,A32,new car,1442.0,A61,A74,4.0,A92,none,4.0,A123,23.0,none,rent,2.0,skilled_employee,1,0,1,0,0,1,1
+A12,24,A30,business,4241.0,A61,A73,1.0,A93,none,4.0,A121,36.0,none,own,3.0,unskilled-resident,1,1,1,0,1,1,1
+A14,18,A34,new car,2775.0,A61,A74,2.0,A93,none,2.0,A122,31.0,bank,own,2.0,skilled_employee,1,0,1,0,1,0,1
+A14,24,A33,business,3863.0,A61,A73,1.0,A93,none,2.0,A124,32.0,none,free,1.0,skilled_employee,1,0,1,1,1,0,1
+A12,7,A32,radio/television,2329.0,A61,A72,1.0,A92,guarantor,1.0,A121,45.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A12,9,A32,furniture/equipment,918.0,A61,A73,4.0,A92,none,1.0,A122,30.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,1
+A12,24,A31,education,1837.0,A61,A74,4.0,A92,none,4.0,A124,34.0,bank,free,1.0,unskilled-resident,1,0,1,0,0,1,1
+A14,36,A32,furniture/equipment,3349.0,A61,A73,4.0,A92,none,2.0,A123,28.0,none,own,1.0,management/self-employed,1,1,1,0,0,0,1
+A13,10,A32,furniture/equipment,1275.0,A61,A72,4.0,A92,none,2.0,A122,23.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A11,24,A31,furniture/equipment,2828.0,A63,A73,4.0,A93,none,4.0,A121,22.0,stores,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A14,24,A34,business,4526.0,A61,A73,3.0,A93,none,2.0,A121,74.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A12,36,A32,radio/television,2671.0,A62,A73,4.0,A92,co-applicant,4.0,A124,50.0,none,free,1.0,skilled_employee,1,0,1,0,0,1,1
+A14,18,A32,radio/television,2051.0,A61,A72,4.0,A93,none,1.0,A121,33.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,15,A32,used car,1300.0,A65,A75,4.0,A93,none,4.0,A124,45.0,bank,free,1.0,skilled_employee,2,0,1,1,1,0,0
+A11,12,A32,domestic appliances,741.0,A62,A71,4.0,A92,none,3.0,A122,22.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,1
+A13,10,A32,new car,1240.0,A62,A75,1.0,A92,none,4.0,A124,48.0,none,free,1.0,unskilled-resident,2,0,1,0,0,1,1
+A11,21,A32,radio/television,3357.0,A64,A72,4.0,A92,none,2.0,A123,29.0,bank,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A11,24,A31,used car,3632.0,A61,A73,1.0,A92,guarantor,4.0,A123,22.0,bank,rent,1.0,skilled_employee,1,0,0,1,0,1,1
+A14,18,A33,furniture/equipment,1808.0,A61,A74,4.0,A92,none,1.0,A121,22.0,none,own,1.0,skilled_employee,1,0,1,0,0,0,1
+A12,48,A30,business,12204.0,A65,A73,2.0,A93,none,2.0,A123,48.0,bank,own,1.0,management/self-employed,1,1,1,1,1,1,0
+A12,60,A33,radio/television,9157.0,A65,A73,2.0,A93,none,2.0,A124,27.0,none,free,1.0,management/self-employed,1,0,1,1,1,1,0
+A11,6,A34,new car,3676.0,A61,A73,1.0,A93,none,3.0,A121,37.0,none,rent,3.0,skilled_employee,2,0,1,1,1,1,1
+A12,30,A32,furniture/equipment,3441.0,A62,A73,2.0,A92,co-applicant,4.0,A123,21.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A14,12,A32,new car,640.0,A61,A73,4.0,A91,none,2.0,A121,49.0,none,own,1.0,unskilled-resident,1,0,1,1,1,0,1
+A12,21,A34,business,3652.0,A61,A74,2.0,A93,none,3.0,A122,27.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A14,18,A34,new car,1530.0,A61,A73,3.0,A93,none,2.0,A122,32.0,bank,own,2.0,skilled_employee,1,0,1,0,1,0,1
+A14,48,A32,business,3914.0,A65,A73,4.0,A91,none,2.0,A121,38.0,bank,own,1.0,skilled_employee,1,0,1,0,1,0,0
+A11,12,A32,furniture/equipment,1858.0,A61,A72,4.0,A92,none,1.0,A123,22.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,1
+A11,18,A32,radio/television,2600.0,A61,A73,4.0,A93,none,4.0,A124,65.0,none,free,2.0,skilled_employee,1,0,1,0,1,1,1
+A14,15,A32,radio/television,1979.0,A65,A75,4.0,A93,none,2.0,A123,35.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,0
+A13,6,A32,furniture/equipment,2116.0,A61,A73,2.0,A93,none,2.0,A121,41.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A12,9,A31,new car,1437.0,A62,A74,2.0,A93,none,3.0,A124,29.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,42,A34,furniture/equipment,4042.0,A63,A73,4.0,A93,none,4.0,A121,36.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A14,9,A32,education,3832.0,A65,A75,1.0,A93,none,4.0,A121,64.0,none,own,1.0,unskilled-resident,1,0,1,1,1,0,0
+A11,24,A32,radio/television,3660.0,A61,A73,2.0,A92,none,4.0,A123,28.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A11,18,A31,furniture/equipment,1553.0,A61,A73,4.0,A93,none,3.0,A123,44.0,bank,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A12,15,A32,radio/television,1444.0,A65,A72,4.0,A93,none,1.0,A122,23.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,0
+A14,9,A32,furniture/equipment,1980.0,A61,A72,2.0,A92,co-applicant,2.0,A123,19.0,none,rent,2.0,skilled_employee,1,0,1,0,0,0,1
+A12,24,A32,new car,1355.0,A61,A72,3.0,A92,none,4.0,A123,25.0,none,own,1.0,unskilled-resident,1,1,1,0,0,1,1
+A14,12,A32,education,1393.0,A61,A75,4.0,A93,none,4.0,A122,47.0,bank,own,3.0,skilled_employee,2,1,1,1,1,0,1
+A14,24,A32,radio/television,1376.0,A63,A74,4.0,A92,none,1.0,A123,28.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A14,60,A33,radio/television,15653.0,A61,A74,2.0,A93,none,4.0,A123,21.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A14,12,A32,radio/television,1493.0,A61,A72,4.0,A92,none,3.0,A123,34.0,none,own,1.0,skilled_employee,2,0,1,1,0,0,1
+A11,42,A33,radio/television,4370.0,A61,A74,3.0,A93,none,2.0,A122,26.0,bank,own,2.0,skilled_employee,2,1,1,0,1,1,1
+A11,18,A32,education,750.0,A61,A71,4.0,A92,none,1.0,A121,27.0,none,own,1.0,unemployed/unskilled,1,0,1,0,0,1,1
+A12,15,A32,repairs,1308.0,A61,A75,4.0,A93,none,4.0,A123,38.0,none,own,2.0,unskilled-resident,1,0,1,1,1,1,1
+A14,15,A32,education,4623.0,A62,A73,3.0,A93,none,2.0,A122,40.0,none,own,1.0,management/self-employed,1,1,1,0,1,0,1
+A14,24,A34,radio/television,1851.0,A61,A74,4.0,A94,guarantor,2.0,A123,33.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A11,18,A34,radio/television,1880.0,A61,A74,4.0,A94,none,1.0,A122,32.0,none,own,2.0,management/self-employed,1,1,1,1,1,1,1
+A14,36,A33,business,7980.0,A65,A72,4.0,A93,none,4.0,A123,27.0,none,rent,2.0,skilled_employee,1,1,1,0,1,0,0
+A11,30,A30,furniture/equipment,4583.0,A61,A73,2.0,A91,guarantor,2.0,A121,32.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A14,12,A32,new car,1386.0,A63,A73,2.0,A92,none,2.0,A122,26.0,none,own,1.0,skilled_employee,1,0,1,0,0,0,1
+A13,24,A32,new car,947.0,A61,A74,4.0,A93,none,3.0,A124,38.0,bank,free,1.0,skilled_employee,2,0,1,0,1,1,1
+A11,12,A32,education,684.0,A61,A73,4.0,A93,none,4.0,A123,40.0,none,rent,1.0,unskilled-resident,2,0,1,0,1,1,1
+A11,48,A32,education,7476.0,A61,A74,4.0,A93,none,1.0,A124,50.0,none,free,1.0,management/self-employed,1,1,1,1,1,1,1
+A12,12,A32,furniture/equipment,1922.0,A61,A73,4.0,A93,none,2.0,A122,37.0,none,own,1.0,unskilled-resident,1,0,1,0,1,1,1
+A11,24,A32,new car,2303.0,A61,A75,4.0,A93,co-applicant,1.0,A121,45.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A12,36,A33,new car,8086.0,A62,A75,2.0,A93,none,4.0,A123,42.0,none,own,4.0,management/self-employed,1,1,1,0,1,1,1
+A14,24,A34,used car,2346.0,A61,A74,4.0,A93,none,3.0,A123,35.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A11,14,A32,new car,3973.0,A61,A71,1.0,A93,none,4.0,A124,22.0,none,free,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,12,A32,new car,888.0,A61,A75,4.0,A93,none,4.0,A123,41.0,bank,own,1.0,unskilled-resident,2,0,1,0,1,1,1
+A14,48,A32,radio/television,10222.0,A65,A74,4.0,A93,none,3.0,A123,37.0,stores,own,1.0,skilled_employee,1,1,1,1,1,0,0
+A12,30,A30,business,4221.0,A61,A73,2.0,A92,none,1.0,A123,28.0,none,own,2.0,skilled_employee,1,0,1,1,0,1,1
+A12,18,A34,furniture/equipment,6361.0,A61,A75,2.0,A93,none,1.0,A124,41.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A13,12,A32,radio/television,1297.0,A61,A73,3.0,A94,none,4.0,A121,23.0,none,rent,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,12,A32,new car,900.0,A65,A73,4.0,A94,none,2.0,A123,23.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,0
+A14,21,A32,furniture/equipment,2241.0,A61,A75,4.0,A93,none,2.0,A121,50.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A12,6,A33,furniture/equipment,1050.0,A61,A71,4.0,A93,none,1.0,A122,35.0,stores,own,2.0,management/self-employed,1,1,1,1,1,1,1
+A13,6,A34,education,1047.0,A61,A73,2.0,A92,none,4.0,A122,50.0,none,own,1.0,unskilled-resident,1,0,1,1,0,1,1
+A14,24,A34,others,6314.0,A61,A71,4.0,A93,co-applicant,2.0,A124,27.0,bank,own,2.0,management/self-employed,1,1,1,1,1,0,1
+A12,30,A31,furniture/equipment,3496.0,A64,A73,4.0,A93,none,2.0,A123,34.0,stores,own,1.0,skilled_employee,2,1,1,1,1,1,1
+A14,48,A31,business,3609.0,A61,A73,1.0,A92,none,1.0,A121,27.0,stores,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A11,12,A34,new car,4843.0,A61,A75,3.0,A93,co-applicant,4.0,A122,43.0,none,rent,2.0,skilled_employee,1,1,1,0,1,1,1
+A13,30,A34,radio/television,3017.0,A61,A75,4.0,A93,none,4.0,A122,47.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,24,A34,business,4139.0,A62,A73,3.0,A93,none,3.0,A122,27.0,none,own,2.0,unskilled-resident,1,1,1,1,1,0,1
+A14,36,A32,business,5742.0,A62,A74,2.0,A93,none,2.0,A123,31.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A14,60,A32,new car,10366.0,A61,A75,2.0,A93,none,4.0,A122,42.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A14,6,A34,new car,2080.0,A63,A73,1.0,A94,none,2.0,A123,24.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,21,A33,business,2580.0,A63,A72,4.0,A93,none,2.0,A121,41.0,bank,own,1.0,unskilled-resident,2,0,1,0,1,0,1
+A14,30,A34,radio/television,4530.0,A61,A74,4.0,A92,none,4.0,A123,26.0,none,rent,1.0,management/self-employed,1,1,1,1,0,0,1
+A14,24,A34,furniture/equipment,5150.0,A61,A75,4.0,A93,none,4.0,A123,33.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A12,72,A32,radio/television,5595.0,A62,A73,2.0,A94,none,2.0,A123,24.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A11,24,A32,radio/television,2384.0,A61,A75,4.0,A93,none,4.0,A121,64.0,bank,rent,1.0,unskilled-resident,1,0,1,1,1,1,1
+A14,18,A32,radio/television,1453.0,A61,A72,3.0,A92,none,1.0,A121,26.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A14,6,A32,education,1538.0,A61,A72,1.0,A92,none,2.0,A124,56.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A14,12,A32,radio/television,2279.0,A65,A73,4.0,A93,none,4.0,A124,37.0,none,free,1.0,skilled_employee,1,1,1,1,1,0,0
+A14,15,A33,radio/television,1478.0,A61,A73,4.0,A94,none,3.0,A121,33.0,bank,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A14,24,A34,radio/television,5103.0,A61,A72,3.0,A94,none,3.0,A124,47.0,none,free,3.0,skilled_employee,1,1,1,1,1,0,1
+A12,36,A33,business,9857.0,A62,A74,1.0,A93,none,3.0,A122,31.0,none,own,2.0,unskilled-resident,2,1,1,1,1,1,1
+A14,60,A32,new car,6527.0,A65,A73,4.0,A93,none,4.0,A124,34.0,none,free,1.0,skilled_employee,2,1,1,1,1,0,0
+A13,10,A34,radio/television,1347.0,A65,A74,4.0,A93,none,2.0,A122,27.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,0
+A12,36,A33,new car,2862.0,A62,A75,4.0,A93,none,3.0,A124,30.0,none,free,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,9,A32,radio/television,2753.0,A62,A75,3.0,A93,co-applicant,4.0,A123,35.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A11,12,A32,new car,3651.0,A64,A73,1.0,A93,none,3.0,A122,31.0,none,own,1.0,skilled_employee,2,0,1,1,1,1,1
+A11,15,A34,furniture/equipment,975.0,A61,A73,2.0,A91,none,3.0,A122,25.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A12,15,A32,repairs,2631.0,A62,A73,3.0,A92,none,2.0,A121,25.0,none,own,1.0,unskilled-resident,1,0,1,1,0,1,1
+A12,24,A32,radio/television,2896.0,A62,A72,2.0,A93,none,1.0,A123,29.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,6,A34,new car,4716.0,A65,A72,1.0,A93,none,3.0,A121,44.0,none,own,2.0,unskilled-resident,2,0,1,1,1,1,0
+A14,24,A32,radio/television,2284.0,A61,A74,4.0,A93,none,2.0,A123,28.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A14,6,A32,used car,1236.0,A63,A73,2.0,A93,none,4.0,A122,50.0,none,rent,1.0,skilled_employee,1,0,1,1,1,0,1
+A12,12,A32,radio/television,1103.0,A61,A74,4.0,A93,guarantor,3.0,A121,29.0,none,own,2.0,skilled_employee,1,0,0,1,1,1,1
+A14,12,A34,new car,926.0,A61,A71,1.0,A92,none,2.0,A122,38.0,none,own,1.0,unemployed/unskilled,1,0,1,1,0,0,1
+A14,18,A34,radio/television,1800.0,A61,A73,4.0,A93,none,2.0,A123,24.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A13,15,A32,education,1905.0,A61,A75,4.0,A93,none,4.0,A123,40.0,none,rent,1.0,management/self-employed,1,1,1,1,1,1,1
+A14,12,A32,furniture/equipment,1123.0,A63,A73,4.0,A92,none,4.0,A123,29.0,none,rent,1.0,unskilled-resident,1,0,1,0,0,0,1
+A11,48,A34,used car,6331.0,A61,A75,4.0,A93,none,4.0,A124,46.0,none,free,2.0,skilled_employee,1,1,1,0,1,1,1
+A13,24,A32,radio/television,1377.0,A62,A75,4.0,A92,none,2.0,A124,47.0,none,free,1.0,skilled_employee,1,1,1,1,0,1,1
+A12,30,A33,business,2503.0,A62,A75,4.0,A93,none,2.0,A122,41.0,stores,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A12,27,A32,business,2528.0,A61,A72,4.0,A92,none,1.0,A122,32.0,none,own,1.0,skilled_employee,2,1,1,1,0,1,1
+A14,15,A32,new car,5324.0,A63,A75,1.0,A92,none,4.0,A124,35.0,none,free,1.0,skilled_employee,1,0,1,1,0,0,1
+A12,48,A32,new car,6560.0,A62,A74,3.0,A93,none,2.0,A122,24.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A12,12,A30,furniture/equipment,2969.0,A61,A72,4.0,A92,none,3.0,A122,25.0,none,rent,2.0,skilled_employee,1,0,1,0,0,1,1
+A12,9,A32,radio/television,1206.0,A61,A75,4.0,A92,none,4.0,A121,25.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A12,9,A32,radio/television,2118.0,A61,A73,2.0,A93,none,2.0,A121,37.0,none,own,1.0,unskilled-resident,2,0,1,1,1,1,1
+A14,18,A34,radio/television,629.0,A63,A75,4.0,A93,none,3.0,A122,32.0,bank,own,2.0,management/self-employed,1,1,1,1,1,0,1
+A11,6,A31,education,1198.0,A61,A75,4.0,A92,none,4.0,A124,35.0,none,free,1.0,skilled_employee,1,0,1,0,0,1,1
+A14,21,A32,used car,2476.0,A65,A75,4.0,A93,none,4.0,A121,46.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,0
+A11,9,A34,radio/television,1138.0,A61,A73,4.0,A93,none,4.0,A121,25.0,none,own,2.0,unskilled-resident,1,0,1,1,1,1,1
+A12,60,A32,new car,14027.0,A61,A74,4.0,A93,none,2.0,A124,27.0,none,own,1.0,management/self-employed,1,1,1,0,1,1,1
+A14,30,A34,used car,7596.0,A65,A75,1.0,A93,none,4.0,A123,63.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,0
+A14,30,A34,radio/television,3077.0,A65,A75,3.0,A93,none,2.0,A123,40.0,none,own,2.0,skilled_employee,2,1,1,1,1,0,0
+A14,18,A32,radio/television,1505.0,A61,A73,4.0,A93,none,2.0,A124,32.0,none,free,1.0,management/self-employed,1,1,1,1,1,0,1
+A13,24,A34,radio/television,3148.0,A65,A73,3.0,A93,none,2.0,A123,31.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,0
+A12,20,A30,used car,6148.0,A62,A75,3.0,A94,none,4.0,A123,31.0,bank,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A13,9,A30,radio/television,1337.0,A61,A72,4.0,A93,none,2.0,A123,34.0,none,own,2.0,management/self-employed,1,1,1,0,1,1,1
+A12,6,A31,education,433.0,A64,A72,4.0,A92,none,2.0,A122,24.0,bank,rent,1.0,skilled_employee,2,0,1,0,0,1,1
+A11,12,A32,new car,1228.0,A61,A73,4.0,A92,none,2.0,A121,24.0,none,own,1.0,unskilled-resident,1,0,1,0,0,1,1
+A12,9,A32,radio/television,790.0,A63,A73,4.0,A92,none,3.0,A121,66.0,none,own,1.0,unskilled-resident,1,0,1,1,0,1,1
+A14,27,A32,new car,2570.0,A61,A73,3.0,A92,none,3.0,A121,21.0,none,rent,1.0,skilled_employee,1,0,1,0,0,0,1
+A14,6,A34,new car,250.0,A64,A73,2.0,A92,none,2.0,A121,41.0,bank,own,2.0,unskilled-resident,1,0,1,1,0,0,1
+A14,15,A34,radio/television,1316.0,A63,A73,2.0,A94,none,2.0,A122,47.0,none,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A11,18,A32,radio/television,1882.0,A61,A73,4.0,A92,none,4.0,A123,25.0,bank,rent,2.0,skilled_employee,1,0,1,0,0,1,1
+A12,48,A31,business,6416.0,A61,A75,4.0,A92,none,3.0,A124,59.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A13,24,A34,business,1275.0,A64,A73,2.0,A91,none,4.0,A121,36.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A12,24,A33,radio/television,6403.0,A61,A72,1.0,A93,none,2.0,A123,33.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,24,A32,radio/television,1987.0,A61,A73,2.0,A93,none,4.0,A121,21.0,none,rent,1.0,unskilled-resident,2,0,1,0,1,1,1
+A12,8,A32,radio/television,760.0,A61,A74,4.0,A92,guarantor,2.0,A121,44.0,none,own,1.0,unskilled-resident,1,0,1,1,0,1,1
+A14,24,A32,used car,2603.0,A64,A73,2.0,A92,none,4.0,A123,28.0,none,rent,1.0,skilled_employee,1,1,1,1,0,0,1
+A14,4,A34,new car,3380.0,A61,A74,1.0,A92,none,1.0,A121,37.0,none,own,1.0,skilled_employee,2,0,1,1,0,0,1
+A12,36,A31,domestic appliances,3990.0,A65,A72,3.0,A92,none,2.0,A124,29.0,bank,own,1.0,unemployed/unskilled,1,0,1,1,0,1,0
+A12,24,A32,used car,11560.0,A61,A73,1.0,A92,none,4.0,A123,23.0,none,rent,2.0,management/self-employed,1,0,1,0,0,1,1
+A11,18,A32,new car,4380.0,A62,A73,3.0,A93,none,4.0,A123,35.0,none,own,1.0,unskilled-resident,2,1,1,1,1,1,1
+A14,6,A34,new car,6761.0,A61,A74,1.0,A93,none,3.0,A124,45.0,none,own,2.0,management/self-employed,2,1,1,1,1,0,1
+A12,30,A30,business,4280.0,A62,A73,4.0,A92,none,4.0,A123,26.0,none,rent,2.0,unskilled-resident,1,0,1,0,0,1,1
+A11,24,A31,new car,2325.0,A62,A74,2.0,A93,none,3.0,A123,32.0,bank,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A12,10,A31,radio/television,1048.0,A61,A73,4.0,A93,none,4.0,A121,23.0,stores,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A14,21,A32,radio/television,3160.0,A65,A75,4.0,A93,none,3.0,A122,41.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,0
+A11,24,A31,furniture/equipment,2483.0,A63,A73,4.0,A93,none,4.0,A121,22.0,stores,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A11,39,A34,furniture/equipment,14179.0,A65,A74,4.0,A93,none,4.0,A122,30.0,none,own,2.0,management/self-employed,1,1,1,1,1,1,0
+A11,13,A34,business,1797.0,A61,A72,3.0,A93,none,1.0,A122,28.0,bank,own,2.0,unskilled-resident,1,0,1,1,1,1,1
+A11,15,A32,new car,2511.0,A61,A71,1.0,A92,none,4.0,A123,23.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,1
+A11,12,A32,new car,1274.0,A61,A72,3.0,A92,none,1.0,A121,37.0,none,own,1.0,unskilled-resident,1,0,1,0,0,1,1
+A14,21,A32,used car,5248.0,A65,A73,1.0,A93,none,3.0,A123,26.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,0
+A14,15,A32,used car,3029.0,A61,A74,2.0,A93,none,2.0,A123,33.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A11,6,A32,furniture/equipment,428.0,A61,A75,2.0,A92,none,1.0,A122,49.0,bank,own,1.0,skilled_employee,1,1,1,1,0,1,1
+A11,18,A32,new car,976.0,A61,A72,1.0,A92,none,2.0,A123,23.0,none,own,1.0,unskilled-resident,1,0,1,0,0,1,1
+A12,12,A32,business,841.0,A62,A74,2.0,A92,none,4.0,A121,23.0,none,rent,1.0,unskilled-resident,1,0,1,1,0,1,1
+A14,30,A34,radio/television,5771.0,A61,A74,4.0,A92,none,2.0,A123,25.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A14,12,A33,repairs,1555.0,A64,A75,4.0,A93,none,4.0,A124,55.0,none,free,2.0,skilled_employee,2,0,1,0,1,0,1
+A11,24,A32,new car,1285.0,A65,A74,4.0,A92,none,4.0,A124,32.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,0
+A13,6,A34,new car,1299.0,A61,A73,1.0,A93,none,1.0,A121,74.0,none,own,3.0,unemployed/unskilled,2,0,0,1,1,1,1
+A13,15,A34,radio/television,1271.0,A65,A73,3.0,A93,none,4.0,A124,39.0,none,free,2.0,skilled_employee,1,1,1,0,1,1,0
+A14,24,A32,new car,1393.0,A61,A73,2.0,A93,guarantor,2.0,A121,31.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A11,12,A34,new car,691.0,A61,A75,4.0,A93,none,3.0,A122,35.0,none,own,2.0,skilled_employee,1,0,1,0,1,1,1
+A14,15,A34,new car,5045.0,A65,A75,1.0,A92,none,4.0,A123,59.0,none,own,1.0,skilled_employee,1,1,1,1,0,0,0
+A11,18,A34,furniture/equipment,2124.0,A61,A73,4.0,A92,none,4.0,A121,24.0,none,rent,2.0,skilled_employee,1,0,1,0,0,1,1
+A11,12,A32,radio/television,2214.0,A61,A73,4.0,A93,none,3.0,A122,24.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A14,21,A34,new car,12680.0,A65,A75,4.0,A93,none,4.0,A124,30.0,none,free,1.0,management/self-employed,1,1,1,0,1,0,0
+A14,24,A34,new car,2463.0,A62,A74,4.0,A94,none,3.0,A122,27.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A12,12,A32,radio/television,1155.0,A61,A75,3.0,A94,guarantor,3.0,A121,40.0,bank,own,2.0,unskilled-resident,1,0,1,1,1,1,1
+A11,30,A32,furniture/equipment,3108.0,A61,A72,2.0,A91,none,4.0,A122,31.0,none,own,1.0,unskilled-resident,1,0,1,0,1,1,1
+A14,10,A32,used car,2901.0,A65,A72,1.0,A92,none,4.0,A121,31.0,none,rent,1.0,skilled_employee,1,0,1,1,0,0,0
+A12,12,A34,furniture/equipment,3617.0,A61,A75,1.0,A93,none,4.0,A123,28.0,none,rent,3.0,skilled_employee,1,1,1,1,1,1,1
+A14,12,A34,radio/television,1655.0,A61,A75,2.0,A93,none,4.0,A121,63.0,none,own,2.0,unskilled-resident,1,1,1,1,1,0,1
+A11,24,A32,used car,2812.0,A65,A75,2.0,A92,none,4.0,A121,26.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,0
+A11,36,A34,education,8065.0,A61,A73,3.0,A92,none,2.0,A124,25.0,none,own,2.0,management/self-employed,1,1,1,0,0,1,1
+A14,21,A34,used car,3275.0,A61,A75,1.0,A93,none,4.0,A123,36.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A14,24,A34,radio/television,2223.0,A62,A75,4.0,A93,none,4.0,A122,52.0,bank,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A13,12,A34,new car,1480.0,A63,A71,2.0,A93,none,4.0,A124,66.0,bank,free,3.0,unemployed/unskilled,1,0,1,1,1,1,1
+A11,24,A32,new car,1371.0,A65,A73,4.0,A92,none,4.0,A121,25.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,0
+A14,36,A34,new car,3535.0,A61,A74,4.0,A93,none,4.0,A123,37.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A11,18,A32,radio/television,3509.0,A61,A74,4.0,A92,guarantor,1.0,A121,25.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A14,36,A34,used car,5711.0,A64,A75,4.0,A93,none,2.0,A123,38.0,none,own,2.0,management/self-employed,1,1,1,1,1,0,1
+A12,18,A32,repairs,3872.0,A61,A71,2.0,A92,none,4.0,A123,67.0,none,own,1.0,skilled_employee,1,1,1,1,0,1,1
+A12,39,A34,radio/television,4933.0,A61,A74,2.0,A93,guarantor,2.0,A121,25.0,none,own,2.0,skilled_employee,1,0,1,0,1,1,1
+A14,24,A34,new car,1940.0,A64,A75,4.0,A93,none,4.0,A121,60.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A12,12,A30,retraining,1410.0,A61,A73,2.0,A93,none,2.0,A121,31.0,none,own,1.0,unskilled-resident,1,1,1,1,1,1,1
+A12,12,A32,new car,836.0,A62,A72,4.0,A92,none,2.0,A122,23.0,bank,own,1.0,unskilled-resident,1,0,1,0,0,1,1
+A12,20,A32,used car,6468.0,A65,A71,1.0,A91,none,4.0,A121,60.0,none,own,1.0,management/self-employed,1,1,1,1,1,1,0
+A12,18,A32,business,1941.0,A64,A73,4.0,A93,none,2.0,A122,35.0,none,own,1.0,unskilled-resident,1,1,1,1,1,1,1
+A14,22,A32,radio/television,2675.0,A63,A75,3.0,A93,none,4.0,A123,40.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,48,A34,used car,2751.0,A65,A75,4.0,A93,none,3.0,A123,38.0,none,own,2.0,skilled_employee,2,1,1,1,1,0,0
+A12,48,A33,education,6224.0,A61,A75,4.0,A93,none,4.0,A124,50.0,none,free,1.0,skilled_employee,1,0,1,0,1,1,1
+A11,40,A34,education,5998.0,A61,A73,4.0,A93,none,3.0,A124,27.0,bank,own,1.0,skilled_employee,1,1,1,0,1,1,1
+A12,21,A32,business,1188.0,A61,A75,2.0,A92,none,4.0,A122,39.0,none,own,1.0,skilled_employee,2,0,1,0,0,1,1
+A14,24,A32,used car,6313.0,A65,A75,3.0,A93,none,4.0,A123,41.0,none,own,1.0,management/self-employed,2,1,1,1,1,0,0
+A14,6,A34,furniture/equipment,1221.0,A65,A73,1.0,A94,none,2.0,A122,27.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,0
+A13,24,A32,furniture/equipment,2892.0,A61,A75,3.0,A91,none,4.0,A124,51.0,none,free,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,24,A32,furniture/equipment,3062.0,A63,A75,4.0,A93,none,3.0,A124,32.0,none,rent,1.0,skilled_employee,1,1,1,1,1,0,1
+A14,9,A32,furniture/equipment,2301.0,A62,A72,2.0,A92,none,4.0,A122,22.0,none,rent,1.0,skilled_employee,1,0,1,1,0,0,1
+A11,18,A32,used car,7511.0,A65,A75,1.0,A93,none,4.0,A122,51.0,none,free,1.0,skilled_employee,2,1,1,0,1,1,0
+A14,12,A34,furniture/equipment,1258.0,A61,A72,2.0,A92,none,4.0,A122,22.0,none,rent,2.0,unskilled-resident,1,0,1,1,0,0,1
+A14,24,A33,new car,717.0,A65,A75,4.0,A94,none,4.0,A123,54.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,0
+A12,9,A32,new car,1549.0,A65,A72,4.0,A93,none,2.0,A121,35.0,none,own,1.0,unemployed/unskilled,1,0,1,1,1,1,0
+A14,24,A34,education,1597.0,A61,A75,4.0,A93,none,4.0,A124,54.0,none,free,2.0,skilled_employee,2,0,1,1,1,0,1
+A12,18,A34,radio/television,1795.0,A61,A75,3.0,A92,guarantor,4.0,A121,48.0,bank,rent,2.0,unskilled-resident,1,1,1,1,0,1,1
+A11,20,A34,furniture/equipment,4272.0,A61,A75,1.0,A92,none,4.0,A122,24.0,none,own,2.0,skilled_employee,1,0,1,1,0,1,1
+A14,12,A34,radio/television,976.0,A65,A75,4.0,A93,none,4.0,A123,35.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,0
+A12,12,A32,new car,7472.0,A65,A71,1.0,A92,none,2.0,A121,24.0,none,rent,1.0,unemployed/unskilled,1,0,1,1,0,1,0
+A11,36,A32,new car,9271.0,A61,A74,2.0,A93,none,1.0,A123,24.0,none,own,1.0,skilled_employee,1,1,1,0,1,1,1
+A12,6,A32,radio/television,590.0,A61,A72,3.0,A94,none,3.0,A121,26.0,none,own,1.0,unskilled-resident,1,0,0,1,1,1,1
+A14,12,A34,radio/television,930.0,A65,A75,4.0,A93,none,4.0,A121,65.0,none,own,4.0,skilled_employee,1,0,1,1,1,0,0
+A12,42,A31,used car,9283.0,A61,A71,1.0,A93,none,2.0,A124,55.0,bank,free,1.0,management/self-employed,1,1,1,1,1,1,1
+A12,15,A30,new car,1778.0,A61,A72,2.0,A92,none,1.0,A121,26.0,none,rent,2.0,unemployed/unskilled,1,0,1,0,0,1,1
+A12,8,A32,business,907.0,A61,A72,3.0,A94,none,2.0,A121,26.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,1
+A12,6,A32,radio/television,484.0,A61,A74,3.0,A94,guarantor,3.0,A121,28.0,bank,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A11,36,A34,used car,9629.0,A61,A74,4.0,A93,none,4.0,A123,24.0,none,own,2.0,skilled_employee,1,1,1,0,1,1,1
+A11,48,A32,domestic appliances,3051.0,A61,A73,3.0,A93,none,4.0,A123,54.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A11,48,A32,new car,3931.0,A61,A74,4.0,A93,none,4.0,A124,46.0,none,free,1.0,skilled_employee,2,0,1,0,1,1,1
+A12,36,A33,new car,7432.0,A61,A73,2.0,A92,none,2.0,A122,54.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,1
+A14,6,A32,domestic appliances,1338.0,A63,A73,1.0,A91,none,4.0,A121,62.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,6,A34,radio/television,1554.0,A61,A74,1.0,A92,none,2.0,A123,24.0,none,rent,2.0,skilled_employee,1,1,1,1,0,0,1
+A11,36,A32,others,15857.0,A61,A71,2.0,A91,co-applicant,3.0,A123,43.0,none,own,1.0,management/self-employed,1,0,1,1,1,1,1
+A11,18,A32,radio/television,1345.0,A61,A73,4.0,A94,none,3.0,A121,26.0,bank,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,12,A32,new car,1101.0,A61,A73,3.0,A94,none,2.0,A121,27.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A13,12,A32,radio/television,3016.0,A61,A73,3.0,A94,none,1.0,A123,24.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,36,A32,furniture/equipment,2712.0,A61,A75,2.0,A93,none,2.0,A122,41.0,bank,own,1.0,skilled_employee,2,0,1,0,1,1,1
+A11,8,A34,new car,731.0,A61,A75,4.0,A93,none,4.0,A121,47.0,none,own,2.0,unskilled-resident,1,0,1,1,1,1,1
+A14,18,A34,furniture/equipment,3780.0,A61,A72,3.0,A91,none,2.0,A123,35.0,none,own,2.0,management/self-employed,1,1,1,1,1,0,1
+A11,21,A34,new car,1602.0,A61,A75,4.0,A94,none,3.0,A123,30.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A11,18,A34,new car,3966.0,A61,A75,1.0,A92,none,4.0,A121,33.0,bank,rent,3.0,skilled_employee,1,1,1,0,0,1,1
+A14,18,A30,business,4165.0,A61,A73,2.0,A93,none,2.0,A123,36.0,stores,own,2.0,skilled_employee,2,0,1,0,1,0,1
+A11,36,A32,used car,8335.0,A65,A75,3.0,A93,none,4.0,A124,47.0,none,free,1.0,skilled_employee,1,0,1,0,1,1,0
+A12,48,A33,business,6681.0,A65,A73,4.0,A93,none,4.0,A124,38.0,none,free,1.0,skilled_employee,2,1,1,1,1,1,0
+A14,24,A33,business,2375.0,A63,A73,4.0,A93,none,2.0,A123,44.0,none,own,2.0,skilled_employee,2,1,1,1,1,0,1
+A11,18,A32,new car,1216.0,A61,A72,4.0,A92,none,3.0,A123,23.0,none,rent,1.0,skilled_employee,1,1,1,0,0,1,1
+A11,45,A30,business,11816.0,A61,A75,2.0,A93,none,4.0,A123,29.0,none,rent,2.0,skilled_employee,1,0,1,0,1,1,1
+A12,24,A32,radio/television,5084.0,A65,A75,2.0,A92,none,4.0,A123,42.0,none,own,1.0,skilled_employee,1,1,1,1,0,1,0
+A13,15,A32,radio/television,2327.0,A61,A72,2.0,A92,none,3.0,A121,25.0,none,own,1.0,unskilled-resident,1,0,1,0,0,1,1
+A11,12,A30,new car,1082.0,A61,A73,4.0,A93,none,4.0,A123,48.0,bank,own,2.0,skilled_employee,1,0,1,0,1,1,1
+A14,12,A32,radio/television,886.0,A65,A73,4.0,A92,none,2.0,A123,21.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,0
+A14,4,A32,furniture/equipment,601.0,A61,A72,1.0,A92,none,3.0,A121,23.0,none,rent,1.0,unskilled-resident,2,0,1,1,0,0,1
+A11,24,A34,used car,2957.0,A61,A75,4.0,A93,none,4.0,A122,63.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A14,24,A34,radio/television,2611.0,A61,A75,4.0,A94,co-applicant,3.0,A121,46.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A11,36,A32,furniture/equipment,5179.0,A61,A74,4.0,A93,none,2.0,A122,29.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,21,A33,used car,2993.0,A61,A73,3.0,A93,none,2.0,A121,28.0,stores,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A14,18,A32,repairs,1943.0,A61,A72,4.0,A92,none,4.0,A121,23.0,none,own,1.0,skilled_employee,1,0,1,0,0,0,1
+A14,24,A31,business,1559.0,A61,A74,4.0,A93,none,4.0,A123,50.0,bank,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A14,18,A32,furniture/equipment,3422.0,A61,A75,4.0,A93,none,4.0,A122,47.0,bank,own,3.0,skilled_employee,2,1,1,1,1,0,1
+A12,21,A32,furniture/equipment,3976.0,A65,A74,2.0,A93,none,3.0,A123,35.0,none,own,1.0,skilled_employee,1,1,1,1,1,1,0
+A14,18,A32,new car,6761.0,A65,A73,2.0,A93,none,4.0,A123,68.0,none,rent,2.0,skilled_employee,1,0,1,0,1,0,0
+A14,24,A32,new car,1249.0,A61,A72,4.0,A94,none,2.0,A121,28.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A11,9,A32,radio/television,1364.0,A61,A74,3.0,A93,none,4.0,A121,59.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A11,12,A32,radio/television,709.0,A61,A75,4.0,A93,none,4.0,A121,57.0,stores,own,1.0,unskilled-resident,1,0,1,0,1,1,1
+A11,20,A34,new car,2235.0,A61,A73,4.0,A94,guarantor,2.0,A122,33.0,bank,rent,2.0,skilled_employee,1,0,0,0,1,1,1
+A14,24,A34,used car,4042.0,A65,A74,3.0,A93,none,4.0,A122,43.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,0
+A14,15,A34,radio/television,1471.0,A61,A73,4.0,A93,none,4.0,A124,35.0,none,free,2.0,skilled_employee,1,1,1,1,1,0,1
+A11,18,A31,new car,1442.0,A61,A74,4.0,A93,none,4.0,A124,32.0,none,free,2.0,unskilled-resident,2,0,1,0,1,1,1
+A14,36,A33,new car,10875.0,A61,A75,2.0,A93,none,2.0,A123,45.0,none,own,2.0,skilled_employee,2,1,1,1,1,0,1
+A14,24,A32,new car,1474.0,A62,A72,4.0,A94,none,3.0,A121,33.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A14,10,A32,retraining,894.0,A65,A74,4.0,A92,none,3.0,A122,40.0,none,own,1.0,skilled_employee,1,1,1,1,0,0,0
+A14,15,A34,furniture/equipment,3343.0,A61,A73,4.0,A93,none,2.0,A124,28.0,none,free,1.0,skilled_employee,1,1,1,1,1,0,1
+A11,15,A32,new car,3959.0,A61,A73,3.0,A92,none,2.0,A122,29.0,none,own,1.0,skilled_employee,1,1,1,0,0,1,1
+A14,9,A32,new car,3577.0,A62,A73,1.0,A93,guarantor,2.0,A121,26.0,none,rent,1.0,skilled_employee,2,0,0,1,1,0,1
+A14,24,A34,used car,5804.0,A64,A73,4.0,A93,none,2.0,A121,27.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A14,18,A33,business,2169.0,A61,A73,4.0,A94,none,2.0,A123,28.0,none,own,1.0,skilled_employee,1,1,1,0,1,0,1
+A11,24,A32,radio/television,2439.0,A61,A72,4.0,A92,none,4.0,A121,35.0,none,own,1.0,skilled_employee,1,1,1,0,0,1,1
+A14,27,A34,furniture/equipment,4526.0,A64,A72,4.0,A93,none,2.0,A121,32.0,stores,own,2.0,unskilled-resident,2,1,1,1,1,0,1
+A14,10,A32,furniture/equipment,2210.0,A61,A73,2.0,A93,none,2.0,A121,25.0,bank,rent,1.0,unskilled-resident,1,0,1,0,1,0,1
+A14,15,A32,furniture/equipment,2221.0,A63,A73,2.0,A92,none,4.0,A123,20.0,none,rent,1.0,skilled_employee,1,0,1,1,0,0,1
+A11,18,A32,radio/television,2389.0,A61,A72,4.0,A92,none,1.0,A123,27.0,stores,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A14,12,A34,furniture/equipment,3331.0,A61,A75,2.0,A93,none,4.0,A122,42.0,stores,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A14,36,A32,business,7409.0,A65,A75,3.0,A93,none,2.0,A122,37.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,0
+A11,12,A32,furniture/equipment,652.0,A61,A75,4.0,A92,none,4.0,A122,24.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,1
+A14,36,A33,furniture/equipment,7678.0,A63,A74,2.0,A92,none,4.0,A123,40.0,none,own,2.0,skilled_employee,1,1,1,1,0,0,1
+A13,6,A34,new car,1343.0,A61,A75,1.0,A93,none,4.0,A121,46.0,none,own,2.0,skilled_employee,2,0,0,1,1,1,1
+A11,24,A34,business,1382.0,A62,A74,4.0,A93,none,1.0,A121,26.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A14,15,A32,domestic appliances,874.0,A65,A72,4.0,A92,none,1.0,A121,24.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,0
+A11,12,A32,furniture/equipment,3590.0,A61,A73,2.0,A93,co-applicant,2.0,A122,29.0,none,own,1.0,unskilled-resident,2,0,1,1,1,1,1
+A12,11,A34,new car,1322.0,A64,A73,4.0,A92,none,4.0,A123,40.0,none,own,2.0,skilled_employee,1,0,1,1,0,1,1
+A11,18,A31,radio/television,1940.0,A61,A72,3.0,A93,co-applicant,4.0,A124,36.0,bank,free,1.0,management/self-employed,1,1,1,1,1,1,1
+A14,36,A32,radio/television,3595.0,A61,A75,4.0,A93,none,2.0,A123,28.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A11,9,A32,new car,1422.0,A61,A72,3.0,A93,none,2.0,A124,27.0,none,free,1.0,management/self-employed,1,1,1,0,1,1,1
+A14,30,A34,radio/television,6742.0,A65,A74,2.0,A93,none,3.0,A122,36.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,0
+A14,24,A32,used car,7814.0,A61,A74,3.0,A93,none,3.0,A123,38.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A14,24,A32,used car,9277.0,A65,A73,2.0,A91,none,4.0,A124,48.0,none,free,1.0,skilled_employee,1,1,1,1,1,0,0
+A12,30,A34,new car,2181.0,A65,A75,4.0,A93,none,4.0,A121,36.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,0
+A14,18,A34,radio/television,1098.0,A61,A71,4.0,A92,none,4.0,A123,65.0,none,own,2.0,unemployed/unskilled,1,0,1,1,0,0,1
+A12,24,A32,furniture/equipment,4057.0,A61,A74,3.0,A91,none,3.0,A123,43.0,none,own,1.0,skilled_employee,1,1,1,0,1,1,1
+A11,12,A32,education,795.0,A61,A72,4.0,A92,none,4.0,A122,53.0,none,own,1.0,skilled_employee,1,0,1,0,0,1,1
+A12,24,A34,business,2825.0,A65,A74,4.0,A93,none,3.0,A124,34.0,none,own,2.0,skilled_employee,2,1,1,1,1,1,0
+A12,48,A32,business,15672.0,A61,A73,2.0,A93,none,2.0,A123,23.0,none,own,1.0,skilled_employee,1,1,1,0,1,1,1
+A14,36,A34,new car,6614.0,A61,A75,4.0,A93,none,4.0,A123,34.0,none,own,2.0,management/self-employed,1,1,1,1,1,0,1
+A14,28,A31,used car,7824.0,A65,A72,3.0,A93,guarantor,4.0,A121,40.0,bank,rent,2.0,skilled_employee,2,1,1,1,1,0,0
+A11,27,A34,business,2442.0,A61,A75,4.0,A93,none,4.0,A123,43.0,stores,own,4.0,management/self-employed,2,1,1,1,1,1,1
+A14,15,A34,radio/television,1829.0,A61,A75,4.0,A93,none,4.0,A123,46.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,1
+A11,12,A34,new car,2171.0,A61,A73,4.0,A93,none,4.0,A122,38.0,bank,own,2.0,unskilled-resident,1,0,0,1,1,1,1
+A12,36,A34,used car,5800.0,A61,A73,3.0,A93,none,4.0,A123,34.0,none,own,2.0,skilled_employee,1,1,1,1,1,1,1
+A14,18,A34,radio/television,1169.0,A65,A73,4.0,A93,none,3.0,A122,29.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,0
+A14,36,A33,used car,8947.0,A65,A74,3.0,A93,none,2.0,A123,31.0,stores,own,1.0,management/self-employed,2,1,1,1,1,0,0
+A11,21,A32,radio/television,2606.0,A61,A72,4.0,A92,none,4.0,A122,28.0,none,rent,1.0,management/self-employed,1,1,1,1,0,1,1
+A14,12,A34,furniture/equipment,1592.0,A64,A74,3.0,A92,none,2.0,A122,35.0,none,own,1.0,skilled_employee,1,0,0,1,0,0,1
+A14,15,A32,furniture/equipment,2186.0,A65,A74,1.0,A92,none,4.0,A121,33.0,bank,rent,1.0,unskilled-resident,1,0,1,1,0,0,0
+A11,18,A32,furniture/equipment,4153.0,A61,A73,2.0,A93,co-applicant,3.0,A123,42.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A11,16,A34,new car,2625.0,A61,A75,2.0,A93,guarantor,4.0,A122,43.0,bank,rent,1.0,skilled_employee,1,1,1,0,1,1,1
+A14,20,A34,new car,3485.0,A65,A72,2.0,A91,none,4.0,A121,44.0,none,own,2.0,skilled_employee,1,1,1,1,1,0,0
+A14,36,A34,used car,10477.0,A65,A75,2.0,A93,none,4.0,A124,42.0,none,free,2.0,skilled_employee,1,0,1,1,1,0,0
+A14,15,A32,radio/television,1386.0,A65,A73,4.0,A94,none,2.0,A121,40.0,none,rent,1.0,skilled_employee,1,1,1,1,1,0,0
+A14,24,A32,radio/television,1278.0,A61,A75,4.0,A93,none,1.0,A121,36.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A11,12,A32,radio/television,1107.0,A61,A73,2.0,A93,none,2.0,A121,20.0,none,rent,1.0,management/self-employed,2,1,1,1,1,1,1
+A11,21,A32,new car,3763.0,A65,A74,2.0,A93,co-applicant,2.0,A121,24.0,none,own,1.0,unskilled-resident,1,0,0,1,1,1,0
+A12,36,A32,education,3711.0,A65,A73,2.0,A94,none,2.0,A123,27.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,0
+A14,15,A33,used car,3594.0,A61,A72,1.0,A92,none,2.0,A122,46.0,none,own,2.0,unskilled-resident,1,0,1,1,0,0,1
+A12,9,A32,new car,3195.0,A65,A73,1.0,A92,none,2.0,A121,33.0,none,own,1.0,unskilled-resident,1,0,1,1,0,1,0
+A14,36,A33,radio/television,4454.0,A61,A73,4.0,A92,none,4.0,A121,34.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A12,24,A34,furniture/equipment,4736.0,A61,A72,2.0,A92,none,4.0,A123,25.0,bank,own,1.0,unskilled-resident,1,0,1,0,0,1,1
+A12,30,A32,radio/television,2991.0,A65,A75,2.0,A92,none,4.0,A123,25.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,0
+A14,11,A32,business,2142.0,A64,A75,1.0,A91,none,2.0,A121,28.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,1
+A11,24,A31,business,3161.0,A61,A73,4.0,A93,none,2.0,A122,31.0,none,rent,1.0,skilled_employee,1,1,1,0,1,1,1
+A12,48,A30,others,18424.0,A61,A73,1.0,A92,none,2.0,A122,32.0,bank,own,1.0,management/self-employed,1,1,0,0,0,1,1
+A14,10,A32,used car,2848.0,A62,A73,1.0,A93,co-applicant,2.0,A121,32.0,none,own,1.0,skilled_employee,2,0,1,1,1,0,1
+A11,6,A32,new car,14896.0,A61,A75,1.0,A93,none,4.0,A124,68.0,bank,own,1.0,management/self-employed,1,1,1,0,1,1,1
+A11,24,A32,furniture/equipment,2359.0,A62,A71,1.0,A91,none,1.0,A122,33.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A11,24,A32,furniture/equipment,3345.0,A61,A75,4.0,A93,none,2.0,A122,39.0,none,rent,1.0,management/self-employed,1,1,1,0,1,1,1
+A14,18,A34,furniture/equipment,1817.0,A61,A73,4.0,A92,none,2.0,A124,28.0,none,own,2.0,skilled_employee,1,0,1,1,0,0,1
+A14,48,A33,radio/television,12749.0,A63,A74,4.0,A93,none,1.0,A123,37.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,1
+A11,9,A32,radio/television,1366.0,A61,A72,3.0,A92,none,4.0,A122,22.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A12,12,A32,new car,2002.0,A61,A74,3.0,A93,none,4.0,A122,30.0,none,rent,1.0,skilled_employee,2,1,1,1,1,1,1
+A11,24,A31,furniture/equipment,6872.0,A61,A72,2.0,A91,none,1.0,A122,55.0,bank,own,1.0,skilled_employee,1,1,1,0,1,1,1
+A11,12,A31,new car,697.0,A61,A72,4.0,A93,none,2.0,A123,46.0,bank,own,2.0,skilled_employee,1,1,1,0,1,1,1
+A11,18,A34,furniture/equipment,1049.0,A61,A72,4.0,A92,none,4.0,A122,21.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,1
+A11,48,A32,used car,10297.0,A61,A74,4.0,A93,none,4.0,A124,39.0,stores,free,3.0,skilled_employee,2,1,1,0,1,1,1
+A14,30,A32,radio/television,1867.0,A65,A75,4.0,A93,none,4.0,A123,58.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,0
+A11,12,A33,new car,1344.0,A61,A73,4.0,A93,none,2.0,A121,43.0,none,own,2.0,unskilled-resident,2,0,1,1,1,1,1
+A11,24,A32,furniture/equipment,1747.0,A61,A72,4.0,A93,co-applicant,1.0,A122,24.0,none,own,1.0,unskilled-resident,1,0,0,1,1,1,1
+A12,9,A32,radio/television,1670.0,A61,A72,4.0,A92,none,2.0,A123,22.0,none,own,1.0,skilled_employee,1,1,1,0,0,1,1
+A14,9,A34,new car,1224.0,A61,A73,3.0,A93,none,1.0,A121,30.0,none,own,2.0,skilled_employee,1,0,1,1,1,0,1
+A14,12,A34,radio/television,522.0,A63,A75,4.0,A93,none,4.0,A122,42.0,none,own,2.0,skilled_employee,2,1,1,1,1,0,1
+A11,12,A32,radio/television,1498.0,A61,A73,4.0,A92,none,1.0,A123,23.0,bank,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A12,30,A33,radio/television,1919.0,A62,A72,4.0,A93,none,3.0,A124,30.0,stores,own,2.0,management/self-employed,1,0,1,0,1,1,1
+A13,9,A32,radio/television,745.0,A61,A73,3.0,A92,none,2.0,A121,28.0,none,own,1.0,unskilled-resident,1,0,1,0,0,1,1
+A12,6,A32,radio/television,2063.0,A61,A72,4.0,A94,none,3.0,A123,30.0,none,rent,1.0,management/self-employed,1,1,1,1,1,1,1
+A12,60,A32,education,6288.0,A61,A73,4.0,A93,none,4.0,A124,42.0,none,free,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,24,A34,used car,6842.0,A65,A73,2.0,A93,none,4.0,A122,46.0,none,own,2.0,management/self-employed,2,1,1,1,1,0,0
+A14,12,A32,new car,3527.0,A65,A72,2.0,A93,none,3.0,A122,45.0,none,own,1.0,management/self-employed,2,1,1,1,1,0,0
+A14,10,A32,new car,1546.0,A61,A73,3.0,A93,none,2.0,A121,31.0,none,own,1.0,unskilled-resident,2,0,0,1,1,0,1
+A14,24,A32,furniture/equipment,929.0,A65,A74,4.0,A93,none,2.0,A123,31.0,stores,own,1.0,skilled_employee,1,1,1,1,1,0,0
+A14,4,A34,new car,1455.0,A61,A74,2.0,A93,none,1.0,A121,42.0,none,own,3.0,unskilled-resident,2,0,1,1,1,0,1
+A11,15,A32,furniture/equipment,1845.0,A61,A72,4.0,A92,guarantor,1.0,A122,46.0,none,rent,1.0,skilled_employee,1,0,1,1,0,1,1
+A12,48,A30,new car,8358.0,A63,A72,1.0,A92,none,1.0,A123,30.0,none,own,2.0,skilled_employee,1,0,1,1,0,1,1
+A11,24,A31,furniture/equipment,3349.0,A63,A72,4.0,A93,none,4.0,A124,30.0,none,free,1.0,skilled_employee,2,1,1,0,1,1,1
+A14,12,A32,new car,2859.0,A65,A71,4.0,A93,none,4.0,A124,38.0,none,own,1.0,management/self-employed,1,1,1,1,1,0,0
+A14,18,A32,furniture/equipment,1533.0,A61,A72,4.0,A94,co-applicant,1.0,A122,43.0,none,own,1.0,unskilled-resident,2,0,1,0,1,0,1
+A14,24,A32,radio/television,3621.0,A62,A75,2.0,A93,none,4.0,A123,31.0,none,own,2.0,skilled_employee,1,0,1,0,1,0,1
+A12,18,A34,business,3590.0,A61,A71,3.0,A94,none,3.0,A123,40.0,none,own,3.0,unemployed/unskilled,2,1,1,1,1,1,1
+A11,36,A33,business,2145.0,A61,A74,2.0,A93,none,1.0,A123,24.0,none,own,2.0,skilled_employee,1,1,1,0,1,1,1
+A12,24,A32,used car,4113.0,A63,A72,3.0,A92,none,4.0,A123,28.0,none,rent,1.0,skilled_employee,1,0,1,0,0,1,1
+A14,36,A32,furniture/equipment,10974.0,A61,A71,4.0,A92,none,2.0,A123,26.0,none,own,2.0,management/self-employed,1,1,1,0,0,0,1
+A11,12,A32,new car,1893.0,A61,A73,4.0,A92,guarantor,4.0,A122,29.0,none,own,1.0,skilled_employee,1,1,1,1,0,1,1
+A11,24,A34,radio/television,1231.0,A64,A75,4.0,A92,none,4.0,A122,57.0,none,rent,2.0,management/self-employed,1,1,1,1,0,1,1
+A13,30,A34,radio/television,3656.0,A65,A75,4.0,A93,none,4.0,A122,49.0,stores,own,2.0,unskilled-resident,1,0,1,1,1,1,0
+A12,9,A34,radio/television,1154.0,A61,A75,2.0,A93,none,4.0,A121,37.0,none,own,3.0,unskilled-resident,1,0,1,1,1,1,1
+A11,28,A32,new car,4006.0,A61,A73,3.0,A93,none,2.0,A123,45.0,none,own,1.0,unskilled-resident,1,0,1,0,1,1,1
+A12,24,A32,furniture/equipment,3069.0,A62,A75,4.0,A93,none,4.0,A124,30.0,none,free,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,6,A34,radio/television,1740.0,A61,A75,2.0,A94,none,2.0,A121,30.0,none,rent,2.0,skilled_employee,1,0,1,1,1,0,1
+A12,21,A33,new car,2353.0,A61,A73,1.0,A91,none,4.0,A122,47.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A14,15,A32,new car,3556.0,A65,A73,3.0,A93,none,2.0,A124,29.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,0
+A14,24,A32,radio/television,2397.0,A63,A75,3.0,A93,none,2.0,A123,35.0,bank,own,2.0,skilled_employee,1,1,1,0,1,0,1
+A12,6,A32,repairs,454.0,A61,A72,3.0,A94,none,1.0,A122,22.0,none,own,1.0,unskilled-resident,1,0,1,1,1,1,1
+A12,30,A32,radio/television,1715.0,A65,A73,4.0,A92,none,1.0,A123,26.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,0
+A12,27,A34,radio/television,2520.0,A63,A73,4.0,A93,none,2.0,A122,23.0,none,own,2.0,unskilled-resident,1,0,1,0,1,1,1
+A14,15,A32,radio/television,3568.0,A61,A75,4.0,A92,none,2.0,A123,54.0,bank,rent,1.0,management/self-employed,1,1,1,1,0,0,1
+A14,42,A32,radio/television,7166.0,A65,A74,2.0,A94,none,4.0,A122,29.0,none,rent,1.0,skilled_employee,1,1,1,1,1,0,0
+A11,11,A34,new car,3939.0,A61,A73,1.0,A93,none,2.0,A121,40.0,none,own,2.0,unskilled-resident,2,0,1,1,1,1,1
+A12,15,A32,repairs,1514.0,A62,A73,4.0,A93,guarantor,2.0,A121,22.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1
+A14,24,A32,new car,7393.0,A61,A73,1.0,A93,none,4.0,A122,43.0,none,own,1.0,unskilled-resident,2,0,1,1,1,0,1
+A11,24,A31,new car,1193.0,A61,A71,1.0,A92,co-applicant,4.0,A124,29.0,none,rent,2.0,unemployed/unskilled,1,0,1,0,0,1,1
+A11,60,A32,business,7297.0,A61,A75,4.0,A93,co-applicant,4.0,A124,36.0,none,rent,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,30,A34,radio/television,2831.0,A61,A73,4.0,A92,none,2.0,A123,33.0,none,own,1.0,skilled_employee,1,1,1,1,0,0,1
+A13,24,A32,radio/television,1258.0,A63,A73,3.0,A92,none,3.0,A123,57.0,none,own,1.0,unskilled-resident,1,0,1,1,0,1,1
+A12,6,A32,radio/television,753.0,A61,A73,2.0,A92,guarantor,3.0,A121,64.0,none,own,1.0,skilled_employee,1,0,1,1,0,1,1
+A12,18,A33,business,2427.0,A65,A75,4.0,A93,none,2.0,A122,42.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,0
+A14,24,A33,new car,2538.0,A61,A75,4.0,A93,none,4.0,A123,47.0,none,own,2.0,unskilled-resident,2,0,1,0,1,0,1
+A12,15,A31,new car,1264.0,A62,A73,2.0,A94,none,2.0,A122,25.0,none,rent,1.0,skilled_employee,1,0,1,0,1,1,1
+A12,30,A34,furniture/equipment,8386.0,A61,A74,2.0,A93,none,2.0,A122,49.0,none,own,1.0,skilled_employee,1,0,1,0,1,1,1
+A14,48,A32,business,4844.0,A61,A71,3.0,A93,none,2.0,A123,33.0,bank,rent,1.0,management/self-employed,1,1,1,0,1,0,1
+A13,21,A32,new car,2923.0,A62,A73,1.0,A92,none,1.0,A123,28.0,bank,own,1.0,management/self-employed,1,1,1,1,0,1,1
+A11,36,A32,used car,8229.0,A61,A73,2.0,A93,none,2.0,A122,26.0,none,own,1.0,skilled_employee,2,0,1,0,1,1,1
+A14,24,A34,furniture/equipment,2028.0,A61,A74,2.0,A93,none,2.0,A122,30.0,none,own,2.0,unskilled-resident,1,0,1,1,1,0,1
+A11,15,A34,furniture/equipment,1433.0,A61,A73,4.0,A92,none,3.0,A122,25.0,none,rent,2.0,skilled_employee,1,0,1,1,0,1,1
+A13,42,A30,business,6289.0,A61,A72,2.0,A91,none,1.0,A122,33.0,none,own,2.0,skilled_employee,1,0,1,1,1,1,1
+A14,13,A32,radio/television,1409.0,A62,A71,2.0,A92,none,4.0,A121,64.0,none,own,1.0,skilled_employee,1,0,1,1,0,0,1
+A11,24,A32,used car,6579.0,A61,A71,4.0,A93,none,2.0,A124,29.0,none,free,1.0,management/self-employed,1,1,1,1,1,1,1
+A12,24,A34,radio/television,1743.0,A61,A75,4.0,A93,none,2.0,A122,48.0,none,own,2.0,unskilled-resident,1,0,1,1,1,1,1
+A14,12,A34,education,3565.0,A65,A72,2.0,A93,none,1.0,A122,37.0,none,own,2.0,unskilled-resident,2,0,1,1,1,0,0
+A14,15,A31,radio/television,1569.0,A62,A75,4.0,A93,none,4.0,A123,34.0,bank,own,1.0,unskilled-resident,2,0,1,1,1,0,1
+A11,18,A32,radio/television,1936.0,A65,A74,2.0,A94,none,4.0,A123,23.0,none,rent,2.0,unskilled-resident,1,0,1,1,1,1,0
+A11,36,A32,furniture/equipment,3959.0,A61,A71,4.0,A93,none,3.0,A122,30.0,none,own,1.0,management/self-employed,1,1,1,1,1,1,1
+A14,12,A32,new car,2390.0,A65,A75,4.0,A93,none,3.0,A123,50.0,none,own,1.0,skilled_employee,1,1,1,1,1,0,0
+A14,12,A32,furniture/equipment,1736.0,A61,A74,3.0,A92,none,4.0,A121,31.0,none,own,1.0,unskilled-resident,1,0,1,1,0,0,1
+A11,30,A32,used car,3857.0,A61,A73,4.0,A91,none,4.0,A122,40.0,none,own,1.0,management/self-employed,1,1,1,1,1,1,1
+A14,12,A32,radio/television,804.0,A61,A75,4.0,A93,none,4.0,A123,38.0,none,own,1.0,skilled_employee,1,0,1,1,1,0,1
+A11,45,A32,radio/television,1845.0,A61,A73,4.0,A93,none,4.0,A124,23.0,none,free,1.0,skilled_employee,1,1,1,0,1,1,1
+A12,45,A34,used car,4576.0,A62,A71,3.0,A93,none,4.0,A123,27.0,none,own,1.0,skilled_employee,1,0,1,1,1,1,1

@@ -16,6 +16,4 @@ Wykorzystaj dwa zbiory danych:
 * degree, 
 najprościej optymalizować hiperparametry w SVM z jądrem gaussowskim, ale można też poszukać najlepszego jądra (-;.
 
-BONUS: zastosuj optymalizację bayesowską w punkcie 3.
-
 
