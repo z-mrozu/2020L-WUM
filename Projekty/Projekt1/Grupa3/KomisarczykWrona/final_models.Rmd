@@ -1,0 +1,887 @@
+---
+title: "WUM - Projekt 1 - finalne modele, prezentacja rezultatów"
+author: "Konrad Komisarczyk, Patryk Wrona"
+date: "21 kwietnia 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(caret)
+library(mice)
+library(VIM)
+library(pROC)
+set.seed(404)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+# Ładowanie danych i przygotowywanie
+
+Usuwamy kolumny, o których stwierdziliśmy na poprzednich kamieniach milowych, że są nadmiarowe:
+
+```{r}
+data <- read.csv("cervical-cancer_csv.csv")
+
+factorize <- function(data, indices) {
+  for (i in indices) {
+    data[[i]] <- as.factor(data[[i]])
+  }
+  data
+}
+
+data <- factorize(data, c(5, 8, 10, 12, 14:25, 29:36))
+data <- data %>%
+  select(-Smokes, 
+         -Hormonal.Contraceptives, 
+         -IUD, 
+         -STDs,
+         -Dx, 
+         -STDs.HPV, # to niekoniecznie usuwać, ale może spróbujmy
+         -STDs..Number.of.diagnosis, # bardzo podobne wartości do STDs, rożnią sie tylko w kilku miejscach, może usunąć żeby nie spowodowało to jakiegoś nadmiernego dopasowania
+         -STDs.condylomatosis, 
+         -Hinselmann, 
+         -Schiller, 
+         -Citology)
+
+data$STDs..Time.since.first.diagnosis <- 
+  ifelse(is.na(data$STDs..Time.since.first.diagnosis), 
+         -1, 
+         data$STDs..Time.since.first.diagnosis)
+
+data$STDs..Time.since.last.diagnosis <- 
+  ifelse(is.na(data$STDs..Time.since.last.diagnosis), 
+         -1, 
+         data$STDs..Time.since.last.diagnosis)
+```
+
+
+
+# Imputacje braków
+
+Nie będziemy stosować imputacji modą, gdyż dla każdej zmiennej dotyczącej danej dolegliwości pacjenta otrzymalibyśmy, że nie ma tej dolegliwości.
+Zastosujemy i porównamy 3 typy imputacji:
+
+- *usunięcie obserwacji* oznaczymy indeksem 1
+- *k-Nearest Neighbors* oznaczymy indeksem 2
+- *NA jako 3 poziom zmiennej* oznaczymy indeksem 3
+
+
+```{r}
+# usunięcie wierszy
+data1 <- na.omit(data.table::as.data.table(data), cols = colnames(data)[9:21])
+
+# kNN na STDs
+data2 <- kNN(data, variable = colnames(data)[9:21],
+            k = 3, imp_var = FALSE)
+
+# zastapienie 3 wartoscia
+data3 <- data
+for (i in 10:21) {
+  levels(data3[[i]]) <- c("No", "Yes", "Unknown")
+  data3[is.na(data3[i]), i] <- "Unknown"
+}
+```
+
+
+
+Imputujemy braki w zmiennych ilościowych zgodnie z 2. kamieniem milowym, wykorzustując najlepszą imputację *mean*.
+
+```{r}
+# imputacja danych
+data1 <- mice(data1, m = 2, method = "mean", maxit = 10, printFlag = FALSE) %>% complete(2)
+data2 <- mice(data2, m = 2, method = "mean", maxit = 10, printFlag = FALSE) %>% complete(2)
+data3 <- mice(data3, m = 2, method = "mean", maxit = 10, printFlag = FALSE) %>% complete(2)
+
+# zaokrąglanie, gdyż wynikiem mean jest średnia:
+data1[[2]] <- round(data1[[2]])
+data1[[3]] <- round(data1[[3]])
+data1[[4]] <- round(data1[[4]])
+data1[[5]] <- round(data1[[5]])
+data1[[7]] <- round(data1[[7]])
+data1[[8]] <- round(data1[[8]])
+
+data2[[2]] <- round(data2[[2]])
+data2[[3]] <- round(data2[[3]])
+data2[[4]] <- round(data2[[4]])
+data2[[5]] <- round(data2[[5]])
+data2[[7]] <- round(data2[[7]])
+data2[[8]] <- round(data2[[8]])
+
+data3[[2]] <- round(data3[[2]])
+data3[[3]] <- round(data3[[3]])
+data3[[4]] <- round(data3[[4]])
+data3[[5]] <- round(data3[[5]])
+data3[[7]] <- round(data3[[7]])
+data3[[8]] <- round(data3[[8]])
+data3[[9]] <- round(data3[[9]])
+```
+
+Dodatkowo dzielimy te zbiory na zbiór treningowy i testowy w stosunku 75%/25%
+
+```{r}
+# usuwanie kolumn faktorów z 1 levelem
+data1 <- data1 %>% select(-c(STDs.cervical.condylomatosis,
+                        STDs.AIDS,
+                        STDs.genital.herpes,
+                        STDs.Hepatitis.B,
+                        STDs.HIV,
+                        STDs.molluscum.contagiosum,
+                        STDs.pelvic.inflammatory.disease,
+                        STDs.vaginal.condylomatosis))
+data2 <- data2 %>% select(-c(STDs.cervical.condylomatosis,
+                        STDs.AIDS,
+                        STDs.genital.herpes,
+                        STDs.Hepatitis.B,
+                        STDs.HIV,
+                        STDs.molluscum.contagiosum,
+                        STDs.pelvic.inflammatory.disease,
+                        STDs.vaginal.condylomatosis))
+
+# zamiana leveli, bo trenowanie modeli nie działało:
+levels(data1$STDs.vulvo.perineal.condylomatosis) <- c("No", "Yes")
+levels(data1$STDs.syphilis) <- c("No", "Yes")
+levels(data1$Dx.Cancer) <- c("No", "Yes")
+levels(data1$Dx.CIN) <- c("No", "Yes")
+levels(data1$Dx.HPV) <- c("No", "Yes")
+levels(data1$Biopsy) <- c("No", "Yes")
+
+levels(data2$STDs.vulvo.perineal.condylomatosis) <- c("No", "Yes")
+levels(data2$STDs.syphilis) <- c("No", "Yes")
+levels(data2$Dx.Cancer) <- c("No", "Yes")
+levels(data2$Dx.CIN) <- c("No", "Yes")
+levels(data2$Dx.HPV) <- c("No", "Yes")
+levels(data2$Biopsy) <- c("No", "Yes")
+
+levels(data3$Dx.Cancer) <- c("No", "Yes")
+levels(data3$Dx.CIN) <- c("No", "Yes")
+levels(data3$Dx.HPV) <- c("No", "Yes")
+levels(data3$Biopsy) <- c("No", "Yes")
+
+indexes1 <- createDataPartition(data1$Age, p = 0.75, list = FALSE)
+indexes2 <- createDataPartition(data2$Age, p = 0.75, list = FALSE)
+indexes3 <- createDataPartition(data3$Age, p = 0.75, list = FALSE)
+
+# SKALOWANIE DLA LEPSZEGO PERFORMANCE'U:
+
+data1[,1:9] <- data1[,1:9] %>% scale(center = F, scale = T)
+data2[,1:9] <- data2[,1:9] %>% scale(center = F, scale = T)
+data3[,1:9] <- data3[,1:9] %>% scale(center = F, scale = T)
+
+# 75%/25% TRAIN/TEST SPLIT:
+
+trainset1 <- data1[indexes1, ]
+testset1 <- data1[-indexes1, ]
+
+trainset2 <- data2[indexes2, ]
+testset2 <- data2[-indexes2, ]
+
+trainset3 <- data3[indexes3, ]
+testset3 <- data3[-indexes3, ]
+
+# to było problematyczne...
+testset3 <- testset3 %>% select(-STDs.Hepatitis.B)
+trainset3 <- trainset3 %>% select(-STDs.Hepatitis.B)
+
+```
+
+
+# Modele uczenia maszynowego
+
+## Wybrane modele
+
+Zastosujemy poniższe modele uczenia maszynowego w celu predykcji zmiennej Schiller.
+Dodatkowo dopisaliśmy w nawiasach hiperparametry każdego modelu.
+
+
+- **ranger - Las losowy** ( mtry, splitrule, min.node.size )
+- **glm - Regresja logistyczna** ( - )
+- **glmnet - Regresja lasso/ridge** (alpha, lambda)
+- **nnet - Sieć neuronowa** (size, decay)
+- **gbm - Gradient Boosting Machines** (interaction.depth, shrinkage, n.minobsinnode)
+- **svm - Support Vector Machines** (kernel, C, lambda, sigma)
+
+Wszystkie hiperparametry będziemy stroić wykorzystując szukanie po zadanej z góry siatce. Nie będzie to szukanie losowe.
+
+
+## Strojenie modeli
+
+Obiekt trainControl dla każdego modelu jest taki sam:
+
+```{r}
+myCtrl <- trainControl( method = "cv", 
+                                  number = 5, 
+                                  verboseIter = F,
+                                  classProbs = TRUE, # chcemy p-stwa --> do AUC
+                                  search = "grid"# strojenie hiperparametrow po siatce
+                                )
+```
+
+
+
+### Las losowy
+
+```{r}
+# dla imputacji usuwaniem obserwacji:
+model_ranger1 <- caret::train(Biopsy ~ .,
+                              data = trainset1,
+                              method = "ranger",
+                              trControl = myCtrl,
+                              tuneGrid = expand.grid(
+                                mtry = c(1,3,5,7),
+                                min.node.size = c(1,3,5,7,9), 
+                                splitrule = "gini"),
+                              verbose = FALSE)
+
+# dla imputacji kNN:
+model_ranger2 <- caret::train(Biopsy ~ .,
+                              data = trainset2,
+                              method = "ranger",
+                              trControl = myCtrl,
+                              tuneGrid = expand.grid(
+                                mtry = c(1,3,5,7),
+                                min.node.size = c(1,3,5,7,9), 
+                                splitrule = "gini"),
+                              verbose = FALSE)
+
+# dla imputacji "specjalna wartość zamiast NA":
+model_ranger3 <- caret::train(Biopsy ~ .,
+                              data = trainset3,
+                              method = "ranger",
+                              trControl = myCtrl,
+                              tuneGrid = expand.grid(
+                                mtry = c(1,3,5,7),
+                                min.node.size = c(1,3,5,7,9), 
+                                splitrule = "gini"),
+                              verbose = FALSE)
+
+```
+
+
+### Regresja logistyczna
+
+```{r}
+# dla imputacji usuwaniem obserwacji:
+model_glm1 <- glm(Biopsy ~., data = trainset1, family = "binomial")
+
+# dla imputacji kNN:
+model_glm2 <- glm(Biopsy ~., data = trainset2, family = "binomial")
+
+# dla imputacji "specjalna wartość zamiast NA":
+model_glm3 <- glm(Biopsy ~., data = trainset3, family = "binomial")
+
+```
+p <- predict(model, test, type = "response")
+
+### Regresja lasso/ridge
+
+```{r}
+# "penalized" Regression Modeling
+# Lasso and Elastic-Net Regularized Generalized Linear Model
+
+
+# dla imputacji usuwaniem obserwacji:
+model_glmnet1 <- caret::train(Biopsy ~ .,
+                              data = trainset1,
+                              method = "glmnet",
+                              trControl = myCtrl,
+                              tuneGrid = expand.grid(
+                                alpha = c(0,0.2,0.4,0.6,0.8,1),
+                                lambda = c(0.0001, 0.001, 0.01, 0.1, 1, 10)),
+                              verbose = FALSE)
+
+# dla imputacji kNN:
+model_glmnet2 <- caret::train(Biopsy ~ .,
+                              data = trainset2,
+                              method = "glmnet",
+                              trControl = myCtrl,
+                              tuneGrid = expand.grid(
+                                alpha = c(0,0.2,0.4,0.6,0.8,1),
+                                lambda = c(0.0001, 0.001, 0.01, 0.1, 1, 10)),
+                              verbose = FALSE)
+
+# dla imputacji "specjalna wartość zamiast NA":
+model_glmnet3 <- caret::train(Biopsy ~ .,
+                              data = trainset3,
+                              method = "glmnet",
+                              trControl = myCtrl,
+                              tuneGrid = expand.grid(
+                                alpha = c(0,0.2,0.4,0.6,0.8,1),
+                                lambda = c(0.0001, 0.001, 0.01, 0.1, 1, 10)),
+                              verbose = FALSE)
+
+```
+
+### Sieć neuronowa
+
+```{r}
+# dla imputacji usuwaniem obserwacji:
+model_nnet1 <- caret::train(Biopsy ~ .,
+                   data = trainset1,
+                   method = "nnet",
+                   trControl = myCtrl,
+                   tuneGrid = expand.grid(size = c(1, 3, 5, 7, 9, 11),
+                                          decay = c(0.2, 2, 5, 10, 15, 20, 30 )), 
+                   verbose = FALSE, trace = FALSE)
+
+# dla imputacji kNN:
+model_nnet2 <- caret::train(Biopsy ~ .,
+                   data = trainset2,
+                   method = "nnet",
+                   trControl = myCtrl,
+                   tuneGrid = expand.grid(size = c(1, 3, 5, 7, 9, 11),
+                                          decay = c(0.2, 2, 5, 10, 15, 20, 30 )), 
+                   verbose = FALSE, trace = FALSE)
+
+# dla imputacji "specjalna wartość zamiast NA":
+model_nnet3 <- caret::train(Biopsy ~ .,
+                   data = trainset3,
+                   method = "nnet",
+                   trControl = myCtrl,
+                   tuneGrid = expand.grid(size = c(1, 3, 5, 7, 9, 11),
+                                          decay = c(0.2, 2, 5, 10, 15, 20, 30 )), 
+                   verbose = FALSE, trace = FALSE)
+
+```
+
+### Gradient Boosting Machines
+
+```{r}
+# dla imputacji usuwaniem obserwacji:
+model_gbm1 <- caret::train(Biopsy ~ .,
+               data = trainset1,
+               method = "gbm",
+               trControl = trainControl( method = "cv", 
+                                  number = 5, 
+                                  verboseIter = F,
+                                  classProbs = FALSE, 
+                                  search = "grid"# strojenie hiperparametrow po siatce
+                                ),
+               tuneGrid = expand.grid(n.trees = c(5, 10, 20, 30),
+                                      interaction.depth = c(1, 3, 5, 8),
+                                      shrinkage = c(0.2, 0.4, 0.6, 0.8),
+                                      n.minobsinnode = c(1, 3, 6, 9)),
+               verbose = FALSE)
+
+# dla imputacji kNN:
+model_gbm2 <- caret::train(Biopsy ~ .,
+               data = trainset2,
+               method = "gbm",
+               trControl = myCtrl,
+               tuneGrid = expand.grid(n.trees = c(5, 10, 20, 30),
+                                      interaction.depth = c(1, 3, 5, 8),
+                                      shrinkage = c(0.2, 0.4, 0.6, 0.8),
+                                      n.minobsinnode = c(1, 3, 6, 9)),
+               verbose = FALSE)
+
+# dla imputacji "specjalna wartość zamiast NA":
+model_gbm3 <- caret::train(Biopsy ~ .,
+               data = trainset3,
+               method = "gbm",
+               trControl = myCtrl,
+               tuneGrid = expand.grid(n.trees = c(5, 10, 20, 30),
+                                      interaction.depth = c(1, 3, 5, 8),
+                                      shrinkage = c(0.2, 0.4, 0.6, 0.8),
+                                      n.minobsinnode = c(1, 3, 6, 9)),
+               verbose = FALSE)
+```
+
+
+### Support Vector Machines
+
+
+## Jądro Gaussowskie
+
+```{r}
+# dla imputacji usuwaniem obserwacji:
+model_svmradial1 <- caret::train(Biopsy ~ .,
+                              data = trainset1,
+                              method = "svmRadial",
+                              trControl = trainControl( method = "cv", 
+                                  number = 5, 
+                                  verboseIter = F,
+                                  classProbs = FALSE, 
+                                  search = "grid"# strojenie hiperparametrow po siatce
+                                ),
+                              tuneGrid = expand.grid(
+                                C = c(0.001,0.01, 0.1, 1, 10, 100),
+                            sigma = c(0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1)),
+                              verbose = FALSE)
+# dla imputacji kNN:
+model_svmradial2 <- caret::train(Biopsy ~ .,
+                              data = trainset2,
+                              method = "svmRadial",
+                              trControl = trainControl( method = "cv", 
+                                  number = 5, 
+                                  verboseIter = F,
+                                  classProbs = FALSE, 
+                                  search = "grid"# strojenie hiperparametrow po siatce
+                                ),
+                              tuneGrid = expand.grid(
+                                C = c(0.001,0.01, 0.1, 1, 10, 100),
+                            sigma = c(0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1)),
+                              verbose = FALSE)
+
+# dla imputacji "specjalna wartość zamiast NA":
+model_svmradial3 <- caret::train(Biopsy ~ .,
+                              data = trainset3,
+                              method = "svmRadial",
+                              trControl = trainControl( method = "cv", 
+                                  number = 5, 
+                                  verboseIter = F,
+                                  classProbs = FALSE, 
+                                  search = "grid"# strojenie hiperparametrow po siatce
+                                ),
+                              tuneGrid = expand.grid(
+                                C = c(0.001,0.01, 0.1, 1, 10, 100),
+                            sigma = c(0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1)),
+                              verbose = FALSE)
+```
+
+
+## Jądro Wielomianowe
+
+```{r}
+# dla imputacji usuwaniem obserwacji:
+model_svmpoly1 <- caret::train(Biopsy ~ .,
+                              data = trainset1,
+                              method = "svmPoly",
+                              trControl = trainControl( method = "cv", 
+                                  number = 5, 
+                                  verboseIter = F,
+                                  classProbs = FALSE, 
+                                  search = "grid"# strojenie hiperparametrow po siatce
+                                ),
+                              tuneGrid = expand.grid(
+                                degree = c(1,2),
+                                C = c(0.001,0.01, 0.1, 1, 10),
+                      scale = c( 0.00001, 0.0001, 0.001, 0.01, 0.1)),
+                              verbose = FALSE)
+# dla imputacji kNN:
+model_svmpoly2 <- caret::train(Biopsy ~ .,
+                              data = trainset2,
+                              method = "svmPoly",
+                              trControl = trainControl( method = "cv", 
+                                  number = 5, 
+                                  verboseIter = F,
+                                  classProbs = FALSE, 
+                                  search = "grid"# strojenie hiperparametrow po siatce
+                                ),
+                              tuneGrid = expand.grid(
+                                degree = c(1,2),
+                                C = c(0.001,0.01, 0.1, 1, 10),
+                      scale = c( 0.00001, 0.0001, 0.001, 0.01, 0.1)),
+                              verbose = FALSE)
+# dla imputacji "specjalna wartość zamiast NA":
+model_svmpoly3 <- caret::train(Biopsy ~ .,
+                              data = trainset3,
+                              method = "svmPoly",
+                              trControl = trainControl( method = "cv", 
+                                  number = 5, 
+                                  verboseIter = F,
+                                  classProbs = FALSE, 
+                                  search = "grid"# strojenie hiperparametrow po siatce
+                                ),
+                              tuneGrid = expand.grid(
+                                degree = c(1,2),
+                                C = c(0.001,0.01, 0.1, 1, 10),
+                      scale = c( 0.00001, 0.0001, 0.001, 0.01, 0.1)),
+                              verbose = FALSE)
+```
+
+
+
+# Porównanie modeli i technik imputacji
+
+
+## Confusion Matrix
+
+### ranger
+
+```{r, echo = FALSE}
+confusionMatrix(predict(model_ranger1, testset1), 
+                testset1$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset1$Biopsy, 
+                predict(model_ranger1, testset1, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+
+confusionMatrix(predict(model_ranger2, testset2), 
+                testset2$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset2$Biopsy, 
+                predict(model_ranger2, testset2, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+confusionMatrix(predict(model_ranger3, testset3), 
+                testset3$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset3$Biopsy, 
+                predict(model_ranger3, testset3, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+```
+
+### glm
+
+```{r, echo = FALSE}
+confusionMatrix(as.factor(ifelse(predict(model_glm1, testset1, type = "response" ) > 0.5, "Yes", "No")), 
+                testset1$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset1$Biopsy, 
+                predict(model_glm1, testset1, type = "response" ),
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+
+confusionMatrix(as.factor(ifelse(predict(model_glm2, testset2, type = "response" ) > 0.5, "Yes", "No")), 
+                testset2$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset2$Biopsy, 
+                predict(model_glm2, testset2, type = "response" ),
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+confusionMatrix(as.factor(ifelse(predict(model_glm3, testset3, type = "response" ) > 0.5, "Yes", "No")), 
+                testset3$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset3$Biopsy, 
+                predict(model_glm3, testset3, type = "response" ),
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+```
+
+#### glm / granica odcięcia 5%
+
+```{r, echo = FALSE}
+confusionMatrix(as.factor(ifelse(predict(model_glm1, testset1, type = "response" ) > 0.05, "Yes", "No")), 
+                testset1$Biopsy,
+                positive = "Yes")
+
+
+confusionMatrix(as.factor(ifelse(predict(model_glm2, testset2, type = "response" ) > 0.05, "Yes", "No")), 
+                testset2$Biopsy,
+                positive = "Yes")
+
+confusionMatrix(as.factor(ifelse(predict(model_glm3, testset3, type = "response" ) > 0.05, "Yes", "No")), 
+                testset3$Biopsy,
+                positive = "Yes")
+
+```
+
+#### glm / granica odcięcia 3%
+
+```{r, echo = FALSE}
+confusionMatrix(as.factor(ifelse(predict(model_glm1, testset1, type = "response" ) > 0.03, "Yes", "No")), 
+                testset1$Biopsy,
+                positive = "Yes")
+
+
+confusionMatrix(as.factor(ifelse(predict(model_glm2, testset2, type = "response" ) > 0.03, "Yes", "No")), 
+                testset2$Biopsy,
+                positive = "Yes")
+
+confusionMatrix(as.factor(ifelse(predict(model_glm3, testset3, type = "response" ) > 0.03, "Yes", "No")), 
+                testset3$Biopsy,
+                positive = "Yes")
+
+```
+
+
+### glmnet
+
+```{r, echo = FALSE}
+confusionMatrix(predict(model_glmnet1, testset1), 
+                testset1$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset1$Biopsy, 
+                predict(model_glmnet1, testset1, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+
+confusionMatrix(predict(model_glmnet2, testset2), 
+                testset2$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset2$Biopsy, 
+                predict(model_glmnet2, testset2, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+confusionMatrix(predict(model_glmnet3, testset3), 
+                testset3$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset3$Biopsy, 
+                predict(model_glmnet3, testset3, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+```
+
+### nnet
+
+```{r, echo = FALSE}
+confusionMatrix(predict(model_nnet1, testset1), 
+                testset1$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset1$Biopsy, 
+                predict(model_nnet1, testset1, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+
+confusionMatrix(predict(model_nnet2, testset2), 
+                testset2$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset2$Biopsy, 
+                predict(model_nnet2, testset2, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+confusionMatrix(predict(model_nnet3, testset3), 
+                testset3$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset3$Biopsy, 
+                predict(model_nnet3, testset3, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+```
+
+
+### gbm
+
+```{r, echo = FALSE}
+confusionMatrix(predict(model_gbm1, testset1), 
+                testset1$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset1$Biopsy, 
+                predict(model_gbm1, testset1, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+
+confusionMatrix(predict(model_gbm2, testset2), 
+                testset2$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset2$Biopsy, 
+                predict(model_gbm2, testset2, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+confusionMatrix(predict(model_gbm3, testset3), 
+                testset3$Biopsy,
+                positive = "Yes")
+ROCCurve <- roc(testset3$Biopsy, 
+                predict(model_gbm3, testset3, type = "prob")[, "Yes"],
+                ci = TRUE)
+plot.roc(ROCCurve,
+         legacy.axes = TRUE,
+         main="ROC",
+         percent=TRUE,
+         col = "#FFD700")
+auc(ROCCurve)
+```
+
+
+### SVM - Jądro Gaussowskie
+
+```{r, echo = FALSE}
+confusionMatrix(predict(model_svmradial1, testset1), 
+                testset1$Biopsy,
+                positive = "Yes")
+
+
+confusionMatrix(predict(model_svmradial2, testset2), 
+                testset2$Biopsy,
+                positive = "Yes")
+
+confusionMatrix(predict(model_svmradial3, testset3), 
+                testset3$Biopsy,
+                positive = "Yes")
+
+```
+
+
+### SVM - Jądro Wielomianowe
+
+```{r, echo = FALSE}
+confusionMatrix(predict(model_svmpoly1, testset1), 
+                testset1$Biopsy,
+                positive = "Yes")
+
+confusionMatrix(predict(model_svmpoly2, testset2), 
+                testset2$Biopsy,
+                positive = "Yes")
+
+confusionMatrix(predict(model_svmpoly3, testset3), 
+                testset3$Biopsy,
+                positive = "Yes")
+
+```
+
+
+## Zestawienie modeli i technik imputacji
+
+
+Porównaliśmy metryki Accuracy/AUC:
+
+**Las losowy ranger:**
+
+1) 0.9396/0.7677
+
+2) **0.9423**/0.6692
+
+3) 0.9231/0.7972
+
+
+
+**Regresja logistyczna:**
+
+1) 0.9341/**0.8325** # największe AUC!
+
+2) **0.9423**/0.5982
+
+3) 0.9375/0.609
+
+
+
+**Regresja logistyczna lasso/ridge:**
+
+1) 0.9396/0.7974
+
+2) **0.9423**/0.733
+
+3) 0.9231/0.6748
+
+
+
+**Sieć neuronowa:**
+
+1) 0.9396/0.5385
+
+2) **0.9423**/0.4898
+
+3) 0.9231/0.5719
+
+
+
+**Gradient Boosting Machines:**
+
+1) 0.9286/0.7363
+
+2) **0.9423**/0.4677
+
+3) 0.9231/0.4748
+
+
+
+**Support Vector Machines - Gaussowskie jądro:**
+
+1) 0.9396/0.6401
+
+2) **0.9423**/0.5303
+
+3) 0.9231/0.7096
+
+
+
+**Support Vector Machines - Wielomianowe jądro:**
+
+1) 0.9396/0.5136
+
+2) **0.9423**/0.5544
+
+3) 0.9231/0.7578
+
+
+
+# Wnioski - najlepszy model i technika imputacji
+
+Z powyższych wyników widać, że Accuracy nie jest najlepszą metryką do porównywania modeli. Każdy model osiągnął to samo maksymalne Accuracy dla imputacji k-Nearest Neighbors. Porównamy więc za pomocą AUC. 
+
+Warto podkreślić, że większość modeli ma Sensitivity = 0, co dla naszego zadania medycznego jest dużym błędem, bo nie wykryliśmy żadnego chorego.
+Tylko **model regresji logistycznej glm** wykrywał chorych przy progu odcięcia 50%. Z tego też powodu umieściliśmy progi odcięcia dla 5% i 3%, które zwiększyły znacznie wartość Sensitivity (wykrytych chorych). Próg 5% zachowywał jeszcze przy tym rozsądne Accuracy.
+
+Ranking względem maksymalngo osiągalnego AUC:
+
+1. Regresja logistyczna
+2. Las losowy
+3. Regresja logistyczna z lasso/ridge
+4. Support Vector Machines - Polynomial kernel
+5. Support Vector Machines - Gaussian kernel
+6. Gradient Boosting Machine
+7. Sieć neuronowa
+
+
+Z powyższych wyników można by wnioskować, że najlepiej poradził sobie model **regresji logistycznej** dla techniki imputacji **usuwanie obserwacji**. 
+
+Najlepsze sprawdziły się techniki imputacji: **usuwanie obserwacji** oraz **trzeci level dla NA**.
+
+W predykcjach medycznych ważne jest wykrywanie przypadków chprych, czyli pozytywnych - "Yes". Z tego powodu najlepiej jest obniżyć próg wykrywania takich przypadków.
+Natomiast wśród naszych modeli najlepiej pozytywne przypadki wykrywał model **regresji logistycznej**. Pokazaliśmy nawet progi 3-5% dla których następuje znaczny skok liczby wykrytych przypadków 'Yes'.
+
+W związku z powyższym wydaje nam się najlepszy model + technika imputacji:
+
+*Regresja Logistyczna + usuwanie cech kategorycznych 0-1 z NA* najlepiej dla progu odcięcia prawdopodobieństwa zakwalifikowania chorego rzędu *3-7%*.
+
