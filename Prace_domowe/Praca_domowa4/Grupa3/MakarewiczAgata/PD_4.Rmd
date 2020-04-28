@@ -1,0 +1,382 @@
+---
+title: "Praca domowa 4"
+author: "Agata Makarewicz"
+date: "20 04 2020"
+output: 
+  html_document:
+     toc: true
+     theme: united
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(knitr)
+library(dplyr)
+library(data.table)
+library(DALEX)
+library(mlr)
+library(mlbench)
+```
+
+## Wprowadzenie
+
+W realizacji zadania skorzystamy z dwóch zbiorów danych:
+
+* ***apartments*** z pakietu `DALEX`
+* ***BostonHousing*** z pakietu `mlbench
+
+Naszym celem jest stworzenie modelu regresji SVM (Support Vector Machine) i wytrenowanie go dla obu zbiorów, sprawdzenie, czy skalowanie danych jest w tym przypadku istotne oraz zoptymalizowanie (strojenie) hiperparametrów modelu ( `cost`, `gamma`, `degree` oraz `kernel` ) za pomocą metody *random search*. \
+\
+Hiperparametry będą strojone na następujących wartościach:
+
+* `kernel` -> radial / polynomial / sigmoid
+* `cost` ->  [0,20]
+* `degree` ->  [2,15] (będzie miał znaczenie tylko w przypadku `kernel` = polynomial)
+* `gamma` -> [0,05, 1]
+
+Do oceny naszego modelu wykorzystamy następujące miary:
+
+* **mse** - mean of squared errors
+* **mae** - mean of absolute errors
+* **rmse** - root mean squared error
+* **rsq** - R-squared (coefficient of determination)
+
+### apartments
+
+Sztucznie wygenerowane dane o mieszkaniach w Warszawie.
+
+Zmienne:
+
+* **m2.price** - cena za metr kwadratowy (zmienna celu)
+* surface - powierzchnia w metrach kwadratowych
+* n.rooms - liczba pomieszczeń (skorelowana z powierzchnią)
+* district - dzielnica
+* floor - piętro
+* construction.date - rok konstrukcji 
+
+```{r data1}
+data1 <- apartments
+knitr::kable(data.table(head(data1)), caption = "Fragment ramki danych")
+```
+
+**Struktura danych:**
+
+```{r}
+str(data1)
+```
+
+### BostonHousing
+
+Dane na temat mieszkań w Bostonie ze spisu ludności z 1970 roku.
+
+Zmiennych jest 14, wszystkie są numeryczne. Nas interesuje ostatnia z nich, czyli **medv** -  średnia wartość domu zamieszkanego przed właściciela w tysiącach dolarów amerykańskich. Jest to nasza zmienna celu.
+
+```{r data2}
+data("BostonHousing")
+data2 <- BostonHousing
+knitr::kable(data.table(head(data2)), caption = "Fragment ramki danych")
+```
+
+## Modelowanie
+
+### apartments
+
+**Podział na zbiór treningowy i testowy**
+
+Zaczynamy od podzielenia naszego zbioru danych na treningowy i testowy. Pierwszy z nich składa się z 80% losowo wybranych rekordów, drugi z pozostałych 20%. 
+
+```{r, echo=TRUE}
+set.seed(123)
+
+n <- nrow(data1)
+
+train_set = sample(n, 0.8 * n)
+test_set = setdiff(seq_len(n), train_set)
+data_train1 <- data1[train_set,]
+data_test1 <- data1[test_set,]
+
+```
+
+```{r mlr1}
+
+# tworzymy zadanie regresji
+task1 <- makeRegrTask(id = "apartments",  data = data_train1, target = "m2.price")
+
+# tworzymy model
+learner_svm1 <- makeLearner("regr.svm", predict.type = "response")
+
+cv <- makeResampleDesc("CV", iter = 5)
+
+# tworzymy zbiór hiperparametrów do strojenia
+tune_svm = makeParamSet(
+  makeDiscreteParam("kernel", values=c("radial", "polynomial", "sigmoid")),
+  makeNumericParam("cost", lower=0, upper=20),
+  makeIntegerParam("degree", lower=2, upper=15),
+  makeNumericParam("gamma", lower=0.05, upper=1)
+  )
+
+# metoda strojenia - random search
+random1 <- makeTuneControlRandom(maxit=20)
+random_tune1 <- tuneParams(learner_svm1, task = task1, resampling = cv,
+                       par.set = tune_svm, control = random1, measures = rmse)
+```
+
+**Strojenie hiperparametrów:**
+
+```{r}
+# ustawiamy wynikowe hiperparametry
+(learner_svm1 = setHyperPars(learner_svm1, kernel = random_tune1$x$kernel, cost=random_tune1$x$cost, degree=random_tune1$x$degree, gamma=random_tune1$x$gamma))
+
+# kroswalidacja na zbiorze treningowym
+cross_1 <- resample(learner_svm1, task1, cv, measures = list(mse, mae, rmse, rsq))
+```
+
+**Wynik kroswalidacji:**
+
+```{r}
+(cross_1_performance <- cross_1$aggr)
+
+# trenujemy model
+model_1 <- train(learner_svm1, task1)
+prediction_1 <- predict(model_1, newdata = data_test1)
+```
+
+**Wynik predykcji:**
+
+```{r}
+(performance_1 <- performance(prediction_1, list(mse, mae, rmse,rsq)))
+```
+
+**Odchylenie standardowe zmiennej celu:**
+
+```{r}
+sd(data1$m2.price)
+```
+
+Jak widać, wyniki modelu z dostrojonymi parametrami prezentują się całkiem nieźle, patrząc chociażby na wartość odchylenia standardowego zmiennej celu oraz na wyliczoną wartość rmse.
+
+#### Porównanie z modelem surowym
+
+```{r raw1}
+# model surowy 
+learner_r1 <- makeLearner("regr.svm", predict.type = "response")
+
+cross_r1 <- resample(learner_r1, task1, cv, measures = list(mse, mae, rmse, rsq))
+
+cross_r1_performance <- cross_r1$aggr
+
+# trenujemy model
+model_r1 <- train(learner_r1, task1)
+pred_r1 <- predict(model_r1, newdata = data_test1)
+```
+
+**Wyniki kroswalidacji:**
+
+```{r}
+results_apartments1 <- rbind(cross_1_performance, cross_r1_performance)
+rownames(results_apartments1) <- c("Tuned model","Raw model")
+kable(results_apartments1)
+```
+
+**Wyniki predykcji:**
+
+```{r}
+performance_r1 <- performance(pred_r1, list(mse, mae, rmse, rsq))
+
+results_apartments2 <- rbind(performance_1, performance_r1)
+rownames(results_apartments2) <- c("Tuned model","Raw model")
+kable(results_apartments2)
+```
+
+W porównaniu z modelem surowym (domyślne hiperparametry) nasz model spisuje się porównywalnie, patrząc na wyniki kroswalidacji, ale przy wynikach predykcji widzimy, że radzi sobie znacznie lepiej, czyli hiperparametry zostały dobrze dostrojone - faktycznie poprawiają wynik modelu.
+
+#### Skalowanie danych 
+
+Model regresji SVM w pakiecie mlr domyślnie skaluje dane (parametr `scale` = TRUE). Sprawdzimy, czy skalowanie wpływa na wyniki kroswalidacji i predykcji naszego modelu (surowego), porównując go z modelem z parametrem `scale` = FALSE
+
+```{r raw1s}
+# model surowy 
+learner_r1_scale <- makeLearner("regr.svm", predict.type = "response", par.vals = list(scale=FALSE))
+
+cross_r1_scale <- resample(learner_r1_scale, task1, cv, measures = list(mse, mae, rmse, rsq))
+
+cross_r1_performance_scale <- cross_r1_scale$aggr
+
+# trenujemy model
+model_r1_scale <- train(learner_r1_scale, task1)
+pred_r1_scale <- predict(model_r1_scale, newdata = data_test1)
+```
+
+**Wyniki kroswalidacji:**
+
+```{r}
+results_apartments1_scale <- rbind(cross_r1_performance, cross_r1_performance_scale)
+rownames(results_apartments1_scale) <- c("Scaling", "Without scaling")
+kable(results_apartments1_scale)
+```
+
+**Wyniki predykcji:**
+
+```{r}
+performance_r1_scale <- performance(pred_r1_scale, list(mse, mae, rmse, rsq))
+
+results_apartments2_scale <- rbind(performance_r1, performance_r1_scale)
+rownames(results_apartments2_scale) <- c("Scaling","Without scaling")
+kable(results_apartments2_scale)
+```
+
+Jak widać powyżej, skalowanie ma bardzo duży wpływ na wyniki modelu, potwierdzają to wszystkie użyte do oceny miary. W przypadku danych nieprzeskalowanych rmse osiąga wartość zbliżoną do odchylenia standardowego, więc model nie spisuje się zbyt dobrze.
+
+### BostonHousing
+
+**Podział na zbiór treningowy i testowy**
+
+Zaczynamy od podzielenia naszego zbioru danych na treningowy i testowy. Pierwszy z nich składa się z 80% losowo wybranych rekordów, drugi z pozostałych 20%. 
+
+```{r, echo=TRUE}
+set.seed(123)
+
+n <- nrow(data2)
+
+train_set = sample(n, 0.8 * n)
+test_set = setdiff(seq_len(n), train_set)
+data_train2 <- data2[train_set,]
+data_test2 <- data2[test_set,]
+
+```
+
+```{r mlr2}
+
+# tworzymy zadanie regresji
+task2 <- makeRegrTask(id = "bostonhousing",  data = data_train2, target = "medv")
+
+# tworzymy model
+learner_svm2 <- makeLearner("regr.svm", predict.type = "response")
+
+cv <- makeResampleDesc("CV", iter = 5)
+
+# tworzymy zbiór hiperparametrów do strojenia
+# tune_svm = makeParamSet(
+#   makeDiscreteParam("kernel", values=c("radial", "polynomial", "sigmoid")),
+#   makeNumericParam("cost", lower=0, upper=20),
+#   makeIntegerParam("degree", lower=2, upper=15),
+#   makeNumericParam("gamma", lower=0.05, upper=1)
+#   )
+
+# metoda strojenia - random search
+random2 <- makeTuneControlRandom(maxit=20)
+random_tune2 <- tuneParams(learner_svm2, task = task2, resampling = cv,
+                       par.set = tune_svm, control = random2, measures = rmse)
+```
+
+**Strojenie hiperparametrów:**
+
+```{r}
+# ustawiamy wynikowe hiperparametry
+(learner_svm2 = setHyperPars(learner_svm2, kernel = random_tune2$x$kernel, cost=random_tune2$x$cost, degree=random_tune2$x$degree, gamma=random_tune2$x$gamma))
+
+# kroswalidacja na zbiorze treningowym
+cross_2 <- resample(learner_svm2, task2, cv, measures = list(mse, mae, rmse, rsq))
+```
+
+**Wynik kroswalidacji:**
+
+```{r}
+(cross_2_performance <- cross_2$aggr)
+
+# trenujemy model
+model_2 <- train(learner_svm2, task2)
+prediction_2 <- predict(model_2, newdata = data_test2)
+```
+
+**Wynik predykcji:**
+
+```{r}
+(performance_2 <- performance(prediction_2, list(mse, mae, rmse,rsq)))
+```
+
+**Odchylenie standardowe zmiennej celu:**
+
+```{r}
+sd(data2$medv)
+```
+
+Tak jak przy pierwszym zbiorze danych, nasz model sprawuje się bardzo dobrze - rmse jest prawie 4 razy mniejszy od odchylenia standardowego, a rsq osiąga wartość powyżej 0.9.
+
+#### Porównanie z modelem surowym
+
+```{r raw2}
+# model surowy 
+learner_r2 <- makeLearner("regr.svm")
+
+cross_r2 <- resample(learner_r2, task2, cv, measures = list(mse, mae, rmse, rsq))
+
+cross_r2_performance <- cross_r2$aggr
+
+# trenujemy model
+model_r2 <- train(learner_r2, task2)
+pred_r2 <- predict(model_r2, newdata = data_test2)
+
+performance_r2 <- performance(pred_r2, list(mse, mae, rmse, rsq))
+```
+
+**Wyniki kroswalidacji:**
+
+```{r}
+results_boston1 <- rbind(cross_2_performance, cross_r2_performance)
+rownames(results_boston1) <- c("Tuned model","Raw model")
+kable(results_boston1)
+```
+
+**Wyniki predykcji:**
+
+```{r}
+performance_r2 <- performance(pred_r2, list(mse, mae, rmse, rsq))
+
+results_boston2 <- rbind(performance_2, performance_r2)
+rownames(results_boston2) <- c("Tuned model","Raw model")
+kable(results_boston2)
+```
+
+W porównaniu z modelem surowym nasz model wypada bardzo dobrze - wartość rmse jest mniejsza o 1 (co patrząc na jego wartość jest sporą różnicą) a rsq o 0.06, co również jest dość znaczącą poprawą.
+
+#### Skalowanie danych 
+
+Model regresji SVM w pakiecie mlr domyślnie skaluje dane (parametr `scale` = TRUE). Sprawdzimy, czy skalowanie wpływa na wyniki kroswalidacji i predykcji naszego modelu (surowego), porównując go z modelem z parametrem `scale` = FALSE
+
+```{r raw2s}
+# model surowy 
+learner_r2_scale <- makeLearner("regr.svm",  predict.type = "response", par.vals = list(scale=FALSE))
+
+cross_r2_scale <- resample(learner_r2_scale, task2, cv, measures = list(mse, mae, rmse, rsq))
+
+cross_r2_performance_scale <- cross_r2_scale$aggr
+
+# trenujemy model
+model_r2_scale <- train(learner_r2_scale, task2)
+pred_r2_scale <- predict(model_r2_scale, newdata = data_test2)
+
+performance_r2_scale <- performance(pred_r2_scale, list(mse, mae, rmse, rsq))
+```
+
+**Wyniki kroswalidacji:**
+
+```{r}
+results_boston1_scale <- rbind(cross_r2_performance, cross_r2_performance_scale)
+rownames(results_boston1_scale) <- c("Scaling", "Without scaling")
+kable(results_boston1_scale)
+```
+
+**Wyniki predykcji:**
+
+```{r}
+performance_r2_scale <- performance(pred_r2_scale, list(mse, mae, rmse, rsq))
+
+results_boston2_scale <- rbind(performance_r2, performance_r2_scale)
+rownames(results_boston2_scale) <- c("Scaling", "Without scaling")
+kable(results_boston2_scale)
+```
+
+Analogicznie jak przy zbiorze apartments, skalowanie danych znacząco wpływa (pozytywnie) na wyniki modelu.\
+\
+\
