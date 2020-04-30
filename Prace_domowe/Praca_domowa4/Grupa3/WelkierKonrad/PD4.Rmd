@@ -1,0 +1,201 @@
+---
+title: "PD4"
+author: "Konrad Welkier"
+date: "29 04 2020"
+output: html_document
+---
+
+## Zbiory danych
+
+W poniższej pracy domowej zastosowany zostanie algorytm Support Vector Machine na zbiorach danych apartaments oraz winequality. Zacznijmy od przygotowania do pracy odpowiednich bibliotek, a także naszych zbiorów. Aby sprawdzić czy proces ten przebiegł poprawnie przyjrzymy się załadowanym zbiorom.
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+library(DALEX)
+library(mlr)
+library(knitr)
+dt1 <- apartments
+dt2 <- read.csv("winequality-red.csv")
+kable(head(dt1), caption = "Fragment zbioru apartaments")
+kable(head(dt2), caption = "Fragment zbioru winequality")
+```
+
+## Informacje wstęne
+
+W pierwszym zbiorze kolumną celu będzie "m2.price", natomiast w zbiorze drugim kolumna "quality".
+
+Podczas tej pracy sprawdzimy wpływ skalowania na wyniki osiągane przez przygotowany model.
+
+Następnie zajmiemy się strojeniem poniższych hiperparametrów:
+
+*  `kernel` - wartości radial, polynomial oraz sigmoid
+*  `cost` - w zakresie od 0.01 do 20
+*  `gamma` - w zakresie od 0.01 do 1
+*  `degree` - w zakresie od 0 do 15.
+
+W kwestii oceny skuteczności kolejnych modeli zastosowane zostaną następujące miary:
+
+* `mse` - mean of squared errors
+* `mae` - mean of absolute errors
+* `rmse` - root mean squared error
+*  `rsq` - R-squared.
+
+## Apartaments - algorytm ze skalowaniem oraz bez
+
+Skalowalność podczas tworzenia "learnera" jest wybierania poprzez argument "scale". Domyślna wartość wynosi TRUE, ale na potrzeby oceny wpływu tego argumentu na skuteczność predykcji określimy go wyraźnie zarówno w przypadku, gdy skalowalność nie zostanie zastosowana, jak i w przeciwnej sytuacji. 
+
+```{r, echo=FALSE}
+#podział zbioru 70:30 jest stosowany w całej pracy
+n <- nrow(dt1)
+train_set <- sample(1:n, 0.7*n)
+dt1_train <- dt1[train_set,]
+dt1_test <- dt1[-train_set,]
+
+task1.1 <- makeRegrTask(id = "apartments",  data = dt1_train, target = "m2.price")
+#"scale" = FALSE, więc rozpatrujemy przypadek nie uwzględniający skalowalności
+learner1.1 <- makeLearner("regr.svm", predict.type = "response", par.vals = list("scale" = FALSE))
+model1.1 <- train(learner1.1, task1.1)
+prediction1.1 <- predict(model1.1, newdata = dt1_test)
+performance1.1 <- performance(prediction1.1, list(mse, mae, rmse, rsq))
+
+#drugi raz przeprowadzamy analogiczny proces
+task1.2 <- makeRegrTask(id = "apartments",  data = dt1_train, target = "m2.price")
+#tym razem jednak "scale" = TRUE, więc mówimy o przypadku biorącym pod uwagę skalowalność
+learner1.2 <- makeLearner("regr.svm", predict.type = "response", par.vals = list("scale" = TRUE))
+model1.2 <- train(learner1.2, task1.2)
+prediction1.2 <- predict(model1.2, newdata = dt1_test)
+performance1.2 <- performance(prediction1.2, list(mse, mae, rmse, rsq))
+results1 <- rbind(performance1.1, performance1.2)
+rownames(results1) <- c("Bez skalowania","Ze skalowaniem")
+kable(results1, caption = "Porównanie wpływu skalowalności na otrzymywane wyniki dla zbioru apartaments")
+```
+
+Okazuje się, że skalowalność istotnie poprawiła wyniki osiągane przez algorytm.
+
+## Winequality - algorytm ze skalowaniem oraz bez
+
+Sprawdzimy teraz czy również w przypadku drugiego zbioru - winequality skalowalność ma pozytywny wpływ na wyniki osiągane przez algorytm.
+
+```{r, echo = FALSE}
+n <- nrow(dt2)
+train_set <- sample(1:n, 0.7*n)
+dt2_train <- dt2[train_set,]
+dt2_test <- dt2[-train_set,]
+#różnice w tym przypadku dotyczą oczywiście analizowanego zbioru
+task2.1 <- makeRegrTask(id = "winequality",  data = dt2_train, target = "quality")
+learner2.1 <- makeLearner("regr.svm", predict.type = "response", par.vals = list("scale" = FALSE))
+model2.1 <- train(learner2.1, task2.1)
+prediction2.1 <- predict(model2.1, newdata = dt2_test)
+#dodany został fragment zaokrąglający wyniki, ponieważ model zwraca liczby zmiennoprzecinkowe, natomiast quality
+#powinno być określone liczbą całkowitą
+prediction2.1$data$response <- round(prediction2.1$data$response)
+performance2.1 <- performance(prediction2.1, list(mse, mae, rmse,rsq))
+
+task2.2 <- makeRegrTask(id = "winequality",  data = dt2_train, target = "quality")
+learner2.2 <- makeLearner("regr.svm", predict.type = "response", par.vals = list("scale" = TRUE))
+model2.2 <- train(learner2.2, task2.2)
+prediction2.2 <- predict(model2.2, newdata = dt2_test)
+prediction2.2$data$response <- round(prediction2.2$data$response)
+performance2.2 <- performance(prediction2.2, list(mse, mae, rmse, rsq))
+results2 <- rbind(performance2.1, performance2.2)
+rownames(results2) <- c("Bez skalowania","Ze skalowaniem")
+kable(results2, caption = "Porównanie wpływu skalowalności na otrzymywane wyniki dla zbioru winequality")
+```
+
+Również w tym przypadku wpływ skalowalności był jednoznacznie pozytywny.
+
+## Apartaments - strojenie hiperparametrów
+
+Zgodnie z zapowiedzią zestrojone zostaną teraz hiperparametry w celu wybrania najlepszej opcji. Aby zachować obiektywizm otrzymany wynik porównany zostanie z algorytmem w "wersji domyślnej". Zaprezentowane zostaną zarówno wybrane hiperparametry, jak i zestawienie wyników dla kolejnych metryk w taki sam sposób jak przy badaniu skalowalności.
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+n <- nrow(dt1)
+train_set <- sample(1:n, 0.7*n)
+dt1_train <- dt1[train_set,]
+dt1_test <- dt1[-train_set,]
+
+task3.1 <- makeRegrTask(id = "apartments",  data = dt1_train, target = "m2.price")
+learner3.1 <- makeLearner("regr.svm", predict.type = "response")
+cv3.1 <- makeResampleDesc("CV", iter = 5)
+#hiperparametry będą strojone dla wartości zgodnie z zapowiedzią
+tune3.1 = makeParamSet(
+  makeDiscreteParam("kernel", values=c("radial", "polynomial", "sigmoid")),
+  makeNumericParam("cost", lower=0.01, upper=20),
+  makeNumericParam("gamma", lower=0.01, upper=1),
+  makeIntegerParam("degree", lower=0, upper=15))
+#strojenie za pomocą random search
+random3.1 <- makeTuneControlRandom(maxit=100)
+random_tune3.1 <- tuneParams(learner3.1, task = task3.1, resampling = cv3.1, par.set = tune3.1, 
+                             control = random3.1, measures = list(mse, mae, rmse,rsq))
+kernel3.1 <- random_tune3.1$x$kernel
+cost3.1 <- random_tune3.1$x$cost
+gamma3.1 <- random_tune3.1$x$gamma
+degree3.1 <- random_tune3.1$x$degree
+#wstawienie otrzymanych hiperparametrów w odpowiednie miejsce
+(learner3.1 <- setHyperPars(learner3.1, kernel = kernel3.1, cost = cost3.1, gamma = gamma3.1, 
+                            degree = degree3.1))
+#końcówka standardowa
+model3.1 <- train(learner3.1, task3.1)
+prediction3.1 <- predict(model3.1, newdata = dt1_test)
+performance3.1 <- performance(prediction3.1, list(mse, mae, rmse,rsq))
+
+#w całości standardowy proces
+task3.2 <- makeRegrTask(id = "apartments",  data = dt1_train, target = "m2.price")
+learner3.2 <- makeLearner("regr.svm", predict.type = "response")
+model3.2 <- train(learner3.2, task3.2)
+prediction3.2 <- predict(model3.2, newdata = dt1_test)
+
+performance3.2 <- performance(prediction3.2, list(mse, mae, rmse, rsq))
+results3 <- rbind(performance3.1, performance3.2)
+rownames(results3) <- c("Ze strojeniem","Bez strojenia")
+kable(results3, caption = "Porówanie wpływu strojenia hiperparametrów na otrzymywane wyniki dla zbioru apartaments")
+```
+
+Zgodnie z oczekiwaniami model zawierający zestrojone hiperparametry otrzymał lepsze wyniki.
+
+## Winequality - strojenie hiperparametrów
+
+Analogiczny proces zostanie przeprowadzony dla drugiego zbioru - winequality.
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+n <- nrow(dt2)
+train_set <- sample(1:n, 0.7*n)
+dt2_train <- dt2[train_set,]
+dt2_test <- dt2[-train_set,]
+
+task4.1 <- makeRegrTask(id = "winequality",  data = dt2_train, target = "quality")
+learner4.1 <- makeLearner("regr.svm", predict.type = "response")
+cv4.1 <- makeResampleDesc("CV", iter = 5)
+tune4.1 = makeParamSet(
+  makeDiscreteParam("kernel", values=c("radial", "polynomial", "sigmoid")),
+  makeNumericParam("cost", lower=0.01, upper=20),
+  makeNumericParam("gamma", lower=0.01, upper=1),
+  makeIntegerParam("degree", lower=0, upper=15))
+random4.1 <- makeTuneControlRandom(maxit=100)
+random_tune4.1 <- tuneParams(learner4.1, task = task4.1, resampling = cv4.1,
+                           par.set = tune4.1, control = random4.1, measures = list(mse, mae, rmse, rsq))
+kernel4.1 <- random_tune4.1$x$kernel
+cost4.1 <- random_tune4.1$x$cost
+gamma4.1 <- random_tune4.1$x$gamma
+degree4.1 <- random_tune4.1$x$degree
+(learner4.1 <- setHyperPars(learner4.1, kernel = kernel4.1, cost = cost4.1, gamma=gamma4.1, 
+                            degree = degree4.1))
+model4.1 <- train(learner4.1, task4.1)
+prediction4.1 <- predict(model4.1, newdata = dt2_test)
+prediction4.1$data$response <- round(prediction4.1$data$response)
+performance4.1 <- performance(prediction4.1, list(mse, mae, rmse,rsq))
+
+task4.2 <- makeRegrTask(id = "winequality",  data = dt2_train, target = "quality")
+learner4.2 <- makeLearner("regr.svm", predict.type = "response")
+model4.2 <- train(learner4.2, task4.2)
+prediction4.2 <- predict(model4.2, newdata = dt2_test)
+performance4.2 <- performance(prediction4.2, list(mse, mae, rmse, rsq))
+results4 <- rbind(performance4.1, performance4.2)
+rownames(results4) <- c("Ze strojeniem","Bez strojenia")
+kable(results4, caption = "Porówanie wpływu strojenia hiperparametrów na otrzymywane wyniki dla zbioru winequality")
+```
+
+W tym przypadku wyniki otrzymane po przeprowadzeniu strojenia hiperparametrów nie okazały się być jednoznacznie lepsze niż w scenariuszu bez strojenia. Warto zauważyć jednak, że optymalne hiperparametry znacząco różniły się od tych, które były odpowiednie w przypadku zbioru apartaments.
+
+## Podsumowanie
+
+W wyniku przeprowadzonych porównań możemy stwierdzić, że w przypadku zbiorów apartaments oraz winequality przeprowadzenie skalowalności oraz strojenia hiperparametrów wpływa pozytywnie na wyniki otrzymywane przez algorytm Support Vector Machine.
