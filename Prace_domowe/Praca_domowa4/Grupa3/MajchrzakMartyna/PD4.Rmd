@@ -1,0 +1,354 @@
+---
+title: "Praca domowa 4"
+author: "Martyna Majchrzak"
+date: "28 04 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(DALEX)
+library(OpenML)
+# config
+set.seed(1)
+source <- 'openml'
+# download data
+list_all_openml_dataset <- listOMLDataSets()
+dataset_openml <- getOMLDataSet(data.id = 37L)
+diabetes<- dataset_openml$data
+# target_column <- dataset_openml$target.features
+
+library(mlr)
+```
+
+# Temat pracy
+
+Przeprowadzenie regresji liniowej za pomocą modelu SVM na dwóch zbiorach danych.
+
+# Zbiory danych
+
+## Apartments
+
+Pierwszy analizowany zbiór to `apartments` z pakietu DALEX. Zawiera on informacje o mieszkaniach w Warszawie, między innymi o ich cenie na metr kwadratowy (zmienna m2.price), dla której zostamie przeprowadzona regresja.
+
+```{r apartments}
+str(apartments)
+# summary(apartments)
+
+```
+
+## Diabetes
+
+Zbiór danych diabetes pochodzi z OpenML (https://www.openml.org/d/37) i zawiera dane dotyczące pacjentek badanych pod kątem cukrzycy. Zawiera oczywiście domyślną zmienną celu informującą, czy wynik był pozytywny czy negatywny, ale do celów tego zadania za zmienną celu zostanie potraktowana zmienna age, oznaczająca wiek.
+
+```{r diabetes}
+str(diabetes)
+```
+
+
+Obydwa zbiory nie zawierają braków danych i zostały podzielone na zbiór treningowy i testowy w proporcji 80% i 20%.
+
+```{r train test}
+# apartments
+ap_train_rows <- sample(1:nrow(apartments), 0.8*nrow(apartments))
+ap_train <- apartments[ap_train_rows,]
+ap_test <- apartments[-ap_train_rows,]
+
+# diabetes
+dia_train_rows <- sample(1:nrow(diabetes), 0.8*nrow(diabetes))
+dia_train <- diabetes[dia_train_rows,]
+dia_test <- diabetes[-dia_train_rows,]
+
+#kroswalidacja
+cv <- makeResampleDesc("CV", iters = 5)
+
+```
+
+# Dopasowanie modelu SVM
+
+```{r function}
+svm_model<-function(data_train, data_test, data_target, kernel){
+  # takes dataset and kernel for svm model as input
+  # returns data.frame with crosvalidation and prediction results 
+  # measures list(rmse, mae, rsq)
+  
+  data_task <- makeRegrTask(data = data_train, target = data_target)
+  data_lrn <- makeLearner("regr.svm", par.vals = list(kernel=kernel))
+  getParamSet(data_lrn)
+  data_model_raw <- train(data_lrn, data_task)
+  
+  # kroswalidacja
+  data_r <- resample(data_lrn, data_task, cv, measures = list(rmse, mae, rsq), models=TRUE)
+  data_cv_measures <- data_r$aggr
+  
+  # predykcja
+  # data_model <- data_r$models[[1]]
+  data_prediction<-predict(data_model_raw, newdata=data_test)
+  data_pred_measures<-performance(data_prediction, list(rmse, mae, rsq))
+  
+  data_results<-as.data.frame(rbind(data_cv_measures, data_pred_measures))
+  rownames(data_results)<-c("crosvalidation mean", "prediction")
+  colnames(data_results)<-c("RMSE", "MAE", "RSQ")
+  return(data_results)
+}
+```
+
+## Apartments
+
+```{r apartments raw model}
+getParamSet("regr.svm")
+
+ap_results_linear<-svm_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="linear")
+ap_results_polynomial<-svm_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="polynomial")
+ap_results_radial<-svm_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="radial")
+ap_results_sigmoid<-svm_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="sigmoid")
+
+
+```
+
+
+Wyniki kernel linear
+
+```{r apartments results linear}
+knitr::kable(ap_results_linear)
+```
+
+Wyniki kernel polynomial
+
+```{r apartments results polynomial}
+knitr::kable(ap_results_polynomial)
+```
+
+Wyniki kernel radial
+
+```{r apartments results radial}
+knitr::kable(ap_results_radial)
+```
+
+Wyniki kernel sigmoid
+
+```{r apartments results sigmoid}
+knitr::kable(ap_results_sigmoid)
+```
+
+## Diabetes
+
+
+```{r diabetes raw model}
+
+dia_results_linear<-svm_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="linear")
+dia_results_polynomial<-svm_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="polynomial")
+dia_results_radial<-svm_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="radial")
+dia_results_sigmoid<-svm_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="sigmoid")
+
+
+```
+
+
+Wyniki kernel linear
+
+```{r diabetes results linear}
+knitr::kable(dia_results_linear)
+```
+
+Wyniki kernel polynomial
+
+```{r diabetes results polynomial}
+knitr::kable(dia_results_polynomial)
+```
+
+Wyniki kernel radial
+
+```{r diabetes results radial}
+knitr::kable(dia_results_radial)
+```
+
+Wyniki kernel sigmoid
+
+```{r diabetes results sigmoid}
+knitr::kable(dia_results_sigmoid)
+```
+
+# Normalizacja
+
+Sprawdzenie, czy skalowanie danych poprawy wyniki.
+
+
+
+# Optymalizacja hiperparametrów
+
+W obydwu zbiorach przeprowadzone zostało strojenie parametrów:
+ - cost,
+ - gamma,
+ - degree, 
+ 
+```{r tuned function}
+svm_tuned_model<-function(data_train, data_test, data_target, kernel){
+  # takes dataset and kernel for svm model as input
+  # tunes cost, gamma and degree parameters
+  # returns data.frame with crosvalidation and prediction results 
+  # measures list(rmse, mae, rsq)
+  
+  data_task <- makeRegrTask(data = data_train, target = data_target)
+  data_lrn <- makeLearner("regr.svm", par.vals = list(kernel=kernel))
+  
+  svm_params = makeParamSet(
+  #makeDiscreteParam("kernel", values=c("linear", "polynomial", "radial", "sigmoid")),
+  makeNumericParam("cost", lower = 0, upper = 50),
+  makeNumericParam("gamma", lower = 0, upper = 10),
+  makeIntegerParam("degree", lower = 1, upper = 10)
+  )
+  ctrl_random <- makeTuneControlRandom(maxit = 30)
+  # strojenie parametrów
+  data_res_random <- tuneParams(data_lrn, 
+                              task = data_task, 
+                              resampling = cv,
+                         par.set = svm_params, 
+                         control = ctrl_random, 
+                         measures = list(rmse, mae, rsq))
+    
+  
+  # kroswalidacja
+  data_r <- resample(data_res_random$learner, data_task, cv, measures = list(rmse, mae, rsq), models=TRUE)
+  data_cv_measures <- data_r$aggr
+  
+  # predykcja
+  # data_model <- data_r$models[[1]]
+  data_model_tuned <- train(data_res_random$learner, data_task)
+  data_prediction<-predict(data_model_tuned, newdata=data_test)
+  data_pred_measures<-performance(data_prediction, list(rmse, mae, rsq))
+  
+  data_results<-as.data.frame(rbind(data_cv_measures, data_pred_measures))
+  rownames(data_results)<-c("crosvalidation mean", "prediction")
+  colnames(data_results)<-c("RMSE", "MAE", "RSQ")
+  return(data_results)
+}
+
+```
+
+
+
+## Apartments
+
+```{r apartments tuned model}
+getParamSet("regr.svm")
+
+ap_results_linear<-svm_tuned_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="linear")
+ap_results_polynomial<-svm_tuned_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="polynomial")
+ap_results_radial<-svm_tuned_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="radial")
+ap_results_sigmoid<-svm_tuned_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="sigmoid")
+
+
+```
+
+
+Wyniki kernel linear
+
+```{r apartments tuned results linear}
+knitr::kable(ap_results_linear)
+```
+
+Wyniki kernel polynomial
+
+```{r apartments tuned results polynomial}
+knitr::kable(ap_results_polynomial)
+```
+
+Wyniki kernel radial
+
+```{r apartments tuned results radial}
+knitr::kable(ap_results_radial)
+```
+
+Wyniki kernel sigmoid
+
+```{r apartments tuned results sigmoid}
+knitr::kable(ap_results_sigmoid)
+```
+
+## Diabetes
+
+
+```{r diabetes tuned model}
+
+dia_results_linear<-svm_tuned_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="linear")
+dia_results_polynomial<-svm_tuned_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="polynomial")
+dia_results_radial<-svm_tuned_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="radial")
+dia_results_sigmoid<-svm_tuned_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="sigmoid")
+
+
+```
+
+
+Wyniki kernel linear
+
+```{r diabetes tuned results linear}
+knitr::kable(dia_results_linear)
+```
+
+Wyniki kernel polynomial
+
+```{r diabetes tuned results polynomial}
+knitr::kable(dia_results_polynomial)
+```
+
+Wyniki kernel radial
+
+```{r diabetes tuned results radial}
+knitr::kable(dia_results_radial)
+```
+
+Wyniki kernel sigmoid
+
+```{r diabetes tuned results sigmoid}
+knitr::kable(dia_results_sigmoid)
+```
+
