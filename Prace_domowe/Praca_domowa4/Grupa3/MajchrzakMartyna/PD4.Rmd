@@ -1,14 +1,23 @@
 ---
 title: "Praca domowa 4"
 author: "Martyna Majchrzak"
-date: "28 04 2020"
-output: html_document
+date: "27 04 2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: united
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, echo=FALSE, cache=TRUE, warning = FALSE, message=FALSE)
 library(DALEX)
 library(OpenML)
+library(ggplot2)
+library(dplyr)
+library(gbm)
 # config
 set.seed(1)
 source <- 'openml'
@@ -29,7 +38,7 @@ Przeprowadzenie regresji liniowej za pomocą modelu SVM na dwóch zbiorach danyc
 
 ## Apartments
 
-Pierwszy analizowany zbiór to `apartments` z pakietu DALEX. Zawiera on informacje o mieszkaniach w Warszawie, między innymi o ich cenie na metr kwadratowy (zmienna m2.price), dla której zostamie przeprowadzona regresja.
+Pierwszy analizowany zbiór to `apartments` z pakietu DALEX. Zawiera on informacje o mieszkaniach w Warszawie, między innymi o ich cenie na metr kwadratowy (zmienna `m2.price`), dla której zostanie przeprowadzona regresja.
 
 ```{r apartments}
 str(apartments)
@@ -39,7 +48,7 @@ str(apartments)
 
 ## Diabetes
 
-Zbiór danych diabetes pochodzi z OpenML (https://www.openml.org/d/37) i zawiera dane dotyczące pacjentek badanych pod kątem cukrzycy. Zawiera oczywiście domyślną zmienną celu informującą, czy wynik był pozytywny czy negatywny, ale do celów tego zadania za zmienną celu zostanie potraktowana zmienna age, oznaczająca wiek.
+Zbiór danych diabetes pochodzi z OpenML (https://www.openml.org/d/37) i zawiera dane dotyczące pacjentek badanych pod kątem cukrzycy. Zawiera oczywiście domyślną zmienną celu informującą, czy wynik był pozytywny czy negatywny, ale do celów tego zadania za zmienną celu zostanie przyjęta zmienna `age`, oznaczająca wiek pacjentki.
 
 ```{r diabetes}
 str(diabetes)
@@ -64,17 +73,41 @@ cv <- makeResampleDesc("CV", iters = 5)
 
 ```
 
-# Dopasowanie modelu SVM
+# Model SVM
+
+Support Vector Machine to model klasyfikacji danych. Jego wyniki zależą w dużej mierze od wyboru parametrów. W tej pracy zajmiemy się parametrami:
+ 
+  - `kernel` - oznaczającym rodzaj funkcji, którą model będzie dopasowywał do danych w celu ich podziału na kategorie, może przyjmować wartości:
+ 
+    - *linear* -  funkcja liniowa
+    - *polynomial* - wielomian odpowiedniego stopnia (patrz: `degree`)
+    - *radial* (gaussian) - krzywa gaussa
+    - *sigmoid* - funkcja sigmoid mająca kształt litery 'S' 
+      $$S(x)=\frac{e^{x}}{e^{x}+1}$$
+      
+  - `cost` - kontroluje to jak 'twardy' bądź 'miękki' jest margines przy podziale danych na klasy
+  
+  - `gamma` - kontroluje jak duży wpływ na kształt linii podziału ma pojedyncza obserwacja
+  
+  - `degree` - stopień wielomianu przy jądrze *polynomial*
+
+Poniżej znajdują się wszystkie parametry, jakie przyjmuje model SVM, wraz z domyślnymi wartościami i zakresem możliwych wartości.
+
+```{r}
+getParamSet("regr.svm")
+
+```
 
 ```{r function}
-svm_model<-function(data_train, data_test, data_target, kernel){
+svm_model<-function(data_train, data_test, data_target, kernel, scale=TRUE){
   # takes dataset and kernel for svm model as input
   # returns data.frame with crosvalidation and prediction results 
   # measures list(rmse, mae, rsq)
   
   data_task <- makeRegrTask(data = data_train, target = data_target)
-  data_lrn <- makeLearner("regr.svm", par.vals = list(kernel=kernel))
-  getParamSet(data_lrn)
+  data_lrn <- makeLearner("regr.svm", par.vals = list(kernel=kernel,
+                                                      scale=scale))
+  
   data_model_raw <- train(data_lrn, data_task)
   
   # kroswalidacja
@@ -93,10 +126,39 @@ svm_model<-function(data_train, data_test, data_target, kernel){
 }
 ```
 
+# Plan eksperymentu
+
+Model dopasujemy do danych na 3 sposoby:
+
+ - z domyślnymi parametrami
+ 
+ - bez skalowania
+ 
+ - dostrajając wybrane parametry
+ 
+Za każdym razem przeprowadzimy to działanie dla każdej z 4 wartości parametru `kernel`. Zostanie przeprowadzona kroswalidacja na zbiorze treningowym (z 5 iteracjami) oraz predykcja na zbiorze testowym.
+
+Trafność dopasowania modelu ocenimy za pomocą miar:
+
+ - RMSE (root mean square error) - błąd średniokwadratowy
+ 
+ - MAE (mean absolute error) - suma wartości bezwzględnych różnic między wartościami wektorów podzielona przez liczbę obserwacji.
+ 
+ - RSQ (r squared) 
+
+Wszystkie trzy miary określają wielkość popełnianego błędu, zatem będzie nam zależało na nich zminimalizowaniu.
+
+# Domyślne parametry
+
+Na początku model zostanie dopasowany do obydwu zbiorów z domyślnymi wartościami parametrów `cost`, `gamma` oraz `degree`, ale dla każdej możliwej wartości parametru `kernel`.
+
+
+
+
+
 ## Apartments
 
 ```{r apartments raw model}
-getParamSet("regr.svm")
 
 ap_results_linear<-svm_model(data_train= ap_train,
                       data_test = ap_test,
@@ -119,28 +181,56 @@ ap_results_sigmoid<-svm_model(data_train= ap_train,
 ```
 
 
-Wyniki kernel linear
+### Wyniki kernel linear
 
 ```{r apartments results linear}
 knitr::kable(ap_results_linear)
 ```
 
-Wyniki kernel polynomial
+### Wyniki kernel polynomial
 
 ```{r apartments results polynomial}
 knitr::kable(ap_results_polynomial)
 ```
 
-Wyniki kernel radial
+### Wyniki kernel radial
 
 ```{r apartments results radial}
 knitr::kable(ap_results_radial)
 ```
 
-Wyniki kernel sigmoid
+### Wyniki kernel sigmoid
 
 ```{r apartments results sigmoid}
 knitr::kable(ap_results_sigmoid)
+```
+
+### Podsumowanie
+
+```{r ggplot function}
+vis_results<-function(r1,r2,r3,r4){
+  results<-rbind(r1,r2,r3,r4)%>%
+    mutate(kernel=c("linear", "linear", "polynomial", "polynomial", "radial", "radial", "sigmoid", "sigmoid"),
+           type=rep(c("cv", "prediction"),4))
+    
+  plot<-ggplot(results, aes(x=1:8, y=RMSE, fill=kernel))+
+    geom_col()+
+    scale_x_discrete(limits=1:8, labels=rep(c("cv", "prediction"),4))+
+    xlab("")+
+    theme(axis.ticks=element_blank())+
+    theme_minimal()
+  
+  return(plot)
+}
+
+```
+
+
+W przypadku zbioru `apartments` z do domyślnymi parametrami najlepiej proradził sobie model z jądrem 'radial'.
+
+```{r vis results ap raw, fig.height=4, fig.width=8}
+vis_results(ap_results_linear, ap_results_polynomial, ap_results_radial, ap_results_sigmoid)
+
 ```
 
 ## Diabetes
@@ -169,42 +259,206 @@ dia_results_sigmoid<-svm_model(data_train= dia_train,
 ```
 
 
-Wyniki kernel linear
+### Wyniki kernel linear
 
 ```{r diabetes results linear}
 knitr::kable(dia_results_linear)
 ```
 
-Wyniki kernel polynomial
+### Wyniki kernel polynomial
 
 ```{r diabetes results polynomial}
 knitr::kable(dia_results_polynomial)
 ```
 
-Wyniki kernel radial
+### Wyniki kernel radial
 
 ```{r diabetes results radial}
 knitr::kable(dia_results_radial)
 ```
 
-Wyniki kernel sigmoid
+### Wyniki kernel sigmoid
 
 ```{r diabetes results sigmoid}
 knitr::kable(dia_results_sigmoid)
 ```
 
-# Normalizacja
+### Podsumowanie
 
-Sprawdzenie, czy skalowanie danych poprawy wyniki.
+W przypadku zbioru `diabetes` z domyślnymi parametrami wyniki modeli z kernelami *linear*, *polynomial* oraz *radial* są bardzo podobne, a wynik modelu z kernelem *sigmoid* zdecydowanie odstaje od reszty.
+
+```{r vis results dia raw, fig.height=4, fig.width=8}
+vis_results(dia_results_linear, dia_results_polynomial, dia_results_radial, dia_results_sigmoid)
+
+```
+
+# Brak skalowania danych
+
+Model SVM zawiera parametr `scale`, domyślenie ustawiony na *TRUE*. Skalowanie danych sprawia, że każda zmienna ma taki sam wpływ na 'odległość' obserwacji od siebie z przestrzeni zmiennych, i tymsamym na modelowanie.
+Sprawdźmy, co stanie się z wynikami, gdy ustawimy wartość parametru na *FALSE*
 
 
+## Apartments
+
+```{r apartments without normalisation model}
+ap_results_linear_wn<-svm_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="linear",
+                      scale=FALSE)
+ap_results_polynomial_wn<-svm_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="polynomial",
+                      scale=FALSE)
+ap_results_radial_wn<-svm_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="radial",
+                      scale=FALSE)
+ap_results_sigmoid_wn<-svm_model(data_train= ap_train,
+                      data_test = ap_test,
+                      data_target = "m2.price",
+                      kernel="sigmoid",
+                      scale=FALSE)
+
+
+```
+
+
+### Wyniki kernel linear
+
+```{r apartments results linear wn}
+knitr::kable(ap_results_linear_wn)
+```
+
+### Wyniki kernel polynomial
+
+```{r apartments results polynomial wn}
+knitr::kable(ap_results_polynomial_wn)
+```
+
+### Wyniki kernel radial
+
+```{r apartments results radial wn}
+knitr::kable(ap_results_radial_wn)
+```
+
+### Wyniki kernel sigmoid
+
+```{r apartments results sigmoid wn}
+knitr::kable(ap_results_sigmoid_wn)
+```
+
+### Podsumowanie
+
+Znaczne pogorszenie się wyników, zwłaszcza przy jądrze *polynomial* (różnica w rzędzie wielkości jest tak duża, że oryginalnych wyników nie widać nawet na wykresie), widoczne jest gołym okiem.
+
+```{r ggplot compare 2}
+compare_results<-function(r1,r2){
+  results<-rbind(r1,r2)%>%
+    mutate(scale=c("TRUE", "TRUE", "FALSE", "FALSE"),
+      type=rep(c("cv", "prediction"),2))
+    
+  plot<-ggplot(results, aes(x=1:4, y=RMSE, fill=scale))+
+    geom_col()+
+    scale_x_discrete(limits=1:4, labels=rep(c("cv", "prediction"),2))+
+    xlab("")+
+    theme(axis.ticks=element_blank())+
+    theme_minimal()
+  return(plot)
+}
+
+```
+
+```{r vis results ap wn}
+cr1_wn<-compare_results(ap_results_linear, ap_results_linear_wn)+ggtitle("Kernel Linear")
+cr2_wn<-compare_results(ap_results_polynomial, ap_results_polynomial_wn)+ggtitle("Kernel Polynomial")
+cr3_wn<-compare_results(ap_results_radial, ap_results_radial_wn)+ggtitle("Kernel Radial")
+cr4_wn<-compare_results(ap_results_sigmoid, ap_results_sigmoid_wn)+ggtitle("Kernel Sigmoid")
+grid.arrange(cr1_wn,cr2_wn, cr3_wn, cr4_wn, ncol=2)
+
+```
+
+## Diabetes
+
+
+```{r diabetes without normalisation model}
+
+dia_results_linear_wn<-svm_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="linear",
+                      scale=FALSE)
+dia_results_polynomial_wn<-svm_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="polynomial",
+                      scale=FALSE)
+dia_results_radial_wn<-svm_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="radial",
+                      scale=FALSE)
+dia_results_sigmoid_wn<-svm_model(data_train= dia_train,
+                      data_test = dia_test,
+                      data_target = "age",
+                      kernel="sigmoid",
+                      scale=FALSE)
+
+
+```
+
+
+### Wyniki kernel linear
+
+```{r diabetes results linear wn}
+knitr::kable(dia_results_linear_wn)
+```
+
+### Wyniki kernel polynomial
+
+```{r diabetes results polynomial wn}
+knitr::kable(dia_results_polynomial_wn)
+```
+
+### Wyniki kernel radial
+
+```{r diabetes results radial wn}
+knitr::kable(dia_results_radial_wn)
+```
+
+### Wyniki kernel sigmoid
+
+```{r diabetes results sigmoid wn}
+knitr::kable(dia_results_sigmoid_wn)
+```
+
+### Podsumowanie
+
+Wyniki kernela *polynomial* pogorszyły się w sposób dramatyczny (wynik ze skalowaniem nie jest nawet widoczny przy tej skali).
+Co ciekawe jednak, w przypadku zbioru `diabetes` przy kernelu *linear* i *radial* zmiany były bardzo niewielkie, przy kernelu *sigmoid* nastąpiła nawet dość znaczna poprawa!
+
+```{r vis results dia wn}
+cr1_wn<-compare_results(dia_results_linear, dia_results_linear_wn)+ggtitle("Kernel Linear")
+cr2_wn<-compare_results(dia_results_polynomial, dia_results_polynomial_wn)+ggtitle("Kernel Polynomial")
+cr3_wn<-compare_results(dia_results_radial, dia_results_radial_wn)+ggtitle("Kernel Radial")
+cr4_wn<-compare_results(dia_results_sigmoid, dia_results_sigmoid_wn)+ggtitle("Kernel Sigmoid")
+grid.arrange(cr1_wn,cr2_wn, cr3_wn, cr4_wn, ncol=2)
+
+```
 
 # Optymalizacja hiperparametrów
 
-W obydwu zbiorach przeprowadzone zostało strojenie parametrów:
- - cost,
- - gamma,
- - degree, 
+Na obydwu zbiorach przeprowadzimy teraz strojenie hiperparametrów:
+
+ - `cost`,
+ 
+ - `gamma`,
+ 
+ - `degree`,
+ 
+ podobnie jak poprzednio przy ustalonym kernelu.
  
 ```{r tuned function}
 svm_tuned_model<-function(data_train, data_test, data_target, kernel){
@@ -255,21 +509,20 @@ svm_tuned_model<-function(data_train, data_test, data_target, kernel){
 ## Apartments
 
 ```{r apartments tuned model}
-getParamSet("regr.svm")
 
-ap_results_linear<-svm_tuned_model(data_train= ap_train,
+ap_results_linear_tn<-svm_tuned_model(data_train= ap_train,
                       data_test = ap_test,
                       data_target = "m2.price",
                       kernel="linear")
-ap_results_polynomial<-svm_tuned_model(data_train= ap_train,
+ap_results_polynomial_tn<-svm_tuned_model(data_train= ap_train,
                       data_test = ap_test,
                       data_target = "m2.price",
                       kernel="polynomial")
-ap_results_radial<-svm_tuned_model(data_train= ap_train,
+ap_results_radial_tn<-svm_tuned_model(data_train= ap_train,
                       data_test = ap_test,
                       data_target = "m2.price",
                       kernel="radial")
-ap_results_sigmoid<-svm_tuned_model(data_train= ap_train,
+ap_results_sigmoid_tn<-svm_tuned_model(data_train= ap_train,
                       data_test = ap_test,
                       data_target = "m2.price",
                       kernel="sigmoid")
@@ -278,28 +531,58 @@ ap_results_sigmoid<-svm_tuned_model(data_train= ap_train,
 ```
 
 
-Wyniki kernel linear
+### Wyniki kernel linear
 
 ```{r apartments tuned results linear}
-knitr::kable(ap_results_linear)
+knitr::kable(ap_results_linear_tn)
 ```
 
-Wyniki kernel polynomial
+### Wyniki kernel polynomial
 
 ```{r apartments tuned results polynomial}
-knitr::kable(ap_results_polynomial)
+knitr::kable(ap_results_polynomial_tn)
 ```
 
-Wyniki kernel radial
+### Wyniki kernel radial
 
 ```{r apartments tuned results radial}
-knitr::kable(ap_results_radial)
+knitr::kable(ap_results_radial_tn)
 ```
 
-Wyniki kernel sigmoid
+### Wyniki kernel sigmoid
 
 ```{r apartments tuned results sigmoid}
-knitr::kable(ap_results_sigmoid)
+knitr::kable(ap_results_sigmoid_tn)
+```
+
+### Podsumowanie
+
+```{r ggplot compare 2 tuned}
+compare_results_tn<-function(r1,r2){
+  results<-rbind(r1,r2)%>%
+    mutate(tuned=c("FALSE", "FALSE", "TRUE", "TRUE"),
+      type=rep(c("cv", "prediction"),2))
+    
+  plot<-ggplot(results, aes(x=1:4, y=RMSE, fill=tuned))+
+    geom_col()+
+    scale_x_discrete(limits=1:4, labels=rep(c("cv", "prediction"),2))+
+    xlab("")+
+    theme(axis.ticks=element_blank())+
+    theme_minimal()
+  return(plot)
+}
+
+```
+
+Porównanie wyników modelu po strojeniu z modelem z domyślnymi parametrami pokazuje, że różnice między nimi są praktycznie niezauważalne. Świadczy to o bardzo dobrym dopasowaniu domyślnych parametrów.
+
+```{r vis results ap tn}
+cr1_tn<-compare_results_tn(ap_results_linear, ap_results_linear_tn)+ggtitle("Kernel Linear")
+cr2_tn<-compare_results_tn(ap_results_polynomial, ap_results_polynomial_tn)+ggtitle("Kernel Polynomial")
+cr3_tn<-compare_results_tn(ap_results_radial, ap_results_radial_tn)+ggtitle("Kernel Radial")
+cr4_tn<-compare_results_tn(ap_results_sigmoid, ap_results_sigmoid_tn)+ggtitle("Kernel Sigmoid")
+grid.arrange(cr1_tn,cr2_tn, cr3_tn, cr4_tn, ncol=2)
+
 ```
 
 ## Diabetes
@@ -307,19 +590,19 @@ knitr::kable(ap_results_sigmoid)
 
 ```{r diabetes tuned model}
 
-dia_results_linear<-svm_tuned_model(data_train= dia_train,
+dia_results_linear_tn<-svm_tuned_model(data_train= dia_train,
                       data_test = dia_test,
                       data_target = "age",
                       kernel="linear")
-dia_results_polynomial<-svm_tuned_model(data_train= dia_train,
+dia_results_polynomial_tn<-svm_tuned_model(data_train= dia_train,
                       data_test = dia_test,
                       data_target = "age",
                       kernel="polynomial")
-dia_results_radial<-svm_tuned_model(data_train= dia_train,
+dia_results_radial_tn<-svm_tuned_model(data_train= dia_train,
                       data_test = dia_test,
                       data_target = "age",
                       kernel="radial")
-dia_results_sigmoid<-svm_tuned_model(data_train= dia_train,
+dia_results_sigmoid_tn<-svm_tuned_model(data_train= dia_train,
                       data_test = dia_test,
                       data_target = "age",
                       kernel="sigmoid")
@@ -328,27 +611,58 @@ dia_results_sigmoid<-svm_tuned_model(data_train= dia_train,
 ```
 
 
-Wyniki kernel linear
+### Wyniki kernel linear
 
 ```{r diabetes tuned results linear}
-knitr::kable(dia_results_linear)
+knitr::kable(dia_results_linear_tn)
 ```
 
-Wyniki kernel polynomial
+### Wyniki kernel polynomial
 
 ```{r diabetes tuned results polynomial}
-knitr::kable(dia_results_polynomial)
+knitr::kable(dia_results_polynomial_tn)
 ```
 
-Wyniki kernel radial
+### Wyniki kernel radial
 
 ```{r diabetes tuned results radial}
-knitr::kable(dia_results_radial)
+knitr::kable(dia_results_radial_tn)
 ```
 
-Wyniki kernel sigmoid
+### Wyniki kernel sigmoid
 
 ```{r diabetes tuned results sigmoid}
-knitr::kable(dia_results_sigmoid)
+knitr::kable(dia_results_sigmoid_tn)
 ```
 
+### Podsumowanie
+
+Podobnie jak w pierwszym zbiorze, strojenie nie zrobiło tu wielkiej różnicy.
+
+```{r vis results dia tn}
+cr1_tn<-compare_results_tn(dia_results_linear, dia_results_linear_tn)+ggtitle("Kernel Linear")
+cr2_tn<-compare_results_tn(dia_results_polynomial, dia_results_polynomial_tn)+ggtitle("Kernel Polynomial")
+cr3_tn<-compare_results_tn(dia_results_radial, dia_results_radial_tn)+ggtitle("Kernel Radial")
+cr4_tn<-compare_results_tn(dia_results_sigmoid, dia_results_sigmoid_tn)+ggtitle("Kernel Sigmoid")
+grid.arrange(cr1_tn,cr2_tn, cr3_tn, cr4_tn, ncol=2)
+
+```
+
+# Wnioski
+
+## Skalowanie danych
+
+Stosując model SVM w większości przypadków warto skalować dane, zwłaszcza jeżeli posługujemy się kernelem *polynomial*, ponieważ niezrobienie tego może prowadzić do dramatycznie źle dopasowanego się modelu.
+
+## Strojenie
+
+W przypadku wybranych zbiorów *apartments* oraz *diabetes* strojenie hiperparametrów metodą random search nie spowodowało istotnej poprawy wyników, co świadczy o świetnym dobraniu domyślnych wartości parametrów. W ogólnym przypadku jednak warto stosować strojenie, aby upewnić się, że nie istnieją wartości lepiej dostosowane do zbioru danych, na którym trenujemy model.
+
+## Kernel
+
+W przypadku obu zbiorów kernel *radial* spisuje się zdecydowanie  najlepiej, słusznie jest on więc ustawiony jako parametr domyślny.
+
+# Źródła
+
+1. http://pyml.sourceforge.net/doc/howto.pdf
+2. https://www.r-bloggers.com/support-vector-machines-with-the-mlr-package/
