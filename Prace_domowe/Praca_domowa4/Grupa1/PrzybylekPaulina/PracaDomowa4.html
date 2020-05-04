@@ -13133,7 +13133,6 @@ div#notebook {
 <span class="kn">import</span> <span class="nn">category_encoders</span> <span class="k">as</span> <span class="nn">ce</span>
 <span class="c1">#!pip install rdata</span>
 <span class="kn">import</span> <span class="nn">rdata</span>
-<span class="kn">import</span> <span class="nn">dalex</span> <span class="k">as</span> <span class="nn">dx</span>
 <span class="kn">import</span> <span class="nn">sklearn</span>
 <span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">GridSearchCV</span><span class="p">,</span> <span class="n">RandomizedSearchCV</span><span class="p">,</span> <span class="n">train_test_split</span><span class="p">,</span> <span class="n">cross_val_score</span><span class="p">,</span> <span class="n">KFold</span>
 <span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">preprocessing</span>
@@ -13187,7 +13186,7 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">apartments</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
@@ -13203,7 +13202,7 @@ div#notebook {
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[7]:</div>
+    <div class="prompt output_prompt">Out[4]:</div>
 
 
 
@@ -13301,7 +13300,7 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[8]:</div>
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">apartments</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
@@ -13345,7 +13344,7 @@ memory usage: 40.6 KB
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Nie mamy brakujących wartości, a district jest zmienną celu, jednak musimy ją zakodować zanim przejdziemy do modelowania. Nie będziemy dalej przeprowadzać EDA, gdyż zadanie tego nie wymaga, dlatego przejdziemy od razu do zakodowania targetu i podziału danych na testowy i treningowy zbiór.</p>
+<p>Nie mamy brakujących wartości, a district uznajemy za zmienną celu (problem klasyfikacji), jednak musimy ją zakodować zanim przejdziemy do modelowania. Nie będziemy dalej przeprowadzać EDA, gdyż zadanie tego nie wymaga, dlatego przejdziemy od razu do zakodowania targetu i podziału danych na testowy i treningowy zbiór.</p>
 
 </div>
 </div>
@@ -13377,7 +13376,7 @@ memory usage: 40.6 KB
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># zobaczmy czy zbiór jest zbalansowany</span>
@@ -13400,13 +13399,13 @@ memory usage: 40.6 KB
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[10]:</div>
+    <div class="prompt output_prompt">Out[7]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f796d180e80&gt;</pre>
+<pre>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f7a321b86a0&gt;</pre>
 </div>
 
 </div>
@@ -13449,7 +13448,7 @@ memory usage: 40.6 KB
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[11]:</div>
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># tworzymy funkcję pomocniczą badającą wpływ standaryzacji na wyniki</span>
@@ -13596,7 +13595,7 @@ SVC with sigmoid kernel:
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[21]:</div>
+<div class="prompt input_prompt">In&nbsp;[11]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">test_metrics</span> <span class="o">=</span> <span class="n">dataModeling</span><span class="p">()</span>
@@ -13613,7 +13612,7 @@ SVC with sigmoid kernel:
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[21]:</div>
+    <div class="prompt output_prompt">Out[11]:</div>
 
 
 
@@ -13645,8 +13644,8 @@ SVC with sigmoid kernel:
     <tr>
       <th>0</th>
       <td>rbf</td>
-      <td>0.236763</td>
-      <td>0.314350</td>
+      <td>0.128355</td>
+      <td>0.209069</td>
     </tr>
     <tr>
       <th>1</th>
@@ -13657,8 +13656,8 @@ SVC with sigmoid kernel:
     <tr>
       <th>2</th>
       <td>linear</td>
-      <td>0.208939</td>
-      <td>0.286293</td>
+      <td>0.208815</td>
+      <td>0.282896</td>
     </tr>
     <tr>
       <th>3</th>
@@ -13669,8 +13668,8 @@ SVC with sigmoid kernel:
     <tr>
       <th>4</th>
       <td>poly</td>
-      <td>0.170635</td>
-      <td>0.256737</td>
+      <td>0.134398</td>
+      <td>0.211777</td>
     </tr>
     <tr>
       <th>5</th>
@@ -13681,8 +13680,8 @@ SVC with sigmoid kernel:
     <tr>
       <th>6</th>
       <td>sigmoid</td>
-      <td>0.130291</td>
-      <td>0.219476</td>
+      <td>-0.110584</td>
+      <td>0.025000</td>
     </tr>
     <tr>
       <th>7</th>
@@ -13789,7 +13788,7 @@ SVC with sigmoid kernel:
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[17]:</div>
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">dict_of_best_classifiers</span> <span class="o">=</span> <span class="n">tuner</span><span class="p">(</span><span class="n">data_train</span><span class="p">,</span> <span class="n">target_train</span><span class="p">)</span>
@@ -13869,7 +13868,7 @@ The score: 0.262250
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[19]:</div>
+<div class="prompt input_prompt">In&nbsp;[16]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># tworzymy pipeline z najlepszymy modelami</span>
@@ -13889,7 +13888,7 @@ The score: 0.262250
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[19]:</div>
+    <div class="prompt output_prompt">Out[16]:</div>
 
 
 
@@ -13963,7 +13962,7 @@ The score: 0.262250
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[22]:</div>
+<div class="prompt input_prompt">In&nbsp;[17]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">test_metrics</span>
@@ -13979,7 +13978,7 @@ The score: 0.262250
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[22]:</div>
+    <div class="prompt output_prompt">Out[17]:</div>
 
 
 
@@ -14011,8 +14010,8 @@ The score: 0.262250
     <tr>
       <th>0</th>
       <td>rbf</td>
-      <td>0.236763</td>
-      <td>0.314350</td>
+      <td>0.128355</td>
+      <td>0.209069</td>
     </tr>
     <tr>
       <th>1</th>
@@ -14023,8 +14022,8 @@ The score: 0.262250
     <tr>
       <th>2</th>
       <td>linear</td>
-      <td>0.208939</td>
-      <td>0.286293</td>
+      <td>0.208815</td>
+      <td>0.282896</td>
     </tr>
     <tr>
       <th>3</th>
@@ -14035,8 +14034,8 @@ The score: 0.262250
     <tr>
       <th>4</th>
       <td>poly</td>
-      <td>0.170635</td>
-      <td>0.256737</td>
+      <td>0.134398</td>
+      <td>0.211777</td>
     </tr>
     <tr>
       <th>5</th>
@@ -14047,8 +14046,8 @@ The score: 0.262250
     <tr>
       <th>6</th>
       <td>sigmoid</td>
-      <td>0.130291</td>
-      <td>0.219476</td>
+      <td>-0.110584</td>
+      <td>0.025000</td>
     </tr>
     <tr>
       <th>7</th>
@@ -14093,7 +14092,7 @@ The score: 0.262250
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[23]:</div>
+<div class="prompt input_prompt">In&nbsp;[18]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">wine</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;wine_dataset.csv&#39;</span><span class="p">)</span>
@@ -14110,7 +14109,7 @@ The score: 0.262250
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[23]:</div>
+    <div class="prompt output_prompt">Out[18]:</div>
 
 
 
@@ -14248,7 +14247,7 @@ The score: 0.262250
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[24]:</div>
+<div class="prompt input_prompt">In&nbsp;[19]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">wine</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
@@ -14321,7 +14320,7 @@ memory usage: 19.6+ KB
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[36]:</div>
+<div class="prompt input_prompt">In&nbsp;[21]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># sprawdzamy zbalansowanie zbioru</span>
@@ -14338,13 +14337,13 @@ memory usage: 19.6+ KB
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[36]:</div>
+    <div class="prompt output_prompt">Out[21]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f796ba9e6d8&gt;</pre>
+<pre>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f7a313e8748&gt;</pre>
 </div>
 
 </div>
@@ -14387,7 +14386,7 @@ memory usage: 19.6+ KB
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[37]:</div>
+<div class="prompt input_prompt">In&nbsp;[22]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">examineTransformingInfluence</span><span class="p">(</span><span class="n">svc_rbf</span><span class="p">,</span> <span class="s1">&#39;SVC with rbf kernel&#39;</span><span class="p">,</span> <span class="n">balanced_accuracy</span><span class="p">)</span>
@@ -14441,7 +14440,7 @@ SVC with sigmoid kernel:
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[38]:</div>
+<div class="prompt input_prompt">In&nbsp;[23]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">test_metrics_wine</span> <span class="o">=</span> <span class="n">dataModeling</span><span class="p">()</span>
@@ -14458,7 +14457,7 @@ SVC with sigmoid kernel:
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[38]:</div>
+    <div class="prompt output_prompt">Out[23]:</div>
 
 
 
@@ -14582,7 +14581,7 @@ SVC with sigmoid kernel:
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[44]:</div>
+<div class="prompt input_prompt">In&nbsp;[25]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">dict_of_best_classifiers_wine</span> <span class="o">=</span> <span class="n">tuner</span><span class="p">(</span><span class="n">data_train</span><span class="p">,</span> <span class="n">target_train</span><span class="p">)</span>
@@ -14637,7 +14636,7 @@ The score: 0.988889
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[45]:</div>
+<div class="prompt input_prompt">In&nbsp;[26]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># tworzymy pipeline z najlepszymy modelami</span>
@@ -14657,7 +14656,7 @@ The score: 0.988889
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[45]:</div>
+    <div class="prompt output_prompt">Out[26]:</div>
 
 
 
@@ -14723,7 +14722,7 @@ The score: 0.988889
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[42]:</div>
+<div class="prompt input_prompt">In&nbsp;[27]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># dla porównania poprzednie wyniki</span>
@@ -14740,7 +14739,7 @@ The score: 0.988889
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[42]:</div>
+    <div class="prompt output_prompt">Out[27]:</div>
 
 
 
