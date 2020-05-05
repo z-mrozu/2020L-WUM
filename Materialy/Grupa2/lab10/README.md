@@ -1,0 +1,9 @@
+### Link do spotkania: https://us04web.zoom.us/j/72330083463
+### Meeting ID: 723 3008 3463
+
+#### Agenda:
+18:00 **Prezentacje projektów**
+* Każda grupa będzie miała ok. 7 minut na prezentacje + 3 minuty na ewentualne pytania.
+* Swoje prezentacje proszę wrzucić do folderu Projekty/Projekt2/Grupa2/NazwiskaCzłonkóWGrupy/...
+
+19:00 **Konsultacje**
