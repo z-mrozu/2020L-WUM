@@ -1,0 +1,156 @@
+---
+title: "WUM - Projekt 2 - EDA"
+author: "Konrad Komisarczyk, Mikołaj Malec, Patryk Wrona"
+date: "5 maja 2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true
+---
+
+
+
+```{r setup, include=FALSE}
+options(stringsAsFactors = FALSE)
+
+library(dplyr)
+library(ggplot2)
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+
+
+# Analiza wstępna zbioru danych i opis
+
+W niniejszym projekcie będziemy dokonywać klasteryzacji zbioru reigijnych ksiąg azjatyckich oraz biblijnych. Zagadnienie to wymaga więcej kreatywności niż zagadnienia regresji i klasyfikacji.
+
+W tej cześci projektu, czyli Exploratory Data Analysis, postaramy się jak najbliżej przyjrzeć się zbiorowi danych i możliwości jakie ze sobą niesie.
+
+
+Najpierw załadujmy zbiór danych:
+
+```{r}
+books <- readRDS("./books.RDS")
+```
+
+Spójrzmy na parę pierwszych obserwacji:
+
+```{r}
+head(books)
+```
+
+W pierwszej kolumnie znajdują się odpowiednie rozdziały z danej księgi - w tym przypadku z księgi Buddyzmu. W kolejnych kolumnach jest liczba wystąpień danego słowa w obserwacji będącej chapterem(rozdziałem) rozważanej księgi.
+
+Sprawdzimy czy w zbiorze danych są jakieś braki (chociaż wątpię):
+
+```{r}
+sum(is.na(books))
+```
+
+Zatem w danych nie ma braków ni stąd ni zowąd - zbiory danych są dobrze zdefiniowane.
+
+Sprawdźmy ile mamy ksiąg, a w nich rozdziałów:
+
+```{r}
+table(books$X)
+dim(books) #
+```
+
+Mamy 8 ksiąg, 590 rozdziałów, a liczba unikalnych słówek(kolumn) to 8266, ponieważ nie liczymy pierwszej kolumny.
+
+Poniżej przedstawiamy liczbę rozdziałów (obserwacji) dla każdej księgi tak jak występują one z wbiorze danych:
+
+- Buddhism 46
+- TaoTeChing 81
+- Upanishad 162
+- YogaSutra 189
+- BookOfProverb 31
+- BookOfEcclesiastes 12
+- BookOfEccleasiasticus 50
+- BookOfWisdom 19
+
+Sprawdzimy czy księgi różnią się objętościowo:
+
+```{r}
+aux <- as.matrix(books[,2:ncol(books)])
+# sumuje słowa w każdym rozdziale:
+liczba_slow <- apply(aux, 1, sum)
+hist(liczba_slow, breaks = 100, main = "Liczba slow w ksiegach", 
+     xlab = "liczba slow",
+     ylab = "czsstotliwosc")
+
+```
+
+Widać, że przeważają księgi, których rozdziały mają do 100 słów. Uwidacznia się również inna grupa - tych rozdziałów, które 200-400 słów. Być może będzie to cenna wskazówka w przyszłości.
+
+
+
+# Problemy na drodze do klasteryzacji
+
+Niestety **klasteryzacja na tak wysoce wymiarowym zbiorze danych nie jest dobrym pomysłem** - musimy w pewien sposób zagregować nasze dane i **zmniejszyć ich wymiar**, aby móc w 2. kamieniu milowym rozpocząć wstępne modelowanie.
+
+Oczywiście istnieją banalne sposoby agregacji typu *zliczanie ilości słów* w rozdziałach ksiąg, albo obliczanie *średniej długości słowa*. Jednakże, chcielibyśmy poszukać tych mniej oczywistych przekształceń. Rozważymy:
+
+- zliczanie liczby rzeczowników, czasowników, przymiotników i przysłówków
+- zliczanie liczby słówek o zadanej emocji spośród 7 wybranych typów emocji
+
+Tutaj tylko ładujemy przekształcone zbiory danych. Kod pomocny w celu wygenerowania ich jest w pliku *eda2.R*.
+
+# Części mowy w poszczególnych księgach
+
+W internecie łatwo znaleźć odpowiednie zbiory danych dotyczących słówek i odpowiadających im części mowy w języku angielskim. Odpowiednio zagregowaliśmy dane i otrzymaliśmy następujący rezultat:
+
+```{r}
+books2 <- readRDS("./speech_parts_aggregated.RDS")
+head(books2, 10)
+tail(books2, 10)
+```
+
+Na pierwszy rzut oka, w Buddhism nie ma za wiele przysłówków (adverb), a w BookOfWisdom jest ich procentowo więcej. 
+
+Można również dostrzec, że w BookOfWisdom jest więcej słówek jako takich - te rozdziały są 'większe objętościowo'. Postaramy się wziąć to pod uwagę *w następnym kamieniu milowym*, a samo zliczanie słówek jest łatwe w porównaniu do zastosowanych w tym projekcie przekształceń danych.
+
+
+# Emocje w poszczególnych księgach
+
+W internecie znaleźliśmy zbiór słówek wraz z przyporządkowanym im emocjom. Niestety, zaledwie 10% słówek w naszych księgach miało zdefiniowane emocje - trudno się dziwić, w tych księgach są archaiczne słowa zazwyczaj nie analizowane w dzisiejszych czasach. Miejsmy nadzieję, że te 10% będzie reprezentatywne.
+
+Odpowiednio zagregowaliśmy dane i otrzymaliśmy następujący rezultat:
+
+
+```{r}
+emotions <- readRDS("./emotions.RDS")
+head(emotions, 20)
+tail(emotions, 20)
+```
+
+Możemy zauważyć, że Księdze Buddyzmu emocje są wymieszane, natomiast w Księdze Mądrości dominuje emocja "happy", ale również "fear". W Księdze Mądrości pojawia się również 'disgust', której to emocji brakuje w Księdze Buddyzmu.
+
+
+# Wnioski
+
+W agregacji wzlędem emocji mamy 7 kolumn - na pierwszy rzut można było dostrzec różnice między Księgą Buddyzmu a Księgą Mądrości - być może dzieki takiemu przekształceniu danych będziemy mogli dokonać klasteryzacji.
+
+W agregacji dotyczącej cześci mowy zamiast 8266 kolumn zostały nam tylko 4 - idealnie! :) 
+
+Po sprawdzeniu że w zbiorze jest różnorodność jeśli chodzi o liczbę słów w danym rozdziale księgi, nie wykonywaliśmy wykresów np. 3D, na które przyjdzie czas w następnym kamieniu milowym. **Jeden krok do klasteryzacji może polegać na podziale ksiąg na małe i duże objętościowo** jednakże ważne jest aby nie korzystać z tego faktu przy używaniu przekształconego zbioru danych dla emocji i części mowy - oczywistym jest fakt, że przedstawiając typowy wykres 3D, księgi większe zazwyczaj będą miały więcej słów o danych emocjach, zatem będa bardziej oddalone od początku układu współrzędnych. Taki wykres dawałby złudną nadzieję, że te większe księgi są bardziej nacechowane emocjonalnie.
+
+W następnym kamieniu milowym dotyczącym **inżynierii cech i wstępnego modelowania** postaramy się odpowiednio przeskalować księgi, aby emocje i cześci mowy były zdefiniowane np. na 50 albo 100 słów.
+
+Oczywiście nic nie stoi na przeszkodzie, aby połączyć nasze 2 bardziej zaawansowane przekształcenia; przy klasteryzacji patrzeć zarówno na części mowy jak i emocje wzbudzające odpowiednie słowa zawarte w tekstach ksiąg. Możliwe, że efekt będzie pozytywny.
+
+# Bibliografia/źródła
+
+- (części mowy)[http://www.ashley-bovan.co.uk/words/partsofspeech.html]
+- (emocje)[https://www.kaggle.com/iwilldoit/emotions-sensor-data-set/data]
+
+
+# Oświadczenie
+
+Potwierdzam samodzielność powyższej pracy oraz niekorzystanie przeze mnie z niedozwolonych źródeł.
+
+
