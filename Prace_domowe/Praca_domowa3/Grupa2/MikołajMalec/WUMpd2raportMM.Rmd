@@ -1,0 +1,533 @@
+---
+
+title: "weatherAUS - rain tommorow prediction"
+
+author: "Mikołaj Malec"
+
+date: "4/6/2020"
+
+output: html_document
+
+---
+
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library( dplyr)
+
+set.seed(123)
+
+```
+
+## Loading data
+
+
+
+This dataset has daily weather observations from many Australian weather stations.
+
+The target variable RainTomorrow means: Did it rain the next day?
+
+```{r loading data}
+
+library( rattle.data)
+
+dirty_df <- rattle.data::weatherAUS
+
+orginal_dim <- dim(dirty_df)
+
+```
+
+
+
+## Cutting data
+
+
+
+There is no need for rows with missing target and columns with already predicted rain risk.
+
+Also columns with many missing data aren't helpful.
+
+Wind direction may be important, but they have very little correlation with target and others categories. To simplify the model wind direction were removed.
+
+There are to many locations, they were mean encoded at this stage.
+
+Year and day aren't that important and could lead to overfitting. Date was reduced to months. In the left data there are 0.79 full rows. There is no need to fill missing vales because remaing data is still huge.
+
+
+
+In the end 8 columns were deleted and 77% of originals rows from loaded data remained.
+
+```{r cut data}
+#exploration
+
+library( DataExplorer)
+
+#DataExplorer::create_report(dirty_df)
+
+
+
+DataExplorer::plot_missing( dirty_df)
+
+#rows with missing target
+
+dirty_df<- dirty_df[ complete.cases( dirty_df$RainTomorrow),]
+
+#column with risk of rain tomorrow
+
+dirty_df$RISK_MM <- NULL
+
+
+
+#cut columns with more than 37% missing values:
+
+#Cloud9am, Cloud3pm, Evaporation, Sunshine
+
+dirty_df[,which( colnames(dirty_df) %in% c("Cloud9am", "Cloud3pm", "Evaporation", "Sunshine"))] <- NULL
+
+
+
+
+
+
+
+info <- DataExplorer::introduce(dirty_df)
+
+info$complete_rows / info$rows
+
+
+
+#only rows with no missing value
+
+dirty_df <- dirty_df[ complete.cases(dirty_df),]
+
+
+
+#WindGustDir, WindDir9am, WindDir3pm very little correlation with target
+
+dirty_df[,which( colnames(dirty_df) %in% c("WindGustDir", "WindDir9am", "WindDir3pm"))] <- NULL
+
+
+
+#Location
+
+dirty_df$Mean_raintommorow_bylocation <- ave( as.numeric( dirty_df$RainTomorrow) - 1, dirty_df$Location)
+
+dirty_df$Location <- NULL
+
+
+
+#Date
+
+months <- as.character( dirty_df$Date) %>% substr(6,7)
+
+dirty_df$Month <- as.numeric( months)
+
+dirty_df$Date <- NULL
+
+
+
+
+
+DataExplorer::plot_correlation( dirty_df)
+
+
+
+#summary of df_dirty
+
+data.frame(list(orginal = orginal_dim),
+
+                final = dim(dirty_df),
+
+                diff = orginal_dim - dim(dirty_df),
+
+                proc = dim(dirty_df) / orginal_dim,
+
+           row.names = c("Rows", "Columns"))
+
+```
+
+
+
+## Normalization and splitting to trying and test
+
+
+
+In general preparation for ML quantitive column were min max normalized separately. Only categorical column *RainToday* and *RainTomorrow* were one encoded:  0 = No, 1 = Yes. Bellow training and test were good sliced as the distribution in both are mostly the same.
+
+
+
+
+
+```{r cleaning data (normalisation)}
+
+#stats
+
+str( dirty_df)
+
+
+
+#is this important for example to temperature should be normalized together? I don't know but i will do them separately
+
+min_max_norm <- function(x) {
+
+  (x - min(x)) / (max(x) - min(x))
+
+}
+
+
+
+nonnum <- which( names(dirty_df) %in% c("RainToday","RainTomorrow"))
+
+clean_df <- as.data.frame(lapply(dirty_df[-nonnum], min_max_norm))
+
+
+
+clean_df$RainToday <- as.numeric( dirty_df$RainToday) -1
+
+
+
+summary( clean_df)
+
+
+
+target <- as.numeric( dirty_df$RainTomorrow) -1
+
+
+
+##### training and test data 4:1
+
+n <-  length(clean_df[,1])
+
+random_ind <- sample( 1:n)
+
+test_ind <- random_ind[ 1:round(n/5)]
+
+train_ind <- random_ind[ (round(n/5)+1):n]
+
+
+
+test_df <- clean_df[test_ind,]
+
+test_lab <- target[test_ind]
+
+
+
+train_df <- clean_df[train_ind,]
+
+train_lab <- target[train_ind]
+
+
+
+#mostly the same distribution: quantitive
+
+DataExplorer::plot_density(test_df, title = "test_df")
+
+DataExplorer::plot_density(train_df, title = "train_df")
+
+
+
+#mostly the same distribution: categorical
+
+n_test <- length( test_lab)
+
+n_train <- length( train_lab)
+
+RainToday_percentage <- c( sum( test_df$RainToday) / n_test, 
+
+                sum( train_df$RainToday ) / n_train)
+
+Labels_percentage <- c( sum( test_lab) / n_test, 
+
+                sum( train_lab ) / n_train)
+
+data.frame( RainToday_percentage, Labels_percentage, row.names = c("test","train"))
+
+```
+
+## Measures
+
+
+
+*Carnet* has functions for precision, recall and F1. Custom *accuracy* function were created. All function get confusion matrix as parameter. Also it was calculated accuracy of model, which always says that it won't rain next day. It is comparison for other models.
+
+```{r measures}
+
+library(caret)
+
+#precision(conf, relevant = "1")
+
+#recall( conf, relevant = "1")
+
+#F_meas( conf, relevant = "1")
+
+
+
+accuracy <- function(conf){
+
+  sum( diag(conf)) / sum( conf)
+
+}
+
+
+
+#what if model suggested that it always will be sun next day
+
+Accuracy_of_dum_model <- sum( 1 - test_lab) / length( test_lab)
+
+Accuracy_of_dum_model
+
+```
+
+## Models
+
+
+
+Three models were used: decision tree, k nearest neighbours and naive bayens.
+
+
+
+Decision tree, from package *rpart*, is set with parameter cp = 0.01, with this parameter set to 0.05 it's reduced to one question about humidity at 3 pm. Only firts is shown. 
+
+
+
+K nearest, from package *class*, neighbours was tested with k parameter in range from 1 to 10, best accuracy was for 9. Mesures for k = 9 are shown. 
+
+
+
+Naive bayens, from package *mlr*, was tested with *laplace* parameter set to different values, in theory it should smother the probability but even for very big numbers model behaved in the same way. m
+
+Measures for laplace = 0 are shown.
+
+```{r models}
+
+##### tree
+
+library( rpart)
+
+
+
+train_lab_df_tree <- cbind( train_df, train_lab)
+
+
+
+#tree <- rpart( train_lab~., train_lab_df_tree, method = "class",
+
+#               control = rpart.control(cp = 0.05))
+
+#pred_tree <- predict( tree, test_df, method ='class')[,2]
+
+#conf_tree <- table( if_else( pred_tree > 0.5, 1, 0), test_lab)
+
+
+
+
+
+tree <- rpart( train_lab~., train_lab_df_tree, method = "class",
+
+               control = rpart.control(cp = 0.01))
+
+pred_tree <- predict( tree, test_df, method ='class')[,2]
+
+conf_tree <- table( if_else( pred_tree > 0.5, 1, 0), test_lab)
+
+
+
+rpart.plot::rpart.plot( tree) 
+
+
+
+#measures
+
+acc_tree <- accuracy( conf_tree)
+
+prec_tree <- precision(conf_tree, relevant = "1")
+
+rec_tree <- recall( conf_tree, relevant = "1")
+
+f1_tree <- F_meas( conf_tree, relevant = "1")
+
+  
+
+
+
+
+
+
+
+##### knn
+
+library(class)
+
+#num <- 5
+
+#accs_knn <- rep(0,num)
+
+#confs_knn <- list()
+
+#for (k in 1:num){
+
+#  knn1 <- knn( train_df, test_df, train_lab, k=k)  
+
+#  conf <- table(knn1, test_lab)
+
+#  confs_knn[[k]] <- conf  
+
+#  accs_knn[k] <- accuracy( conf)
+
+#}
+
+
+
+knn <- knn( train_df, test_df, train_lab, k=9)  
+
+conf_knn <- table(knn, test_lab)
+
+
+
+#measures
+
+acc_knn <- accuracy( conf_knn)
+
+prec_knn <- precision(conf_knn, relevant = "1")
+
+rec_knn <- recall( conf_knn, relevant = "1")
+
+f1_knn <- F_meas( conf_knn, relevant = "1")
+
+
+
+
+
+
+
+
+
+
+
+##### Naive Bayens
+
+library(mlr)
+
+
+
+train_lab_df_NB <- cbind( train_df, factor( train_lab))
+
+names( train_lab_df_NB) <- c( names(train_df), "train_lab")
+
+
+
+#ls_i <- c(0,1,2,4,8,16,32,64)
+
+#accs_nb <- rep(0, length(ls_i))
+
+#confs_nb <- list()
+
+#task <- makeClassifTask( data = train_lab_df_NB, target = "train_lab")
+
+#for (i in 1:length(ls_i)) {
+
+#  select_model <- makeLearner("classif.naiveBayes", laplace =ln_i)
+
+#  NB_mlr = train(select_model, task)
+
+#  pred_nb <- as.data.frame( predict( NB_mlr, newdata = test_df))[,1]
+
+#  conf_nb <- table( pred_nb, test_lab)
+
+#  confs_nb[[i]] <- conf_nb
+
+#  accs_nb[i] <- accuracy( conf_nb)
+
+#}
+
+
+
+task <- makeClassifTask( data = train_lab_df_NB, target = "train_lab")
+
+select_model <- makeLearner("classif.naiveBayes", laplace =0)
+
+NB_mlr = train(select_model, task)
+
+pred_nb <- as.data.frame( predict( NB_mlr, newdata = test_df))[,1]
+
+conf_nb <- table( pred_nb, test_lab)
+
+
+
+#measures
+
+acc_nb <- accuracy( conf_nb)
+
+prec_nb <- precision(conf_nb, relevant = "1")
+
+rec_nb <- recall( conf_nb, relevant = "1")
+
+f1_nb <- F_meas( conf_nb, relevant = "1")
+
+
+
+
+
+
+
+
+
+#summary
+
+Accuracy <- c( acc_tree, acc_knn, acc_nb)
+
+Precision <- c( prec_tree, prec_knn, prec_nb)
+
+Recall <- c( rec_tree, prec_knn, prec_nb)
+
+F1_score <- c( f1_tree, f1_knn, f1_nb)
+
+
+
+data.frame( Accuracy, Precision, Recall, F1_score, row.names = c("Tree","k-nearest","Naive_Bayens"))
+
+Accuracy_of_dum_model
+
+```
+
+
+
+## Summary of models and discussion
+
+
+
+Tree model has very high precision, but low on recall. In general, it's asking only one question: is humidity at 3 pm high. It's no big discovery, humans use this to predict weather for a very long time. But as the precision and recall suggest, if humidity is high rain should be expiated, but don't relay only on that.
+
+
+
+K nearest neighbours was the best model overall.
+
+
+
+Naive bayens was the worst of the three. Maybe because categories aren't very correlated and naive  assumption that categories aren't independent from encoded, wich in weather prediction isn't good assumption.
+
+
+
+Overall accuracy of models haven't increased significantly from dum model. But accuracy isn't good measurement for this data because there is high proportion of days without rain. Also weather prediction is hard because there are many crucial elements ( some not in data like cloud coverage) to work with and making prediction only on data from one day and location isn't enough.
+
+
+
+Future models could be trained for every location separately, for example random forest, or by climate in that region, but more data would be needed. Location is maybe crucial as the north and the south have raining season are in the different parts of the year.
+
+
+
+```{r seesion info}
+sessionInfo()
+```
+
+
+
+
+
+
+
+
+

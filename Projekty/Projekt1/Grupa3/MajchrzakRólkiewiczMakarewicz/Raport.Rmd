@@ -1,0 +1,1156 @@
+---
+title: "Raport końcowy"
+author: "Niewiasty WRS - Agata Makarewicz, Martyna Majchrzak, Renata Rólkiewicz"
+date: "25 04 2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: united
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(dplyr)
+library(ggplot2)
+library(DataExplorer)
+library(gridExtra)
+library(visdat)
+library(mlr3)
+library(naniar)
+library(mlr3learners)
+library(mlr3measures)
+library(mlr3tuning)
+library(mice)
+library(mlr3viz)
+library(factoextra)
+library(data.table)
+library(knitr)
+library(paradox)
+#devtools::install_github("DominikRafacz/auprc")
+library(auprc)
+
+```
+
+# Wprowadzenie
+
+Celem raportu jest przedstawienie i porównanie wyników predykcji różnych klasyfikatorów na konkretnym zbiorze danych.
+Praca składała się z 3 etapów:
+
+1) analiza eksploracyjna (EDA)
+2) wstępne modelowanie
+3) strojenie hiperparametrów i ostateczne modelowanie
+
+## Zbiór danych
+
+Wybrany zbiór danych zawiera informacje na temat przypadków raka piersi u kobiet z Wisconsin, USA, zebranych w 1995 roku. Przedstawione cechy zostały wyliczone na podstawie cyfrowych obrazów próbek pobranych z tkanki piersi pacjentki.
+Ramka została pobrana ze [strony datahub ](https://datahub.io/machine-learning/breast-w#data-cl), pochodzą z OpenML (https://www.openml.org/d/15).
+
+
+```{r data, cache=TRUE}
+# wczytanie zbioru danych 
+
+data_breast <- read.csv("breast-w_csv.csv", sep=",")
+
+#data_breast <- read.csv("C:\\Users\\acer\\Desktop\\WUM\\NiewiastyWRS\\breast-w_csv.csv", sep=",")
+data_breast <- read.csv("breast-w_csv.csv", sep = ",")
+
+
+knitr::kable(head(data_breast), caption = "Tab.1. Fragment ramki danych")
+```
+
+Poniżej przedstawione zostało pokrótce znaczenie poszczególnych cech:
+
+- 1 - Clump_Thickness	- grubość grudki, określa czy komórki są jedno- / wielowarstwowe	
+- 2 - Cell_Size_Uniformity - regularność/jednorodność wielkości komórek
+- 3 - Cell_Shape_Uniformity	- regularność/jednorodność kształtu komórek
+- 4 - Marginal_Adhesion	-	zrosty na brzegach
+- 5 - Single_Epi_Cell_Size - epithelial cells, czy komórki nabłonkowe są znacznie powiększone
+- 6 - Bare_Nuclei	- proporcja komórek nieotoczonych cytoplazmą do tych, które są nią otoczone
+- 7 - Bland_Chromatin	-	jednolitość tekstury jądra (od drobnego do grubego)
+- 8 - Normal_Nucleoli	- określa czy jądra komórek są małe i ledwo widoczne czy duże i dobrze widoczne
+- 9 - Mitoses -	mitozy
+- 10 - Class - czy rak jest łagodny (benign) czy złośliwy (malignant)
+
+Wszystkie zmienne za wyjątkiem zmiennej celu zawierają wartości od 1 do 10 opisujące daną cechę. Poniżej przedstawione zostały proste statystyki tych danych.
+
+```{r data statistics}
+knitr::kable(summary(data_breast), caption = "Tab.2. Statystyki danych")
+```
+
+# EDA
+
+## Rozkłady zmiennych
+
+Struktura danych przedstawia się następująco:
+
+```{r str}
+str(data_breast)
+```
+
+Większość zmiennych stanowią zmienne dyskretne o następujących rozkładach:
+
+```{r density, fig.height=4, fig.width=8}
+
+plot1 <- ggplot(data_breast, aes(x=data_breast$Bare_Nuclei)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Bare_Nuclei", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot2 <- ggplot(data_breast, aes(x=data_breast$Bland_Chromatin)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Bland_Chromatin", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot3 <- ggplot(data_breast, aes(x=data_breast$Cell_Shape_Uniformity)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Cell_Shape_Uniformity", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot4 <- ggplot(data_breast, aes(x=data_breast$Cell_Size_Uniformity)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Cell_Size_Uniformity", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot5 <- ggplot(data_breast, aes(x=data_breast$Clump_Thickness)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Clump_Thickness", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot6 <- ggplot(data_breast, aes(x=data_breast$Marginal_Adhesion)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Marginal_Adhesion", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot7 <- ggplot(data_breast, aes(x=data_breast$Mitoses)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Mitoses", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot8 <- ggplot(data_breast, aes(x=data_breast$Normal_Nucleoli)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Normal_Nucleoli", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot9 <- ggplot(data_breast, aes(x=data_breast$Single_Epi_Cell_Size)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Single_Epi_Cell_Size", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+grid.arrange(plot1,plot2, ncol=2)
+grid.arrange(plot3,plot4, ncol=2)
+grid.arrange(plot5,plot6, ncol=2)
+grid.arrange(plot7,plot8, ncol=2)
+plot9
+
+```
+
+Widoczna jest tendencja do przyjmowania rozkładów bardzo skośnych, lub takich w których najczęściej przyjmowane wartości to najmniejsza (1) i największa (10).
+
+Interesujące jest również to, jak te rozkłady wyglądają po podziale względem zmiennej celu - Class. Poniżej zaprezentowane zostały wykresy boxplot względem zmiennej Class oraz zmiennej Mitoses.
+
+```{r boxplot, fig.height=10, fig.width=10}
+plot_boxplot(data_breast, by = "Class", title="Boxploty względem Class", ncol = 3)
+plot_boxplot(data_breast, by = "Mitoses", title = "Boxploty względem Mitoses")
+```
+
+Jedyną zmienną kategoryczą jest nasza zmienna celu, czyli Class.
+
+```{r target}
+# rozkład zmiennej celu
+plot_bar(data_breast)
+```
+
+Widzimy, że przypadków złośliwych jest o połowę mniej niż przypadków łagodnych. Stanowią one około 1/3 wszystkich rekordów, a więc dane są dość niezbalansowane.
+
+## Braki danych
+
+W danych znajduje się 16 rekordów z brakującymi danymi, wszystkie w kolumnie Bare_Nuclei. Ich imputacja zostanie uwzględniona przy trenowaniu modeli.
+
+```{r missing summary}
+miss_var_summary(data_breast)
+```
+
+## Korelacje między zmiennymi 
+
+Tabela przedstawiająca macierz korelacji pomiędzy zmiennymi wskazuje na bardzo dużą zależność ich od siebie. Poziom zmiennej celu Class_malignant jest widocznie skorelowany ze wszystkimi zmiennymi w zbiorze (naturalnie oprócz Class_benign). Zmienna Mitoses odstaje tu w pewnym stopniu od reszty, gdyż jej korelacja wynosi ok. 0.30-0.40, podczas gdy korelacje pozostałych zmiennych zwykle przekraczają 0.6 i osiągają nawet do 0.82.
+
+```{r correlation, fig.height=10, fig.width=10}
+plot_correlation(na.omit(data_breast), title = "Korelacje między zmiennymi")
+```
+
+## Wybrane zależności
+
+Silne zależności między zmiennymi możemy zaobserwować na przykładzie Cell_Size_Uniformity oraz Cell_Shape_Uniformity:
+
+```{r dependencies}
+ggplot(data_breast, aes(x=Cell_Size_Uniformity, y=Cell_Shape_Uniformity)) +
+  geom_point() +
+  geom_smooth()
+
+ggplot(data_breast, aes(y=Cell_Shape_Uniformity,
+                        group=Cell_Size_Uniformity,
+                        x=Cell_Size_Uniformity))+
+  geom_boxplot()
+```
+
+Poniżej zaprezentowane zostały rozkłady wybranych zmiennych z podziałem ze względu na wartość zmiennej `Class`.
+
+```{r plot by Class 1, fig.height=4, fig.width=8}
+plot_1 <- ggplot(data_breast, aes(x=Cell_Shape_Uniformity, fill=Class))+
+  geom_density(alpha=0.4)
+plot_2 <- ggplot(data_breast, aes(x=Cell_Size_Uniformity, fill=Class))+
+  geom_density(alpha=0.4)
+grid.arrange(plot_1, plot_2, ncol=2)
+
+```
+
+```{r plot by Class 2, fig.height=4, fig.width=8}
+plot_1 <- ggplot(data_breast, aes(x=Mitoses, fill=Class))+
+  geom_density(alpha=0.4)
+plot_2 <- ggplot(data_breast, aes(x=Normal_Nucleoli, fill=Class))+
+  geom_density(alpha=0.4)
+grid.arrange(plot_1, plot_2, ncol=2)
+
+```
+
+## PCA - Principal Component Analysis
+
+Silne zależności między zmiennymi pozwalają podejrzewać, że możliwe byłoby znaczne zmniejszenie wymiarów danych przy zachowaniu zawartych w nich informacji. W celu zbadania tego została przeprowadzona PCA, pozwalająca ustalić jaki procent wariancji pozwalałoby wyjaśnić zmiejszenie danych do konkretnej liczby wymiarów.
+
+```{r  PCA}
+data_pca <- prcomp(na.omit(data_breast[,-10]), scale. = TRUE, center = TRUE)
+summary(data_pca)
+```
+
+Jak widać, już przy pomocy jednej zmiennej wyjaśnione zostałoby 65% wariancji, dwóch zmiennych - 74%, a przy trzech byłoby to już ponad 80%.
+
+```{r screeplot}
+fviz_screeplot(data_pca, addlabels = TRUE, ylim = c(0, 70))
+```
+
+
+Gdyby zdecydować się na ograniczenie wymiarów do dwóch, wpływ poszczególnych zmiennych na każdy z nich przedstawiałby się następująco.
+
+```{r fvis_pca_var}
+
+# Korelacja zmiennych i ich wplyw na glowne skladowe
+fviz_pca_var(data_pca,
+             col.var = "contrib",
+             gradient.cols = c("#FFFF00", "orange", "red"),
+             repel = TRUE)
+
+
+```
+
+Szczególnie wyraźnie widać tu, że zmienna Mitoses różni się w pewien sposób od pozostałych, wpływając przede wszystkim na drugi wymiar. Jeszcze wyraźniej widoczne jest to na wykresach słupkowych.
+
+```{r fviz_contrib}
+c1 <- fviz_contrib(data_pca, choice = "var", axes = 1, top = 10)
+c2 <- fviz_contrib(data_pca, choice = "var", axes = 2, top = 10)
+grid.arrange(c1, c2, ncol=2)
+```
+
+Wysoka odrębność od siebie obserwacji z poszczególnych klas zmiennej celu (malignant i benign) jest już w dwuwymiarowym przypadku bardzo dobrze widoczna.
+
+```{r fviz_pca_ind}
+fviz_pca_ind(data_pca,
+             label = "none", #hide individual labels
+             habillage = na.omit(data_breast)$Class, #color by groups
+             palette = c("#00AFBB","#FC4E07"),
+             addEllipses = TRUE #concentration ellipses
+)
+```
+
+# Przygotowanie do modelowania
+
+## Podział na zbiór treningowy i testowy
+
+Zbiór danych został podzielony na zbiór treningowy oraz zbiór testowy. Pierwszy z nich składa się z 80% losowo wybranych rekordów, drugi z pozostałych 20%. 
+
+Na tak podzielonych danych zostały zastosowane dwie różne metody imputacji.
+
+```{r}
+set.seed(23)
+
+# podzial na zbior testowy i treningowy
+n <- nrow(data_breast)
+train_set = sample(n, 0.8 * n)
+test_set = setdiff(seq_len(n), train_set)
+data_train <- data_breast[train_set,]
+data_test <- data_breast[test_set,]
+
+```
+
+## Imputacja danych 
+
+### Metoda imputacji 1 
+
+Pierwszą zastosowaną metodą imputacji jest usunięcie wszystkich wierszy zawierających braki danych.
+
+```{r imp1}
+# usunięcie rekordów zawierających NA
+
+data_train1 <- na.omit(data_train)
+data_test1 <- na.omit(data_test)
+
+task1 <- TaskClassif$new(id = "breast_naomit", backend = data_train1, target = "Class")
+```
+
+```{r vis imp1}
+vis_dat(rbind(data_train1, data_test1))
+```
+
+Ponieważ takich wierszy było 16, sumaryczna liczba wierszy w zbiorze treningowym i testowym zmniejszyła się z 699 do 683.
+
+### Metoda imputacji 2 
+
+Drugą zastosowaną metodą jest uzupełnienie brakujących wartości za pomocą funkcji mice, przy pomocy Predictive Mean Matching.
+
+```{r imp2, results='hide'}
+# Używamy metody pmm
+
+# Zbiór treningowy
+na <- subset(data_train, is.na(data_train$Bare_Nuclei))
+row_id <- row.names(na)
+# Usuwamy tymczasowo target, żeby nie 
+imp <- mice(data_train[,-10], method = "pmm", m=5, maxit =5, seed = 1)
+data_train2 <- complete(imp)
+# dołączamy spowrotem target
+data_train2 <- cbind(data_train2, data_train$Class)
+colnames(data_train2)[10] <- "Class"
+
+
+# Zbiór testowy
+na <- subset(data_test, is.na(data_test$Bare_Nuclei))
+row_id <- row.names(na)
+# Usuwamy tymczasowo target
+imp <- mice(data_test[,-10], method = "pmm", m=5, maxit =5, seed = 1)
+data_test2 <- complete(imp)
+# dołączamy spowrotem target
+data_test2 <- cbind(data_test2, data_test$Class)
+colnames(data_test2)[10] <- "Class"
+
+task2 <- TaskClassif$new(id = "breast_imp", backend = data_train2, target = "Class")
+```
+
+```{r}
+vis_dat(rbind(data_train2, data_test2))
+```
+
+W tym przypadku wymiar danych nie uległ zmianie.
+
+# Klasyfikacja
+
+Na każdym z tak przygotowanych zbiorów z wytrenowane zostało po 5 modeli:
+
+   1. SVM - Support Vector Machine 
+   2. RF - Random Forest
+   3. BN - Bayesian Networks
+   4. LDA - Linear Discriminal Analysis
+   5. RPART - Recursive Partitioning and Regression Trees
+
+Dla każdego modelu dostrojone zostanły odpowiednie hiperparametry za pomocą metody `random search` oraz względem miary *False Positive Rate*. Istotność tej metody dla badanego zbioru została przedstawiona w rozdziale 5. Ocena klasyfikatorów.
+
+Dla każdego z powstałych w ten sposób 10 zbiorów treningowych została przeprowadzona kroswalidacja z podziałem na 5 części, a następnie predykcja na odpowiednim zbiorze testowym.
+
+
+```{r}
+cv = rsmp("cv", folds = 5) # kroswalidacja
+
+# parametry do strojenia hiperparametrów
+tune_rsmp = rsmp("holdout") # metoda resamplingu 
+ending = term("evals", n_evals = 30) # maksymalna liczba iteracji przy strojeniu 
+```
+
+
+Poniżej dla każdego z klasyfikatorów przedstawione zostały:
+
+ * dostrojone dla niego parametry
+ * pierwszych kilka wierszy predykcji wraz z wyliczonymi przez model prawdopodobieństwami
+ * macierz błędów (confusion matrix)
+ * wykres przedstawiający liczbę obserwacji pozytywnych i negatywnych w zbiorze porównaną z liczbą obserwacji zakwalifikowanych jako pozytywne i negatywne przez model
+
+## SVM - Support Vector Machine 
+
+W tym modelu ustalony został parametr `kernel` = *polynomial* (wielomianowe), a stojenie zostało wykonane dla parametrów:
+
+ * `degree` (stopień wielomianu) na przedziale [2,10]
+ * `gamma` na przedziale [0.05, 0.5]
+
+### Metoda 1
+
+```{r, results='hide'}
+learner_svm1 = mlr_learners$get("classif.svm")
+learner_svm1$predict_type = "prob"
+
+learner_svm1$param_set
+tune_svm = ParamSet$new(list(
+  ParamFct$new("kernel", levels =c("polynomial")), # ustalone
+  ParamInt$new("degree", lower=2, upper=10),
+  ParamDbl$new("gamma", lower=0.05, upper=0.5)
+))
+# tune_svm
+
+# optymalizujemy względem false positive rate
+measure = msr("classif.fpr")
+
+instance = TuningInstance$new(
+  task = task1,
+  learner = learner_svm1,
+  resampling = tune_rsmp,
+  measures = measure,
+  param_set = tune_svm,
+  terminator = ending
+)
+print(instance)
+
+tuner = tnr("random_search")
+result = tuner$tune(instance)
+instance$archive(unnest = "params")[, c("degree","gamma", "classif.fpr")]
+learner_svm1$param_set$values = instance$result$params
+learner_svm1$param_set$values # tu wartosci tych najlepszych
+
+learner_svm1$train(task1)
+#print(learner_svm$model)
+
+rr_svm1 = resample(task1, learner_svm1, cv, store_models = TRUE)
+prediction_svm1 = learner_svm1$predict_newdata(data_test1)
+```
+
+**Wartości dostrojonych parametrów:**
+
+```{r}
+learner_svm1$param_set$values
+```
+
+**Wynik predykcji:**
+
+```{r}
+head(as.data.table(prediction_svm1))
+```
+
+**Macierz błędów:**
+
+```{r}
+confusion_matrix(prediction_svm1$truth, prediction_svm1$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_svm1)
+```
+
+### Metoda 2 
+
+```{r results='hide'}
+learner_svm2 = mlr_learners$get("classif.svm")
+#print(learner_svm)
+learner_svm2$predict_type = "prob"
+
+measure = msr("classif.fpr")
+
+instance = TuningInstance$new(
+  task = task2,
+  learner = learner_svm2,
+  resampling = tune_rsmp,
+  measures = measure,
+  param_set = tune_svm,
+  terminator = ending
+)
+print(instance)
+
+tuner = tnr("grid_search")
+print(tuner)
+result = tuner$tune(instance)
+instance$archive(unnest = "params")[, c("degree", "gamma", "classif.fpr")]
+learner_svm2$param_set$values = instance$result$params
+learner_svm2$param_set$values  # tu wartosci tych najlepszych
+
+learner_svm2$train(task2)
+#print(learner_svm$model)
+
+rr_svm2 = resample(task2, learner_svm2, cv, store_models = TRUE)
+prediction_svm2 = learner_svm2$predict_newdata(data_test2)
+```
+
+**Wartości dostrojonych parametrów:**
+
+```{r}
+learner_svm2$param_set$values
+```
+
+**Wynik predykcji:**
+
+```{r}
+head(as.data.table(prediction_svm2))
+```
+
+**Macierz błędów:**
+
+```{r}
+confusion_matrix(prediction_svm2$truth, prediction_svm2$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_svm2)
+```
+
+
+## RF - Random Forest
+
+W tym modelu dostrojone zostały parametry:
+
+ * `num.trees` (liczba drzew), na przedziale [50,200]
+ * `mtry` (liczba zmiennych, na podstawie których dokonujemy podziału w węźle drzewa) na przedziale [3,9]
+ 
+### Metoda 1
+
+```{r, results='hide'}
+learner_ranger1 = mlr_learners$get("classif.ranger")
+learner_ranger1$predict_type = "prob"
+
+learner_ranger1$param_set
+tune_ranger = ParamSet$new(list(
+  ParamInt$new("num.trees", lower=50, upper=200),
+  ParamInt$new("mtry", lower=3, upper=9)
+))
+tune_ranger
+
+measure = msr("classif.fpr")
+
+instance = TuningInstance$new(
+  task = task1,
+  learner = learner_ranger1,
+  resampling = tune_rsmp,
+  measures = measure,
+  param_set = tune_ranger,
+  terminator = ending
+)
+print(instance)
+
+tuner = tnr("random_search")
+print(tuner)
+result = tuner$tune(instance)
+
+instance$archive(unnest = "params")[, c("num.trees", "mtry", "classif.fpr")]
+learner_ranger1$param_set$values = instance$result$params
+learner_ranger1$param_set$values  # tu wartosci tych najlepszych
+
+learner_ranger1$train(task1)
+#print(learner_ranger$model)
+
+rr_ranger1 = resample(task1, learner_ranger1, cv, store_models = TRUE)
+prediction_ranger1 = learner_ranger1$predict_newdata(data_test1)
+```
+
+**Wartości dostrojonych parametrów:**
+
+```{r}
+learner_ranger1$param_set$values
+```
+
+**Wynik predykcji:**
+
+```{r}
+head(as.data.table(prediction_ranger1))
+```
+
+**Macierz błędów:**
+
+```{r}
+confusion_matrix(prediction_ranger1$truth, prediction_ranger1$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_ranger1)
+```
+
+### Metoda 2
+
+```{r, results='hide'}
+learner_ranger2 = mlr_learners$get("classif.ranger")
+learner_ranger2$predict_type = "prob"
+
+measure = msr("classif.fpr")
+
+instance = TuningInstance$new(
+  task = task2,
+  learner = learner_ranger2,
+  resampling = tune_rsmp,
+  measures = measure,
+  param_set = tune_ranger,
+  terminator = ending
+)
+print(instance)
+
+tuner = tnr("random_search")
+print(tuner)
+result = tuner$tune(instance)
+
+instance$archive(unnest = "params")[, c("num.trees", "mtry", "classif.fpr")]
+learner_ranger2$param_set$values = instance$result$params
+learner_ranger2$param_set$values  # tu wartosci tych najlepszych
+
+learner_ranger2$train(task2)
+#print(learner_ranger$model)
+
+rr_ranger2 = resample(task2, learner_ranger2, cv, store_models = TRUE)
+prediction_ranger2 = learner_ranger2$predict_newdata(data_test2)
+```
+
+**Wartości dostrojonych parametrów:**
+
+```{r}
+learner_ranger2$param_set$values
+```
+
+**Wynik predykcji:**
+
+```{r}
+head(as.data.table(prediction_ranger2))
+```
+
+**Macierz błędów:**
+
+```{r}
+confusion_matrix(prediction_ranger2$truth, prediction_ranger2$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_ranger2)
+```
+
+## BN - Bayesian Networks
+
+W tym modelu dostrojone zostały parametry:
+
+ * `laplace` (mała liczba, którą dodajemy do każdej kombinacji zmiennych, która wcześniej nie wystąpiła) na przedziale [0,5]
+ * `eps` (prawdopodobieństwa poniżej wartości *eps* będą zastąpione ustaloną wartością parametru *threshold*) na przedziale [0.001,0.1]
+
+### Metoda 1
+
+```{r, results='hide'}
+learner_bn1 = mlr_learners$get("classif.naive_bayes")
+learner_bn1$predict_type = "prob"
+
+learner_bn1$param_set
+tune_bn = ParamSet$new(list(
+  ParamDbl$new("laplace", lower=0, upper=5),
+  ParamDbl$new("eps", lower = 0.001, upper=0.1)
+))
+# tune_bn
+
+measure = msr("classif.fpr")
+
+instance = TuningInstance$new(
+  task = task1,
+  learner = learner_bn1,
+  resampling = tune_rsmp,
+  measures = measure,
+  param_set = tune_bn,
+  terminator = ending
+)
+print(instance)
+
+tuner = tnr("random_search")
+print(tuner)
+result = tuner$tune(instance)
+
+instance$archive(unnest = "params")[, c("laplace", "eps", "classif.fpr")]
+learner_bn1$param_set$values = instance$result$params
+learner_bn1$param_set$values  # tu wartosci tych najlepszych
+
+learner_bn1$train(task1)
+#print(learner_nb$model)
+
+rr_bn1 = resample(task1, learner_bn1, cv, store_models = TRUE)
+prediction_bn1 = learner_bn1$predict_newdata(data_test1)
+```
+
+**Wartości dostrojonych parametrów:**
+
+```{r}
+learner_bn1$param_set$values
+```
+
+**Wynik predykcji:**
+
+```{r}
+head(as.data.table(prediction_bn1))
+```
+
+**Macierz błędów:**
+
+```{r}
+confusion_matrix(prediction_bn1$truth, prediction_bn1$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_bn1)
+```
+
+### Metoda 2
+
+```{r, results='hide'}
+learner_bn2 = mlr_learners$get("classif.naive_bayes")
+learner_bn2$predict_type = "prob"
+
+measure = msr("classif.fpr")
+
+instance = TuningInstance$new(
+  task = task2,
+  learner = learner_bn2,
+  resampling = tune_rsmp,
+  measures = measure,
+  param_set = tune_bn,
+  terminator = ending
+)
+print(instance)
+
+tuner = tnr("random_search")
+print(tuner)
+result = tuner$tune(instance)
+
+instance$archive(unnest = "params")[, c("laplace", "eps", "classif.fpr")]
+learner_bn2$param_set$values = instance$result$params
+learner_bn2$param_set$values  # tu wartosci tych najlepszych
+
+learner_bn2$train(task2)
+#print(learner_nb$model)
+
+rr_bn2 = resample(task2, learner_bn2, cv, store_models = TRUE)
+prediction_bn2 = learner_bn2$predict_newdata(data_test2)
+```
+
+**Wartości dostrojonych parametrów:**
+
+```{r}
+learner_bn2$param_set$values
+```
+
+**Wynik predykcji:**
+
+```{r}
+head(as.data.table(prediction_bn2))
+```
+
+**Macierz błędów:**
+
+```{r}
+confusion_matrix(prediction_bn2$truth, prediction_bn2$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_bn2)
+```
+
+## LDA - Linear Discriminal Analysis
+
+W tym modelu ustalony został parametr `method` = *t* (metoda), a dostrojone zostały parametry:
+
+ * `nu` (liczba stopni swobody dla metody *t*) na przedziale [3,15]
+ * `predict.method` (metoda predykcji) na wartościach: *plug-in*, *predictive*, *debiased*
+ 
+### Metoda 1
+
+```{r, results='hide'}
+learner_lda1 = mlr_learners$get("classif.lda")
+learner_lda1$predict_type = "prob"
+
+learner_lda1$param_set
+tune_lda = ParamSet$new(list(
+  ParamFct$new("method", levels = c("t")), # ustalony
+  ParamInt$new("nu", lower=3, upper=15),
+  ParamFct$new("predict.method", levels = c("plug-in", "predictive", "debiased"))
+))
+#tune_lda
+
+measure = msr("classif.fpr")
+
+instance = TuningInstance$new(
+  task = task1,
+  learner = learner_lda1,
+  resampling = tune_rsmp,
+  measures = measure,
+  param_set = tune_lda,
+  terminator = ending
+)
+print(instance)
+
+tuner = tnr("random_search")
+print(tuner)
+result = tuner$tune(instance)
+
+instance$archive(unnest = "params")[, c("nu", "predict.method", "classif.fpr")]
+learner_lda1$param_set$values = instance$result$params
+learner_lda1$param_set$values  # tu wartosci tych najlepszych
+
+learner_lda1$train(task1)
+#print(learner_lda$model)
+
+rr_lda1 = resample(task1, learner_lda1, cv, store_models = TRUE)
+prediction_lda1 = learner_lda1$predict_newdata(data_test1)
+```
+
+**Wartości dostrojonych parametrów:**
+
+```{r}
+learner_lda1$param_set$values
+```
+
+**Wynik predykcji:**
+```{r}
+head(as.data.table(prediction_lda1))
+```
+
+**Macierz błędów:**
+
+```{r}
+confusion_matrix(prediction_lda1$truth, prediction_lda1$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_lda1)
+```
+
+### Metoda 2
+
+```{r, results='hide'}
+learner_lda2 = mlr_learners$get("classif.lda")
+learner_lda2$predict_type = "prob"
+
+measure = msr("classif.fpr")
+
+instance = TuningInstance$new(
+  task = task2,
+  learner = learner_lda2,
+  resampling = tune_rsmp,
+  measures = measure,
+  param_set = tune_lda,
+  terminator = ending
+)
+print(instance)
+
+tuner = tnr("random_search")
+print(tuner)
+result = tuner$tune(instance)
+
+instance$archive(unnest = "params")[, c("nu", "predict.method", "classif.fpr")]
+learner_lda2$param_set$values = instance$result$params
+learner_lda2$param_set$values  # tu wartosci tych najlepszych
+
+learner_lda2$train(task2)
+#print(learner_lda2$model)
+
+rr_lda2 = resample(task2, learner_lda2, cv, store_models = TRUE)
+prediction_lda2 = learner_lda2$predict_newdata(data_test2)
+```
+
+**Wartości dostrojonych parametrów:**
+
+```{r}
+learner_lda2$param_set$values
+```
+
+**Wynik predykcji:**
+
+```{r}
+head(as.data.table(prediction_lda2))
+```
+
+**Macierz błędów:**
+
+```{r}
+confusion_matrix(prediction_lda2$truth, prediction_lda2$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_lda2)
+```
+
+## RPART - Recursive Partitioning and Regression Trees
+
+W tym modelu dostrojone zostały parametry:
+
+ * `cp` (parametr złożoności, który kontroluje rozmiar drzewa; minimalna wartość o jaką następny podział musi "poprawić" błąd klasyfikacji, aby do niego doszło) na przedziale [0.001,0.1]
+ * `minsplit` (minimalna liczba obserwacji, które muszą istnieć w węźle, aby mogło dojść do podziału) na przedziale [1,10]
+ 
+### Metoda 1
+
+```{r, results='hide'}
+learner_rpart1 = mlr_learners$get("classif.rpart")
+learner_rpart1$predict_type = "prob"
+#learner_rpart1$param_set
+tune_rpart = ParamSet$new(list(
+  ParamDbl$new("cp", lower = 0.001, upper = 0.1),
+  ParamInt$new("minsplit", lower = 1, upper = 10)
+))
+#tune_rpart
+
+measure = msr("classif.fpr")
+
+instance = TuningInstance$new(
+  task = task1,
+  learner = learner_rpart1,
+  resampling = tune_rsmp,
+  measures = measure,
+  param_set = tune_rpart,
+  terminator = ending
+)
+print(instance)
+
+tuner = tnr("random_search")
+print(tuner)
+result = tuner$tune(instance)
+
+instance$archive(unnest = "params")[, c("cp", "minsplit", "classif.fpr")]
+learner_rpart1$param_set$values = instance$result$params
+learner_rpart1$param_set$values  # tu wartosci tych najlepszych
+
+learner_rpart1$train(task1)
+#print(learner_rpart1$model)
+
+rr_rpart1 = resample(task1, learner_rpart1, cv, store_models = TRUE)
+prediction_rpart1 = learner_rpart1$predict_newdata(data_test1)
+```
+
+**Wartości dostrojonych parametrów:**
+
+```{r}
+learner_rpart1$param_set$values
+```
+
+**Wynik predykcji:**
+
+```{r}
+head(as.data.table(prediction_rpart1))
+```
+
+**Macierz błędów:**
+
+```{r}
+confusion_matrix(prediction_rpart1$truth, prediction_rpart1$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_rpart1)
+```
+
+### Metoda 2 
+
+```{r, results='hide'}
+learner_rpart2 = mlr_learners$get("classif.rpart")
+learner_rpart2$predict_type = "prob"
+
+measure = msr("classif.fpr")
+
+instance = TuningInstance$new(
+  task = task2,
+  learner = learner_rpart2,
+  resampling = cv,
+  measures = measure,
+  param_set = tune_rpart,
+  terminator = ending
+)
+print(instance)
+
+tuner = tnr("random_search")
+print(tuner)
+result = tuner$tune(instance)
+
+instance$archive(unnest = "params")[, c("cp", "minsplit", "classif.fpr")]
+learner_rpart2$param_set$values = instance$result$params
+learner_rpart2$param_set$values  # tu wartosci tych najlepszych
+
+learner_rpart2$train(task2)
+#print(learner_rpart1$model)
+
+rr_rpart2 = resample(task2, learner_rpart2, cv, store_models = TRUE)
+prediction_rpart2 = learner_rpart2$predict_newdata(data_test2)
+```
+
+**Wartości dostrojonych parametrów:**
+
+```{r}
+learner_rpart2$param_set$values
+```
+
+**Wynik predykcji:**
+
+```{r}
+head(as.data.table(prediction_rpart2))
+```
+
+**Macierz błędów:**
+
+```{r}
+confusion_matrix(prediction_rpart2$truth, prediction_rpart2$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_rpart2)
+```
+
+# Ocena klasyfikatorów
+
+Do oceny wyników zastosowane zostały następujące miary:
+
+   - **AUC** - Area Under Curve (pole pod krzywą ROC - True Positive Rate w stosunku do False Positive Rate)
+   
+   - **AUPRC** - Area Under Precision Recall Curve (pole pod krzywą Precision Recall)
+   
+   - **Accuracy** - stosunek wszystkich przypadków zaklasyfikowanych poprawnie do wszystkich obserwacji
+   
+   - **Precision** - stosunek przypadków złośliwych zaklasyfikowanych poprawnie do wszystkich przypadków zaklasyfikowanych jako złośliwe
+   
+   - **Recall** - stosunek przypadków złośliwych zaklasyfikowanych poprawnie do wszystkich przypadków złośliwych
+   
+   - **False Positive Rate** - szczególnie ważna, ponieważ oznacza proporcję pacjentów, którzy mieli raka złośliwego (malignant), a zostali zakwalifikowani jako przypadek łagodny (benign). Z oczywistych powodów, w pierwszej kolejności zależy nam, aby liczba takich przypadków była jak najmniejsza.
+   
+   - **False Positive** - liczba przypadków złośliwych zaklasyfikowanych jako łagodne (jak wyżej)
+   
+   - **MCC** - Matthews correlation coefficient; współczynnik korelacji pomiędzy wartościami zaobserwowanymi a przewidywanymi.
+   
+Przedstawione wyniki, zarówno kroswalidacji, jak i predykcji posortowane są względem **False Positive Rate**.
+
+```{r}
+auc <- msr("classif.auc")
+auprc<-msr("classif.auprc")
+acc <- msr("classif.acc")
+precision <- msr("classif.precision")
+recall <- msr("classif.recall")
+fpr <- msr("classif.fpr")
+fp <- msr("classif.fp")
+mcc <- msr("classif.mcc")
+
+list_of_measures <- c(auc, auprc, acc, precision, recall, fpr, fp, mcc)
+```
+
+## Wyniki kroswalidacji
+
+```{r}
+# dla każdej metody zapisujemy średni wynik z kroswalidacji
+rr_svm1_measures <- rr_svm1$aggregate(list_of_measures)
+rr_svm2_measures <- rr_svm2$aggregate(list_of_measures)
+rr_ranger1_measures <- rr_ranger1$aggregate(list_of_measures)
+rr_ranger2_measures <- rr_ranger2$aggregate(list_of_measures)
+rr_bn1_meassures <- rr_bn1$aggregate(list_of_measures)
+rr_bn2_meassures <- rr_bn2$aggregate(list_of_measures)
+rr_lda1_meassures <- rr_lda1$aggregate(list_of_measures)
+rr_lda2_meassures <- rr_lda2$aggregate(list_of_measures)
+rr_rpart1_meassures <- rr_rpart1$aggregate(list_of_measures)
+rr_rpart2_meassures <- rr_rpart2$aggregate(list_of_measures)
+
+rr_measures <- as.data.frame(rbind(
+                           rr_svm1_measures,
+                           rr_svm2_measures,
+                           rr_ranger1_measures,
+                           rr_ranger2_measures,
+                           rr_bn1_meassures,
+                           rr_bn2_meassures,
+                           rr_lda1_meassures,
+                           rr_lda2_meassures,
+                           rr_rpart1_meassures,
+                           rr_rpart2_meassures))
+colnames(rr_measures) <- c("AUC", "AUPRC", "ACCURACY", "PRECISION", "RECALL", "FalsePositiveRate", "FalsePositive", "MCC")
+rownames(rr_measures) <- c("SVM1","SVM2","RF1","RF2","BN1","BN2","LDA1","LDA2", "RPART1", "RPART2")
+
+rr_measures <- cbind(method=rownames(rr_measures),rr_measures)
+knitr::kable(data.table(rr_measures%>%arrange(FalsePositive)))
+```
+
+## Wyniki predykcji
+
+```{r}
+svm1_measures <- prediction_svm1$score(list_of_measures)
+svm2_measures <- prediction_svm2$score(list_of_measures)
+ranger1_measures <- prediction_ranger1$score(list_of_measures)
+ranger2_measures <- prediction_ranger2$score(list_of_measures)
+bn1_meassures <- prediction_bn1$score(list_of_measures)
+bn2_meassures <- prediction_bn2$score(list_of_measures)
+lda1_meassures <- prediction_lda1$score(list_of_measures)
+lda2_meassures <- prediction_lda2$score(list_of_measures)
+rpart1_meassures <- prediction_rpart1$score(list_of_measures)
+rpart2_meassures <- prediction_rpart2$score(list_of_measures)
+
+prediction_measures <- as.data.frame(rbind(svm1_measures,
+                           svm2_measures,
+                           ranger1_measures,
+                           ranger2_measures,
+                           bn1_meassures,
+                           bn2_meassures,
+                           lda1_meassures,
+                           lda2_meassures,
+                           rpart1_meassures,
+                           rpart2_meassures))
+colnames(prediction_measures) <- c("AUC", "AUPRC","ACCURACY", "PRECISION", "RECALL", "FalsePositiveRate", "FalsePositive", "MCC")
+rownames(prediction_measures) <- c("SVM1","SVM2","RF1","RF2","BN1","BN2","LDA1","LDA2", "RPART1", "RPART2")
+
+prediction_measures <- cbind(method=rownames(prediction_measures), prediction_measures)
+knitr::kable(data.table(prediction_measures%>%arrange(FalsePositive)))
+```
+
+
+Kolejność rankingu wyników kroswalidacji i predykcji różni się, zwłaszcza w dalszych miejscach, jednak ze względu na bardzo bliskie wartości miar (w znacznej większości powyżej 0.95) nie jest to w żadnen sposób niepokojące. Brak również jakichkolwiek wartości silnie odstających od tej tendencji.
+
+### Wpływ imputacji
+
+Wyniki kroswalidacji pokazują, że to, czy bardziej korzystne było usunięcie czy zaimputowanie przy pomocy pmm braków danych zależy od klasyfikatora. Ogólnie jednak dla żadnego z tych modeli wybór metody nie był na tyle istotny, by sprawić, że wyniki będą lepsze lub gorsze od wyników innego algorytmu. Na wynikach predykcji nie widać już tej zależności, lecz może być to spowodowane losowością wyboru zbioru testowego i przypadkiem dla konkretnych danych. Wyniki kroswalidacji są tu bardziej wiarygodne ze względu na wielokrotnie przeprowadzone modelowanie.
+
+### False Positive Rate
+
+Najniższą osiągniętą wartością FPR w predykcji było ok 0.019, co oznaczało tylko jedną obserwację błędnie zaklasyfikowaną jako łagodna. Taki rezultat osiągęły klasyfikatory BN dla obu metod imputacji oraz RPART dla usunięcia wierszy.
+
+W kroswalidacji te wyniki przedstawiają się nieco inaczej - BN nadal osiąga FP=1, lecz tylko dla usunięcia wierszy, wyniki FPR są też nieco gorsze (0.026 i 0.033) ze względu na mniejszy wymiar analizowanych zbiorów. Następny w kolejności jest Random Forest dla obu imputacji, a dopiero po nim RPART, z FPR w okolicach 0.065.
+
+### Zastosowane miary a niezbalansowanie danych
+
+Jak już wcześniej zostało wspomniane, zależy nam na jak najmniejszej wartości FPR i to głównie na jej podstawie oceniamy klasyfikatory. Pozostałe miary zostały przedstawione w celu porównania i podkreślenia, jak ważne jest dobranie odpowiednich miar dla danych niezbilansowanych. Przykładem może być AUC, które jest bardzo popularną miarą, jednakże w naszym przypadku największą jej wartość osiąga model SVM, dla którego FP = 3, co plasuje go w środku rankingu. Świetnie za to poradził sobie MCC, który tak samo jak FPR wskazał BN jako znacznego lidera wśród klasyfikatorów.  
+
+## Krzywe PRC
+
+Ze względu na niezbalansowanie danych do prezentacji wyników osiągniętych przez modele podczas predykcji na zbiorze testowym posłużymy się PRC (Precision-Recal Curve) zamiast najczęściej wybieranego AUC.
+
+```{r}
+prc_svm1 <- autoplot(prediction_svm1, type = "prc") + ggtitle("SVM1")
+prc_svm2 <- autoplot(prediction_svm2, type = "prc") + ggtitle("SVM2")
+prc_ranger1 <- autoplot(prediction_ranger1, type = "prc") + ggtitle("RANGER1")
+prc_ranger2 <- autoplot(prediction_ranger2, type = "prc") + ggtitle("RANGER2")
+prc_bn1 <- autoplot(prediction_bn1, type = "prc") + ggtitle("BN1")
+prc_bn2 <- autoplot(prediction_bn2, type = "prc") + ggtitle("BN2")
+prc_lda1 <- autoplot(prediction_lda1, type = "prc") + ggtitle("LDA1")
+prc_lda2 <- autoplot(prediction_lda2, type = "prc") + ggtitle("LDA2")
+prc_rpart1 <- autoplot(prediction_rpart1, type = "prc") + ggtitle("RPART1")
+prc_rpart2 <- autoplot(prediction_rpart2, type = "prc") + ggtitle("RPART2")
+
+grid.arrange(prc_svm1, prc_svm2, ncol=2)
+grid.arrange(prc_ranger1, prc_ranger2,ncol=2)
+grid.arrange(prc_bn1, prc_bn2, ncol=2)
+grid.arrange( prc_lda1, prc_lda2, ncol=2)
+grid.arrange(prc_rpart1, prc_rpart2, ncol=2)
+```
+
+## Błędnie zakwalifikowany rekord
+
+Wartości FP w zależności od modelu wahają się od 1 do 8. Okazuje się, że jeden z rekordów jest zawsze kwalifikowany jako łagodny a w rzeczywistości jest złośliwy. Dodatkowo każdy z modeli był "pewny" swojej odpowiedzi - prawdopodobieństwo, że dany rekord należy do klasy złośliwej było bardzo bliskie 1.
+
+```{r}
+as.data.table(prediction_bn2)[72]
+```
+
+Przyjżyjmy się bliżej temu rekordowi:
+
+```{r}
+knitr::kable(data_test[72,])
+```
+
+Widzimy, że pomimo dość niskich wartości w każdej kolumnie, jest to przypadek raka złośliwego. Pozostałe rekordy zakwalifikowane do klasy złośliwej cechowały wartości bliskie 10 dla przynajmniej kilku atrybutów. Nie dziwi zatem, że modele źle przewidywały przynależność tego rekordu zważywszy na fakt, że nasz zbiór jest stosunkowo niewielki. W takich przypadkach warto też zasięgnąć opinii eksperta dziedzinowego, bo możliwe, że w danych mógł pojawić się błąd i w rzeczywistości dana pacjentka miała raka o charakterze łagodnym.
+
+# Wnioski 
+
+Zarówno w przypadku kroswalidacji, jak i predykcji, najlepszy (względem False Positive Rate) okazał się model Bayesian Networks (BN1, BN2), przy czym ten wytrenowany na danych z usuniętymi wierszami zawierającymi wartości NA poradził sobie nieznacznie lepiej niż w przypadku danych zaimputowanych metodą pmm. 
+
+*Sieć bayesowska* jest to model służący do przedstawiania zależności pomiędzy zdarzeniami i bazuje na rachunku prawdopodobieństwa. Reprezentowanie zależności pomiędzy symptomami a chorobą jest klasycznym przykładem jego zastosowania, co może być powodem jego znakomitych wyników na zbiorze przedstawiającym dane medyczne.
+
+
+# Oświadczenie 
+
+Potwierdzamy samodzielność powyższej pracy oraz niekorzystanie przez nas z niedozwolonych źródeł.
+
+# Session info 
+
+```{r}
+sessionInfo()
+```

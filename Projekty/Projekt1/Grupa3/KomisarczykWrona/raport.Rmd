@@ -1,0 +1,152 @@
+---
+title: "WUM - Projekt 1 - Podsumowanie"
+author: "Konrad Komisarczyk, Patryk Wrona"
+date: "28 kwietnia 2020"
+output: html_document
+---
+
+# Opis zadania i zbioru danych
+
+Naszym zadaniem jest budowa modelu przewidującego występowanie raka szyjki macicy u pacjentek w oparciu o zbiór `cervical-cancer` ze strony https://datahub.io/machine-learning/cervical-cancer.
+
+Dane `cervical-cancer` to informacje o 835 pacjentkach szpitala w Wenezueli. Zawierają informacje demograficzne, o stylu życia pacjentek oraz informacje o ich chorobach w przeszłości. Dane składają się z 36 kolumn, w tym 4 kolumn celu (różnych kryteriów diagnozy raka szyjki macicy). 
+
+Dane zawierają następujące informacje o pacjentkach:
+
+* wiek      
+* liczbę partnerów seksualnych oraz wiek inicjacji seksualnej      
+* liczbę ciąż, które przeszła pacjentka       
+* czy pacjentka pali tytoń, ile pali i od kiedy       
+* czy pacjentka stosuje antykoncepcje hormonalną / wkładkę domaciczną (IUD) i od jakiego czasu       
+* informacje na temat przebytych przez pacjentkę chorób wenerycznych - które z poszczególnych chorób przebyła oraz czas od pierwszej i ostatniej diagnozy          
+* informacje o diagnozie u pacjentki w przeszłości: raka, zakażenia HPV, Cervical intraepithelial neoplasia, raka śródnabłonkowego szyjki macicy    
+
+# Eksploracyjna Analiza Danych
+
+Niekóre dane maiały braki, ponieważ pacjentki z powodów prywatnych mogły nie odpowiadać na wszystkie pytania.
+Zauważyliśmy, że braki danych dla wszystkich kolumn dotyczących przebycia chorób wenerycznych dotyczą tych samych obserwacji, podobnie jest dla grup kolumn dotyczących antykoncepcji hormonalnej i wkładek domacicznych.
+
+Zauważyliśmy, że brak danych w kolumnach `STDs..Time.since.first.diagnosis` i `STDs..Time.since.last.diagnosis` oznacza, że pacjentka nie była nigdy diagnozowana, więc zdecydowaliśmy się później te braki zastapić specjalną wartością `-1`.
+
+
+Analizując wartości kolumn dotyczących chorób wenerycznych zauważyliśmy, że wiele z nich zawiera nadmiarowe informacje - wynikające już z innych kolumn. Takie kolumny to `Smokes`, `Hormonal.Contraceptives`, `IUD`,`STDs..Number.of.diagnosis`, `STDs..number.`, `STDs.HPV`, `STDs.condylomatosis` i `Dx`. Usunięcie tych kolumn pozwoliło nam zmniejszyć liczbę zmiennych objaśniających z `32` do `24`.
+
+Badanie wzajemnej korelacji zmiennych wykazało, że żadne nie są ze sobą wyraźnie skorelowane. 
+
+Analizowaliśmy rozkłady poszczególnych zmiennych. We wszytkich binarnych kolumnach dotyczących palenia, wkładek domacicznych i występowania różnych chorób zdecydowanie przeważającą wartością było `0`i z tego powodu odrzuciliśmy w późniejszych etapach zastępowanie braków danych w tych kolumnach modą.
+
+Analizowaliśmy wzajemne zależności zmiennych parami, ale wniosków, które z tego wyciągnęliśmy nie udało nam się wykorzystać w dalszej pracy.
+
+Analiza PCA pokazała, że za pomocą 10 komponentów możemy wyjaśnić `78%` wariancji, co uznaliśmy za niewystarczająco satysfakcjonujący wynik, aby z tego skorzystać.
+
+Jednej z innych grup udało się zauważyć, że w zbiorze występowały niepoprawne obserwacje, które zdecydowali się usunąć. Nam jednak nie udało się ich znaleźć.
+
+# Inżynieria cech
+
+Wszystkie zmienne kategoryczne w zbiorze zawierały dwa poziomy `0` i `1`, czyli były już zakodowane w postaci one-hot encoding.
+
+Poza opisanym wcześniej zastąpieniem znaczących braków danych specjalną wartością przetestowaliśmy różne metody zastąpienia braków w zmiennych ciągłych. 
+Przetestowaliśmy metody `pmm`, `norm`, `mean`, `qua`, `crt` i `rf` z pakietu *mice*.
+Dla każdej kolumny stworzyliśmy sztucznie braki danych, a następnie policzyliśmy root-mean-square error pomiędzy oryginalnymi wartościami, a wygenerowanymi przez każdą z metod. Powtórzyliśmy taki eksperyment 6 razy i dla każdej metody wybraliśmy metodę generującą najmniejszy średni RMSE. Wyprodukowane tak wartości w kolumnach, w których powinny być one liczbami całkowitymi, po prostu zaokrąglaliśmy. 
+
+Wybraliśmy metody o najmniejszym RMSE dla danych kolumn:
+
+- Number.of.sexual.partners  ->  **mean**
+- First.sexual.intercourse  ->  **crt**
+- Num.of.pregnancies  ->  **mean**
+- Smokes..years..  ->  **crt**
+- Hormonal.Contraceptives..years.  ->  **mean**
+- IUD..years..  ->  **mean**
+
+W związku z powyższym, wybraliśmy najlepszą metodę do imputowania danych w kolumnach liczbowych, czyli **mean**, gdyż okazała się być najlepsza w większości przypadków.
+
+
+Na potrzeby tej części usunęliśmy obserwacje z brakującymi danymi w kolumnach kategorycznych. W następnym projekcie zbadamy która technika imputacji z wybranych dalej 3 jest najlepsza.
+
+
+# Modelowanie
+
+W modelu ostatecznym postanowiliśmy uwzględnić metody imputacji danych w kolumnach kategorycznych, rozważając 3 różne metody imputacji:
+
+- *usunięcie obserwacji*
+- *k-Nearest Neighbors*
+- *NA jako 3 poziom zmiennej*
+
+Jako zmienną referencyjną wybraliśmy zmienną `Biopsy` odrzucając pozostałe zmienne celu. Zbiór podzieliliśmy losowo na zbiór treningowy i testowy w proporcjach `75%` / `25%`.
+
+Do tworzenia modeli używaliśmy pakietu *caret*.
+
+Wstępne modelowanie wykazało, że ze względu na rzadko wystepujace w kolumnie celu wartości `1` (oznaczające, że pacjentka została zdiagnozowana z rakiem) model może nauczyć się bardzo rzadko zwracać wartość `1` i nie zauważać wielu przypadków raka - produkować false negatives. Tak więc w szczególności model zwracający zawsze `0` byłby bardzo dobrym modelem pod względem miary Accuracy. Istotne jednak dla nas jest, aby w miarę możliwości wykryć wszystkie przypadki raka - zminimalizować false negatives. Zatem uznaliśmy, że ważną dla nas miarą będzie Sensitivity, ale mimo to jako podstawowych miar oceny modeli zdecydowaliśmy się używać AUC i Accuracy, aby później dopiero ocenić najlepsze z nich pod względem Sensitivity.
+
+W celu zmniejszenia liczby false negatives można zwiększyć liczbę pozytywnych predykcji modelu za pomocą upsampling - poprzez zwiększenie liczby pozytywnych przypadków w zbiorze. Można to osiągniąć dodając do zbioru losowe kopie istniejących już w nim rekordów będących pozytywnie klasyfikowanymi przypadkami. Prowadziłoby to do zbalansowania naszego zbioru danych. Nie zastosowaliśmy takiej sztuczki, a mogliśmy, możliwe, że pomogłaby nam rozwiązać problemy z Sensitivity.
+
+Zdecydowaliśmy się przetestować następujące metody:
+
+- **ranger - Las losowy** (mtry, splitrule, min.node.size)
+- **glm - Regresja logistyczna** ( - )
+- **glmnet - Regresja lasso/ridge** (alpha, lambda)
+- **nnet - Sieć neuronowa** (size, decay)
+- **gbm - Gradient Boosting Machines** (interaction.depth, shrinkage, n.minobsinnode)
+- **svm - Support Vector Machines** (kernel, C, lambda, sigma)
+
+W nawiasach podane są hiperparametry, które stroiliśmy po zadanej z góry siatce.
+
+Budując modele wyprodukowaliśmy dla każdego z nich 3 wersje, dla 3 metod zastąpienia braków danych w kolumnach binarnych.
+
+
+
+# Ostateczny model
+
+Wszystkie stworzone przez nas modele miały niskie Sensitivity. W zasadzie dla prawie wszystkich z nich wynosiło ono 0. 
+
+Nasze modele zwracały jako wynik prawdopodobieństwo, zatem zdecydowaliśmy się uporać z problemem false negatives poprzez obniżenie progu odcięcia.
+
+Model **regresji logistycznej** (**glm**) przy progu odcięcia 50% poprawnie wykrywał kilku chorych i dawał najlepsze wyniki pod względem AUC - **0.8325**. 
+
+Poniżej przedstawimy wykres krzywej ROC i wyznaczone AUC tego modelu:
+
+![](wykres_glm_ROC.png)
+
+
+Zdecydowaliśmy się zatem przy nim zbadać inne progi odcięcia. Obniżenie progu do **5%** znacznie zwiększa Sensitivity - do **91%** jednocześnie zachowując rozsądne Accuracy równe 48%. Takie postępowanie miało na celu przeciwdziałanie niezbalaznsowanemu zbiorowi danych.
+
+Confusion Matrix dla wybranego modelu:
+
+|                 | Zbiór referencyjny | Predykcja | Liczba obserwacji  |
+|-----------------|--------------------|-----------|--------------------|
+| True Negatives  | No                 | No        | 78                 |
+| False Positives | No                 | Yes       | 93                 |
+| False Negatives | Yes                | No        | 1                  |
+| True Positives  | Yes                | Yes       | 10                 |
+
+Najlepszą techniką pozbycia się braków danych dla modelu regresji logistycznej okazała się nie imputacja, a **usunięcie obserwacji z brakami danych**.
+
+# Wnioski
+
+Storzyliśmy średnio zadawalający model, ponieważ mimo wysokiej Sensitivity nadal nie wykrywa wszystkich pozytywnych przypadków, a produkuje dużo False Positives. 
+
+Możnaby myśleć o wykorzystaniu go jako wstępne narzędzie diagnostyczne wybierające część pacjentów do dalszej diagnozy tradycyjnymi metodami, jednak odsiewa on jedynie 50% pacjentów i przy tym nie daje 100% pewności, że odsiany pacjent nie ma raka. Z jednej strony brzmi to mało optymistycznie i użycie takiego modelu może wydawać się mało opłacalne. Ale trzeba wziąć pod uwagę to, że dane znajdujące się w zbiorze są "tanie do uzyskania" - zebranie ich nie wymaga przeprowadzania żadnych badań, a nawet prawie wszystkie, poza informacjami o życiu seksualnym i paleniu tytoniu można zebrać z "kartoteki" medycznej pacjenta (a i te mogą zostać łatwo zebrane przy wizycie u ginekologa). W związku z taką łatwością zdobycia tych danych, nawet taki średni model możnaby wykorzystać.
+Przykład użycia takiego nie całkowicie poprawnego modelu: *Przeprowadzamy badania raka szyjki macicy dostępne dla każdej chętnej. Możemy poinformować sklasyfikowane pozytywnie przez model pacjentki, że mają wyższe ryzyko raka i powinny się zgłosić na takie badanie. W ten sposób liczba pacjentek która zjawi się na badanie będzie większa, niż jakby nie powiadamiać żadnych pacjentek, więc będziemy w stanie wykryć więcej przypadków raka. Liczba pacjentek będzie też mniejsza niż jakby powiadomić specjalnie wszystkie pacjentki, więc będziemy w stanie zbadać wszystkie pacjentki, które będą chętne.*
+
+Wydaje nam się, że z danego zbioru danych nie można wyciągnąć dużo więcej. Trafna diagnoza raka szyjki macicy na podstawie jedynie informacji znajdujących się w zbiorze jest trudnym zadaniem, o ile nie niemożliwym. 
+
+Zawarte w zbiorze informacje związane są z czynnikami ryzyka raka szyjki macicy. Jeżeli pacjentka spełnia czynniki ryzyka, możemy przewidywać wysokie szanse wystąpienia raka u niej, jednak nawet pacjentce spełniającej wszystkie czynniki ryzyka w wysokim stopniu nie możemy zagwarantować pewności wystąpienia raka. Ani odwrotnie, pacjentce nie spełniającej żadnych czynników nie możemy zagwaratnować, że tego raka nie ma.
+
+Wiemy np. że wcześniejsza inicjacja seksualna, czy zakażenie HIV są uważane za zwiększające szanse wystąpienia raka szyjki macicy. Jednak już wstępna analiza danych pokazała, że nie ma takich wyraźnych korelacji w zbiorze. 
+
+Zależności mówiące o tym, że w jakimś szczególnym przypadku wcześniejsza inicjacja seksualna, lub palenie więcej tytoniu zmniejsza szanse na raka nie powinny być przez nas akceptowane w związku z aktualną wiedzą medyczną. Mogliśmy użyć narzędzi XAI celem wykrycia tego typu zależności wyuczonych przez nasze modele - np. Ceteris Paribus Single Model Response - jak model zachowałby się dla zmiany wartości zmiennej `wiek inicjacji seksualnej` dla ustalonych wartości pozostałych zmiennych. Również mogliśmy zbalansować nasze dane reningowe poprzez upsampling; to mogłoby zwiększyć liczbę poprawnie wykrytych przypadków raka szyjki macicy.
+
+
+
+
+# Oświadczenie
+
+"Potwierdzam samodzielność powyższej pracy oraz niekorzystanie przeze mnie z niedozwolonych źródeł"
+
+
+
+
+
+
+
+
