@@ -13127,9 +13127,46 @@ div#notebook {
 <span class="kn">from</span> <span class="nn">nltk.stem.wordnet</span> <span class="kn">import</span> <span class="n">WordNetLemmatizer</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
 <span class="kn">from</span> <span class="nn">textblob</span> <span class="kn">import</span> <span class="n">TextBlob</span>
+<span class="n">nltk</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="s1">&#39;wordnet&#39;</span><span class="p">)</span>
+<span class="n">nltk</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="s1">&#39;averaged_perceptron_tagger&#39;</span><span class="p">)</span>
 </pre></div>
 
     </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[nltk_data] Downloading package wordnet to /root/nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
+[nltk_data] Downloading package averaged_perceptron_tagger to
+[nltk_data]     /root/nltk_data...
+[nltk_data]   Unzipping taggers/averaged_perceptron_tagger.zip.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[0]:</div>
+
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>True</pre>
+</div>
+
+</div>
+
 </div>
 </div>
 
@@ -15114,9 +15151,8 @@ div#notebook {
 <div class="prompt input_prompt">In&nbsp;[0]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">unique_words</span> <span class="o">=</span> <span class="n">data</span><span class="o">==</span><span class="n">data</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-<span class="n">unique_words</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">unique_words</span><span class="o">.</span><span class="n">any</span><span class="p">()]</span>
-<span class="n">unique_words_dataframe</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">unique_words</span> <span class="o">=</span> <span class="n">grouped_data</span><span class="o">==</span><span class="n">grouped_data</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">unique_words</span> <span class="o">=</span> <span class="n">grouped_data</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">unique_words</span><span class="o">.</span><span class="n">any</span><span class="p">()]</span>
 </pre></div>
 
     </div>
@@ -15129,7 +15165,8 @@ div#notebook {
 <div class="prompt input_prompt">In&nbsp;[0]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">unique_words</span><span class="p">:</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">unique_words_dataframe</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">unique_words</span><span class="p">:</span>
   <span class="n">idx</span> <span class="o">=</span> <span class="n">grouped_data</span><span class="p">[</span><span class="n">grouped_data</span><span class="p">[</span><span class="n">word</span><span class="p">]</span><span class="o">!=</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
   <span class="n">unique_words_dataframe</span> <span class="o">=</span> <span class="n">unique_words_dataframe</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;word&#39;</span><span class="p">:</span><span class="n">word</span><span class="p">,</span> <span class="s1">&#39;book&#39;</span><span class="p">:</span><span class="n">idx</span><span class="p">},</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
@@ -15187,28 +15224,28 @@ div#notebook {
   <tbody>
     <tr>
       <th>0</th>
+      <td>BookOfProverb</td>
+      <td>foolishness</td>
+    </tr>
+    <tr>
+      <th>1</th>
       <td>BookOfEccleasiasticus</td>
       <td>takest</td>
     </tr>
     <tr>
-      <th>1</th>
+      <th>2</th>
+      <td>Buddhism</td>
+      <td>feelings</td>
+    </tr>
+    <tr>
+      <th>3</th>
       <td>Upanishad</td>
       <td>vaivaswata</td>
     </tr>
     <tr>
-      <th>2</th>
+      <th>4</th>
       <td>YogaSutra</td>
       <td>matrix</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>BookOfWisdom</td>
-      <td>convict</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>BookOfWisdom</td>
-      <td>diadem</td>
     </tr>
     <tr>
       <th>...</th>
@@ -15216,33 +15253,33 @@ div#notebook {
       <td>...</td>
     </tr>
     <tr>
-      <th>3867</th>
+      <th>4883</th>
+      <td>BookOfWisdom</td>
+      <td>erred</td>
+    </tr>
+    <tr>
+      <th>4884</th>
       <td>YogaSutra</td>
-      <td>postponement</td>
+      <td>modern</td>
     </tr>
     <tr>
-      <th>3868</th>
-      <td>BookOfProverb</td>
-      <td>stout</td>
-    </tr>
-    <tr>
-      <th>3869</th>
+      <th>4885</th>
       <td>BookOfEccleasiasticus</td>
       <td>reigned</td>
     </tr>
     <tr>
-      <th>3870</th>
+      <th>4886</th>
       <td>BookOfEccleasiasticus</td>
       <td>sparingly</td>
     </tr>
     <tr>
-      <th>3871</th>
+      <th>4887</th>
       <td>YogaSutra</td>
       <td>visual</td>
     </tr>
   </tbody>
 </table>
-<p>3872 rows × 2 columns</p>
+<p>4888 rows × 2 columns</p>
 </div>
 </div>
 
@@ -15257,11 +15294,60 @@ div#notebook {
 <div class="prompt input_prompt">In&nbsp;[0]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#z ciekawości sprawdziliśmy, czy tao rzeczywiście występuje w jednej księdze, okazuje się że nie</span>
-<span class="c1">#unique_words_dataframe[unique_words_dataframe.word == &#39;tao&#39;]</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#z ciekawości sprawdziliśmy, czy tao występuje tylko w taoistycznej księdze</span>
+<span class="n">unique_words_dataframe</span><span class="p">[</span><span class="n">unique_words_dataframe</span><span class="o">.</span><span class="n">word</span> <span class="o">==</span> <span class="s1">&#39;tao&#39;</span><span class="p">]</span>
 </pre></div>
 
     </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[0]:</div>
+
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>book</th>
+      <th>word</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1786</th>
+      <td>TaoTeChing</td>
+      <td>tao</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
 </div>
 </div>
 
@@ -15269,7 +15355,7 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>3872 słowa są unikatowe, czyli ponad 40% słów wystepuje tylko w jednej z ośmiu ksiąg - może być przydatne przy klasteryzacji.<br>Sprawdźmy też, ile słów jest charakterystycznych dla danej księgi - to znaczy ponad 90% wystąpień zawiera się w jednym tekście oraz ile wystąpiło w każdej z ksiąg (zauważmy, że mogą wystąpić słowa w obydwu grupach).</p>
+<p>4888 słowa są unikatowe, czyli ponad 50% słów wystepuje tylko w jednej z ośmiu ksiąg - może być przydatne przy klasteryzacji.<br>Sprawdźmy też, ile słów jest charakterystycznych dla danej księgi - to znaczy ponad 90% wystąpień zawiera się w jednym tekście oraz ile wystąpiło w każdej z ksiąg (zauważmy, że mogą wystąpić słowa w obydwu grupach).</p>
 
 </div>
 </div>
@@ -15310,7 +15396,7 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Wliczając 40% słów unikatowych mamy prawie 60% słów, których 90% wystąpień skupiona jest w jednej księdze.</p>
+<p>Mamy prawie 60% słów, których 90% wystąpień skupiona jest w jednej księdze.</p>
 <p>Przyjrzyjmy się temu 1.29% słów we wszystkich księgach.</p>
 <h2 id="Wsp&#243;lne-s&#322;owa-dla-wszystkich-ksi&#261;g">Wsp&#243;lne s&#322;owa dla wszystkich ksi&#261;g<a class="anchor-link" href="#Wsp&#243;lne-s&#322;owa-dla-wszystkich-ksi&#261;g">&#182;</a></h2>
 </div>
@@ -15688,14 +15774,14 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Unikalne-s&#322;owa-znajduj&#261;ce-si&#281;-w-ka&#380;dej-z-badanych-ksi&#261;g">Unikalne s&#322;owa znajduj&#261;ce si&#281; w ka&#380;dej z badanych ksi&#261;g<a class="anchor-link" href="#Unikalne-s&#322;owa-znajduj&#261;ce-si&#281;-w-ka&#380;dej-z-badanych-ksi&#261;g">&#182;</a></h2>
+<h2 id="Unikatowe-s&#322;owa-znajduj&#261;ce-si&#281;-w-ka&#380;dej-z-badanych-ksi&#261;g">Unikatowe s&#322;owa znajduj&#261;ce si&#281; w ka&#380;dej z badanych ksi&#261;g<a class="anchor-link" href="#Unikatowe-s&#322;owa-znajduj&#261;ce-si&#281;-w-ka&#380;dej-z-badanych-ksi&#261;g">&#182;</a></h2>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Wiemy, że unikalnych słów jest ponad 40%. Zobaczmy to jeszcze w liczbach.</p>
+<p>Wiemy, że unikatowych słów jest ponad 50%. Zobaczmy to jeszcze w liczbach.</p>
 
 </div>
 </div>
@@ -15710,7 +15796,7 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Poniżej mamy unikalne słowa wraz z ich ilością wystąpień, stąd tak duże liczby.</p>
+<p>Poniżej mamy liczbę różnych słów (unikalnych) w każdej z badanych ksiąg.</p>
 
 </div>
 </div>
@@ -15720,7 +15806,7 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
 <div class="prompt input_prompt">In&nbsp;[0]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">data_len_unique_words</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">grouped_data</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">),</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Liczba unikalnych słów w badanym tekście:&#39;</span><span class="p">])</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">data_len_unique_words</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">grouped_data</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">),</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Liczba różnych słów w badanym tekście:&#39;</span><span class="p">])</span>
 <span class="n">data_len_unique_words</span>
 </pre></div>
 
@@ -15757,7 +15843,7 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>Liczba unikalnych słów w badanym tekście:</th>
+      <th>Liczba różnych słów w badanym tekście:</th>
     </tr>
     <tr>
       <th>label</th>
@@ -15813,7 +15899,8 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
 <div class="prompt input_prompt">In&nbsp;[0]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">Counter</span><span class="p">(</span><span class="n">unique_words_dataframe</span><span class="o">.</span><span class="n">book</span><span class="p">),</span> <span class="n">orient</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;index&#39;</span><span class="p">:</span><span class="s1">&#39;book&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="s1">&#39;liczba unikatowych słów&#39;</span><span class="p">})</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">exceptional_words</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">Counter</span><span class="p">(</span><span class="n">unique_words_dataframe</span><span class="o">.</span><span class="n">book</span><span class="p">),</span> <span class="n">orient</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;index&#39;</span><span class="p">:</span><span class="s1">&#39;book&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="s1">&#39;liczba unikatowych słów&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;book&#39;</span><span class="p">)</span>
+<span class="n">exceptional_words</span>
 </pre></div>
 
     </div>
@@ -15855,44 +15942,44 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
-      <td>BookOfEccleasiasticus</td>
-      <td>717</td>
-    </tr>
-    <tr>
       <th>1</th>
-      <td>Upanishad</td>
-      <td>374</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>YogaSutra</td>
-      <td>1050</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>BookOfWisdom</td>
-      <td>363</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>BookOfProverb</td>
-      <td>365</td>
-    </tr>
-    <tr>
-      <th>5</th>
-      <td>TaoTeChing</td>
-      <td>485</td>
-    </tr>
-    <tr>
-      <th>6</th>
-      <td>BookOfEcclesiastes</td>
-      <td>117</td>
+      <td>BookOfEccleasiasticus</td>
+      <td>920</td>
     </tr>
     <tr>
       <th>7</th>
+      <td>BookOfEcclesiastes</td>
+      <td>124</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>BookOfProverb</td>
+      <td>449</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>BookOfWisdom</td>
+      <td>399</td>
+    </tr>
+    <tr>
+      <th>2</th>
       <td>Buddhism</td>
-      <td>401</td>
+      <td>526</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>TaoTeChing</td>
+      <td>568</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Upanishad</td>
+      <td>511</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>YogaSutra</td>
+      <td>1391</td>
     </tr>
   </tbody>
 </table>
@@ -15908,7 +15995,7 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>W powyższym kodzie mamy natomiast liczbę unikatowych bez ich liczby wystąpień. Widziemy, że najwięcej takich słów jest w YpdaSutra, czyli hinduiźmie.</p>
+<p>W powyższym kodzie mamy liczbę  unikatowych (czyli takich występujących tylko w danej księdze), bez ich liczby wystąpień. Widzimy, że najwięcej takich słów jest w YogaSutra, czyli hinduizmie.</p>
 
 </div>
 </div>
@@ -16016,8 +16103,8 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Księgi różnią się wielkością, więc warto zobaczyć ile procent słów z księgi jest unikalnych.</p>
-<h3 id="Procent-unikalnych-s&#322;&#243;w">Procent unikalnych s&#322;&#243;w<a class="anchor-link" href="#Procent-unikalnych-s&#322;&#243;w">&#182;</a></h3>
+<h3 id="Procent-unikatowych-s&#322;&#243;w">Procent unikatowych s&#322;&#243;w<a class="anchor-link" href="#Procent-unikatowych-s&#322;&#243;w">&#182;</a></h3><p>Celem sprawdzenia jaką częścią słów w księdze są wyrazy występujące wyłącznie w niej.</p>
+
 </div>
 </div>
 </div>
@@ -16026,11 +16113,24 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
 <div class="prompt input_prompt">In&nbsp;[0]:</div>
 <div class="inner_cell">
     <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">exceptional_sum</span> <span class="o">=</span> <span class="n">grouped_data</span><span class="p">[</span><span class="n">unique_words</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[0]:</div>
+<div class="inner_cell">
+    <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">A</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">8</span><span class="p">):</span>
-  <span class="n">x</span> <span class="o">=</span> <span class="n">data_len_unique_words</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+  <span class="n">x</span> <span class="o">=</span> <span class="n">exceptional_sum</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
   <span class="n">w</span> <span class="o">=</span> <span class="n">data_len_words</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-  <span class="n">A</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="n">w</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span>
+  <span class="n">A</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="n">w</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s1">%&#39;</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -16088,42 +16188,42 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
     <tr>
       <th>0</th>
       <td>Madrosc Syracha</td>
-      <td>20.183301</td>
+      <td>9.06%</td>
     </tr>
     <tr>
       <th>1</th>
       <td>Ksiega Koheleta</td>
-      <td>34.980166</td>
+      <td>5.52%</td>
     </tr>
     <tr>
       <th>2</th>
       <td>Ksiega Przyslow</td>
-      <td>25.349922</td>
+      <td>7.83%</td>
     </tr>
     <tr>
       <th>3</th>
       <td>Ksiega Madrosci</td>
-      <td>35.826537</td>
+      <td>9.45%</td>
     </tr>
     <tr>
       <th>4</th>
       <td>Buddyzm</td>
-      <td>20.350242</td>
+      <td>25.23%</td>
     </tr>
     <tr>
       <th>5</th>
       <td>Tao Te Ching</td>
-      <td>39.257812</td>
+      <td>18.34%</td>
     </tr>
     <tr>
       <th>6</th>
       <td>Upaniszady</td>
-      <td>28.104575</td>
+      <td>15.7%</td>
     </tr>
     <tr>
       <th>7</th>
       <td>JogaSutry</td>
-      <td>26.376276</td>
+      <td>19.84%</td>
     </tr>
   </tbody>
 </table>
@@ -16139,7 +16239,7 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Względem swojej wielkości to Księga Koheleta ma najwięcej wystąpień unikatowych słów.</p>
+<p>Względem swojej wielkości to buddyjska księga ma najwięcej wystąpień unikatowych słów.</p>
 
 </div>
 </div>
@@ -16196,8 +16296,8 @@ Odsetek słów, które wystąpiły w każdej z ksiąg: 1.29%
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Największą średnią liczbę wystąpień wyrazów możemy zauważyć w Mądrościach Syracha oraz w Buddyźmie. Przy czym Mądrości Syracha są najdłuższą z ksiąg o 20% unikatowych słów.</p>
-<p>Natomiast księgi o wartościach wystąpień poniżej trzech są najkrótszymi księgami z podanych, dodatkowo możemy zauważyć, że mają też największy procent unikatowych słów.</p>
+<p>Największą średnią liczbę wystąpień wyrazów możemy zauważyć w Mądrościach Syracha oraz w Buddyźmie.</p>
+<p>Natomiast księgi o wartościach wystąpień poniżej trzech są najkrótszymi księgami z podanych.</p>
 
 </div>
 </div>
@@ -16874,7 +16974,7 @@ Liczba słów w niezmienionej ramce danych:  8266
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Najkrótsze są rozdziały Upaniszady.</p>
-<p>Ciekawostka - z ponad do korpusu słów przez twórców ramki, rozdział 14 Buddyzmu nie zawiera żadnego z tych słów.</p>
+<p>Ciekawostka - spośród wybranych słów przez twórców ramki, rozdział 14 Buddyzmu nie zawiera żadnego.</p>
 
 </div>
 </div>
@@ -16950,7 +17050,7 @@ Liczba słów w niezmienionej ramce danych:  8266
 <li>analiza sentymentu wykazała, że większość słów jest neutralna</li>
 <li>najwięcej rozdziałów ma księga o hinduiźmie</li>
 <li>najdłuższe rozdziały są w Mądrościach Syracha</li>
-<li>ponad 40% słów jest unikatowane dla danej księgi, tylko 1.29% występuje w każdej z nich</li>
+<li>ponad 50% słów jest unikatowane dla danej księgi, tylko 1.29% występuje w każdej z nich</li>
 <li>jeden rozdział Buddyzmu jest pusty</li>
 </ul>
 
