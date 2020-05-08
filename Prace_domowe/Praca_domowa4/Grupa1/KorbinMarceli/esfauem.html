@@ -190,10 +190,13 @@ summary {
 </div>
 <div id="przygotowanie" class="section level2">
 <h2>Przygotowanie</h2>
+<pre class="r"><code>library(e1071)
+library(DALEX)</code></pre>
 <pre><code>## Welcome to DALEX (version: 1.2.0).
 ## Find examples and detailed introduction at: https://pbiecek.github.io/ema/
 ## Additional features will be available after installation of: ggpubr.
 ## Use 'install_dependencies()' to get all suggested dependencies</code></pre>
+<pre class="r"><code>library(dplyr)</code></pre>
 <pre><code>## 
 ## Attaching package: 'dplyr'</code></pre>
 <pre><code>## The following object is masked from 'package:DALEX':
@@ -205,6 +208,7 @@ summary {
 <pre><code>## The following objects are masked from 'package:base':
 ## 
 ##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(mlr)</code></pre>
 <pre><code>## Loading required package: ParamHelpers</code></pre>
 <pre><code>## 'mlr' is in maintenance mode since July 2019. Future development
 ## efforts will go into its successor 'mlr3'
@@ -214,199 +218,126 @@ summary {
 <pre><code>## The following object is masked from 'package:e1071':
 ## 
 ##     impute</code></pre>
+<pre class="r"><code># potrzebne biblioteki
+heart &lt;- read.csv(&quot;heart.csv&quot;)
+data(apartments, package=&quot;DALEX&quot;)
+# zbiory danych apartments i heart
+
+trainc1 &lt;- sample(1:nrow(apartments), 0.7*nrow(apartments))
+train1 &lt;- apartments[trainc1,]
+test1 &lt;- apartments[-trainc1,]
+trainc2 &lt;- sample(1:nrow(heart), 0.7*nrow(heart))
+train2 &lt;- heart[trainc2,]
+test2 &lt;- heart[-trainc2,]
+# podział danych na zbiory treningowe i testowe</code></pre>
 <div id="zbiór-apartments" class="section level3">
 <h3>Zbiór “apartments”</h3>
-<pre class="r"><code>task1 &lt;- makeClassifTask(data=train1, target=&quot;district&quot;)
-learner &lt;- makeLearner(&quot;classif.svm&quot;,
-                       par.vals=list(kernel=&quot;radial&quot;, cost=100),
-                       predict.type=&quot;response&quot;)
+<p>Na tym zbiorze (ze zmienną celu m2.price) zastosujemy algorytm regresyjny, którego skuteczność zmierzymy miarą RMSE. Budujemy dwa modele, żeby zobaczyć przy okazji wpływ skalowania na wyniki (model1 - bez skalowania, model01 - ze skalowaniem).</p>
+<p>Na początku sprawdzamy RMSE dla algorytmu trenowanego z parametrami kernel=“radial”, cost=100, degree=3 i gamma=1/6.</p>
+<pre class="r"><code>task1 &lt;- makeRegrTask(data=train1, target=&quot;m2.price&quot;)
+learner &lt;- makeLearner(&quot;regr.svm&quot;,
+                       par.vals=list(kernel=&quot;radial&quot;, cost=100, scale=F))
+learnerS &lt;- makeLearner(&quot;regr.svm&quot;,
+                        par.vals=list(kernel=&quot;radial&quot;, cost=100, scale=T))
 model1 &lt;- train(learner, task1)
-all(train1==train1bv)</code></pre>
-<pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code># TRUE - dane się nie zmieniły, więc dla takiej implementacji skalowanie w miejscu nie zachodzi
+model01 &lt;- train(learnerS, task1)
 pred1 &lt;- predict(model1, newdata=test1)
-
-cv &lt;- makeResampleDesc(&quot;CV&quot;, iter=6)
+pred01 &lt;- predict(model01, newdata=test1)
+measureRMSE(pred1$data$response, pred1$data$truth)</code></pre>
+<pre><code>## [1] 919.942</code></pre>
+<pre class="r"><code>measureRMSE(pred01$data$response, pred01$data$truth)</code></pre>
+<pre><code>## [1] 182.1652</code></pre>
+<p>Widzimy, że dla wyskalowanych danych (drugi model) uzyskujemy lepszą miarę. Teraz przygotowujemy parametry do strojenia. Wybierzemy losowo 30 razy wartości z przedziałów wybranych poprzez funkcję makeParamSet.</p>
+<pre class="r"><code>cv &lt;- makeResampleDesc(&quot;CV&quot;, iter=6)
 parSet &lt;- makeParamSet(
   makeIntegerParam(&quot;cost&quot;, lower=10, upper=300),
-  makeDiscreteParam(&quot;kernel&quot;, values=c(&quot;linear&quot;, &quot;polynomial&quot;, &quot;radial&quot;, &quot;sigmoid&quot;)),
+  makeDiscreteParam(&quot;kernel&quot;, values=c(&quot;polynomial&quot;, &quot;radial&quot;, &quot;sigmoid&quot;)),
   makeIntegerParam(&quot;degree&quot;, lower=2, upper=10),
   makeNumericParam(&quot;gamma&quot;, lower=1, upper=10, trafo=function(x) 1/x)
 )
-
 # stroimy parametry
 ctrlR &lt;- makeTuneControlRandom(maxit = 30)
-resR &lt;- tuneParams(learner, task=task1, resampling=cv,
-                   par.set=parSet, control=ctrlR, measures=acc)</code></pre>
-<pre><code>## [Tune] Started tuning learner classif.svm for parameter set:</code></pre>
-<pre><code>##            Type len Def                           Constr Req Tunable Trafo
-## cost    integer   -   -                        10 to 300   -    TRUE     -
-## kernel discrete   -   - linear,polynomial,radial,sigmoid   -    TRUE     -
-## degree  integer   -   -                          2 to 10   -    TRUE     -
-## gamma   numeric   -   -                          1 to 10   -    TRUE     Y</code></pre>
-<pre><code>## With control class: TuneControlRandom</code></pre>
-<pre><code>## Imputation value: -0</code></pre>
-<pre><code>## [Tune-x] 1: cost=286; kernel=polynomial; degree=8; gamma=0.445</code></pre>
-<pre><code>## [Tune-y] 1: acc.test.mean=0.2213503; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 2: cost=89; kernel=radial; degree=10; gamma=0.579</code></pre>
-<pre><code>## [Tune-y] 2: acc.test.mean=0.2813882; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 3: cost=116; kernel=sigmoid; degree=3; gamma=0.116</code></pre>
-<pre><code>## [Tune-y] 3: acc.test.mean=0.2456283; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 4: cost=33; kernel=radial; degree=7; gamma=0.381</code></pre>
-<pre><code>## [Tune-y] 4: acc.test.mean=0.2742411; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 5: cost=239; kernel=sigmoid; degree=6; gamma=0.197</code></pre>
-<pre><code>## [Tune-y] 5: acc.test.mean=0.2257221; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 6: cost=274; kernel=sigmoid; degree=7; gamma=0.148</code></pre>
-<pre><code>## [Tune-y] 6: acc.test.mean=0.2414653; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 7: cost=16; kernel=linear; degree=7; gamma=0.223</code></pre>
-<pre><code>## [Tune-y] 7: acc.test.mean=0.2712693; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 8: cost=69; kernel=sigmoid; degree=3; gamma=0.166</code></pre>
-<pre><code>## [Tune-y] 8: acc.test.mean=0.2242116; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 9: cost=221; kernel=sigmoid; degree=4; gamma=0.116</code></pre>
-<pre><code>## [Tune-y] 9: acc.test.mean=0.2542612; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 10: cost=107; kernel=sigmoid; degree=3; gamma=0.113</code></pre>
-<pre><code>## [Tune-y] 10: acc.test.mean=0.2555998; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 11: cost=288; kernel=radial; degree=10; gamma=0.185</code></pre>
-<pre><code>## [Tune-y] 11: acc.test.mean=0.2771024; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 12: cost=75; kernel=linear; degree=5; gamma=0.167</code></pre>
-<pre><code>## [Tune-y] 12: acc.test.mean=0.2726938; time: 0.1 min</code></pre>
-<pre><code>## [Tune-x] 13: cost=15; kernel=radial; degree=6; gamma=0.157</code></pre>
-<pre><code>## [Tune-y] 13: acc.test.mean=0.2927964; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 14: cost=209; kernel=sigmoid; degree=10; gamma=0.11</code></pre>
-<pre><code>## [Tune-y] 14: acc.test.mean=0.2598364; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 15: cost=216; kernel=radial; degree=10; gamma=0.115</code></pre>
-<pre><code>## [Tune-y] 15: acc.test.mean=0.2842003; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 16: cost=39; kernel=radial; degree=9; gamma=0.172</code></pre>
-<pre><code>## [Tune-y] 16: acc.test.mean=0.2913474; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 17: cost=205; kernel=polynomial; degree=5; gamma=0.113</code></pre>
-<pre><code>## [Tune-y] 17: acc.test.mean=0.2428161; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 18: cost=218; kernel=radial; degree=9; gamma=0.166</code></pre>
-<pre><code>## [Tune-y] 18: acc.test.mean=0.2756656; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 19: cost=204; kernel=radial; degree=4; gamma=0.135</code></pre>
-<pre><code>## [Tune-y] 19: acc.test.mean=0.2827758; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 20: cost=33; kernel=linear; degree=3; gamma=0.176</code></pre>
-<pre><code>## [Tune-y] 20: acc.test.mean=0.2726938; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 21: cost=33; kernel=sigmoid; degree=8; gamma=0.237</code></pre>
-<pre><code>## [Tune-y] 21: acc.test.mean=0.2242116; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 22: cost=140; kernel=sigmoid; degree=4; gamma=0.54</code></pre>
-<pre><code>## [Tune-y] 22: acc.test.mean=0.1771294; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 23: cost=253; kernel=linear; degree=7; gamma=0.122</code></pre>
-<pre><code>## [Tune-y] 23: acc.test.mean=0.2726938; time: 0.1 min</code></pre>
-<pre><code>## [Tune-x] 24: cost=67; kernel=linear; degree=4; gamma=0.127</code></pre>
-<pre><code>## [Tune-y] 24: acc.test.mean=0.2726938; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 25: cost=176; kernel=sigmoid; degree=10; gamma=0.155</code></pre>
-<pre><code>## [Tune-y] 25: acc.test.mean=0.2385794; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 26: cost=43; kernel=polynomial; degree=8; gamma=0.41</code></pre>
-<pre><code>## [Tune-y] 26: acc.test.mean=0.2171382; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 27: cost=258; kernel=polynomial; degree=9; gamma=0.472</code></pre>
-<pre><code>## [Tune-y] 27: acc.test.mean=0.2799391; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 28: cost=251; kernel=linear; degree=7; gamma=0.257</code></pre>
-<pre><code>## [Tune-y] 28: acc.test.mean=0.2726938; time: 0.1 min</code></pre>
-<pre><code>## [Tune-x] 29: cost=132; kernel=linear; degree=2; gamma=0.334</code></pre>
-<pre><code>## [Tune-y] 29: acc.test.mean=0.2726938; time: 0.1 min</code></pre>
-<pre><code>## [Tune-x] 30: cost=151; kernel=linear; degree=5; gamma=0.311</code></pre>
-<pre><code>## [Tune-y] 30: acc.test.mean=0.2726938; time: 0.1 min</code></pre>
-<pre><code>## [Tune] Result: cost=15; kernel=radial; degree=6; gamma=0.157 : acc.test.mean=0.2927964</code></pre>
-<pre class="r"><code>modelR &lt;- train(resR$learner, task1)
+resR &lt;- tuneParams(learnerS, task=task1, resampling=cv,
+                   par.set=parSet, control=ctrlR, measures=rmse,
+                   show.info=F)
+resR$x</code></pre>
+<pre><code>## $cost
+## [1] 20
+## 
+## $kernel
+## [1] &quot;polynomial&quot;
+## 
+## $degree
+## [1] 2
+## 
+## $gamma
+## [1] 0.1126665</code></pre>
+<p>Wyżej zostały wypisane parametry wskazane jako optymalne względem miary RMSE. Jak ostatecznie wypada model po ich przyłożeniu?</p>
+<pre class="r"><code>learnerS &lt;- setHyperPars(learnerS,
+                         kernel=resR$x$kernel, cost=resR$x$cost, degree=resR$x$degree, gamma=resR$x$gamma)
+modelR &lt;- train(learnerS, task1)
 pred10 &lt;- predict(modelR, newdata=test1)
-measureACC(pred10$data$response, pred10$data$truth)</code></pre>
-<pre><code>## [1] 0.2766667</code></pre>
-<p>W linijce “[Tune] Result” można odczytać optymalne parametry, dla których wybrana miara wyszła najwyższa.</p>
+measureRMSE(pred10$data$response, pred10$data$truth)</code></pre>
+<pre><code>## [1] 154.2539</code></pre>
+<p>Strojenie parametrów przyniosło pozytywne skutki.</p>
 </div>
 <div id="zbiór-heart" class="section level3">
 <h3>Zbiór “heart”</h3>
+<p>Zbiór “heart” pojawił się w jednym z tematów projektu pierwszego. Tym razem użyjemy algorytmu klasyfikacyjnego ze zmienną celu “num”. Podobnie jak poprzednio, sprawdzimy wpływ normalizacji na ocenę, ale zamiast RMSE zastosujemy accuracy i F1 ze względu na inny typ zmiennej celu.</p>
+<p>Parametry początkowe takie jak poprzednio, ale gamma tym razem wynosi 1/14 (domyślnie zresztą przyjmuje wartość 1/liczba wymiarów).</p>
 <pre class="r"><code>task2 &lt;- makeClassifTask(data=train2, target=&quot;num&quot;)
 renrael &lt;- makeLearner(&quot;classif.svm&quot;,
-                       par.vals=list(kernel=&quot;radial&quot;, cost=100),
+                       par.vals=list(kernel=&quot;radial&quot;, cost=100, scale=F),
                        predict.type=&quot;response&quot;)
+renraelS &lt;- makeLearner(&quot;classif.svm&quot;,
+                        par.vals=list(kernel=&quot;radial&quot;, cost=100, scale=T),
+                        predict.type=&quot;response&quot;)
+# (&quot;renrael&quot; to &quot;learner&quot; od tyłu)
 model2 &lt;- train(renrael, task2)
+model02 &lt;- train(renraelS, task2)
 pred2 &lt;- predict(model2, newdata=test2)
-
-cv2 &lt;- makeResampleDesc(&quot;CV&quot;, iter=6)
-parSet2 &lt;- makeParamSet(
+pred02 &lt;- predict(model02, newdata=test2)
+measureACC(pred2$data$response, pred2$data$truth)</code></pre>
+<pre><code>## [1] 0.6043956</code></pre>
+<pre class="r"><code>measureACC(pred02$data$response, pred02$data$truth)</code></pre>
+<pre><code>## [1] 0.7142857</code></pre>
+<p>Tak wygląda accuracy, a jak F1?</p>
+<pre class="r"><code>measureF1(pred2$data$response, pred2$data$truth, &quot;1&quot;)</code></pre>
+<pre><code>## [1] 0.1</code></pre>
+<pre class="r"><code>measureF1(pred02$data$response, pred02$data$truth, &quot;1&quot;)</code></pre>
+<pre><code>## [1] 0.6904762</code></pre>
+<p>Parametry nastroimy z tymi samymi wartościami resampling i control, co poprzednio - tylko rozszerzymy zakres szukania gammy w par.set.</p>
+<pre class="r"><code>parSet2 &lt;- makeParamSet(
   makeIntegerParam(&quot;cost&quot;, lower=10, upper=300),
-  makeDiscreteParam(&quot;kernel&quot;, values=c(&quot;linear&quot;, &quot;polynomial&quot;, &quot;radial&quot;, &quot;sigmoid&quot;)),
+  makeDiscreteParam(&quot;kernel&quot;, values=c(&quot;polynomial&quot;, &quot;radial&quot;, &quot;sigmoid&quot;)),
   makeIntegerParam(&quot;degree&quot;, lower=2, upper=10),
-  makeNumericParam(&quot;gamma&quot;, lower=1, upper=10, trafo=function(x) 1/x)
+  makeNumericParam(&quot;gamma&quot;, lower=1, upper=20, trafo=function(x) 1/x)
 )
-
-# stroimy parametry
-ctrlS &lt;- makeTuneControlRandom(maxit = 30)
-resS &lt;- tuneParams(learner, task=task2, resampling=cv2,
-                   par.set=parSet2, control=ctrlS, measures=f1)</code></pre>
-<pre><code>## [Tune] Started tuning learner classif.svm for parameter set:</code></pre>
-<pre><code>##            Type len Def                           Constr Req Tunable Trafo
-## cost    integer   -   -                        10 to 300   -    TRUE     -
-## kernel discrete   -   - linear,polynomial,radial,sigmoid   -    TRUE     -
-## degree  integer   -   -                          2 to 10   -    TRUE     -
-## gamma   numeric   -   -                          1 to 10   -    TRUE     Y</code></pre>
-<pre><code>## With control class: TuneControlRandom</code></pre>
-<pre><code>## Imputation value: -0</code></pre>
-<pre><code>## [Tune-x] 1: cost=251; kernel=polynomial; degree=2; gamma=0.157</code></pre>
-<pre><code>## [Tune-y] 1: f1.test.mean=0.6699615; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 2: cost=196; kernel=polynomial; degree=6; gamma=0.112</code></pre>
-<pre><code>## [Tune-y] 2: f1.test.mean=0.6752771; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 3: cost=270; kernel=radial; degree=9; gamma=0.24</code></pre>
-<pre><code>## [Tune-y] 3: f1.test.mean=0.7502115; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 4: cost=196; kernel=radial; degree=2; gamma=0.335</code></pre>
-<pre><code>## [Tune-y] 4: f1.test.mean=0.7499523; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 5: cost=211; kernel=linear; degree=3; gamma=0.182</code></pre>
-<pre><code>## [Tune-y] 5: f1.test.mean=0.7762582; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 6: cost=219; kernel=radial; degree=3; gamma=0.68</code></pre>
-<pre><code>## [Tune-y] 6: f1.test.mean=0.7190680; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 7: cost=63; kernel=sigmoid; degree=2; gamma=0.105</code></pre>
-<pre><code>## [Tune-y] 7: f1.test.mean=0.7207868; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 8: cost=274; kernel=sigmoid; degree=10; gamma=0.163</code></pre>
-<pre><code>## [Tune-y] 8: f1.test.mean=0.7393305; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 9: cost=86; kernel=linear; degree=8; gamma=0.285</code></pre>
-<pre><code>## [Tune-y] 9: f1.test.mean=0.7762582; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 10: cost=211; kernel=radial; degree=3; gamma=0.124</code></pre>
-<pre><code>## [Tune-y] 10: f1.test.mean=0.7573115; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 11: cost=200; kernel=linear; degree=5; gamma=0.158</code></pre>
-<pre><code>## [Tune-y] 11: f1.test.mean=0.7762582; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 12: cost=194; kernel=sigmoid; degree=5; gamma=0.107</code></pre>
-<pre><code>## [Tune-y] 12: f1.test.mean=0.7151644; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 13: cost=31; kernel=polynomial; degree=7; gamma=0.27</code></pre>
-<pre><code>## [Tune-y] 13: f1.test.mean=0.6842934; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 14: cost=213; kernel=radial; degree=9; gamma=0.126</code></pre>
-<pre><code>## [Tune-y] 14: f1.test.mean=0.7573115; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 15: cost=193; kernel=linear; degree=3; gamma=0.13</code></pre>
-<pre><code>## [Tune-y] 15: f1.test.mean=0.7762582; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 16: cost=224; kernel=radial; degree=7; gamma=0.17</code></pre>
-<pre><code>## [Tune-y] 16: f1.test.mean=0.7573115; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 17: cost=236; kernel=linear; degree=10; gamma=0.108</code></pre>
-<pre><code>## [Tune-y] 17: f1.test.mean=0.7762582; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 18: cost=12; kernel=radial; degree=9; gamma=0.233</code></pre>
-<pre><code>## [Tune-y] 18: f1.test.mean=0.7537766; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 19: cost=293; kernel=linear; degree=5; gamma=0.105</code></pre>
-<pre><code>## [Tune-y] 19: f1.test.mean=0.7762582; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 20: cost=41; kernel=linear; degree=6; gamma=0.339</code></pre>
-<pre><code>## [Tune-y] 20: f1.test.mean=0.7762582; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 21: cost=163; kernel=linear; degree=8; gamma=0.101</code></pre>
-<pre><code>## [Tune-y] 21: f1.test.mean=0.7762582; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 22: cost=296; kernel=sigmoid; degree=7; gamma=0.436</code></pre>
-<pre><code>## [Tune-y] 22: f1.test.mean=0.6986081; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 23: cost=275; kernel=polynomial; degree=2; gamma=0.237</code></pre>
-<pre><code>## [Tune-y] 23: f1.test.mean=0.6576553; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 24: cost=171; kernel=polynomial; degree=9; gamma=0.105</code></pre>
-<pre><code>## [Tune-y] 24: f1.test.mean=0.7570948; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 25: cost=41; kernel=sigmoid; degree=4; gamma=0.235</code></pre>
-<pre><code>## [Tune-y] 25: f1.test.mean=0.7063987; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 26: cost=95; kernel=radial; degree=10; gamma=0.165</code></pre>
-<pre><code>## [Tune-y] 26: f1.test.mean=0.7573115; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 27: cost=233; kernel=sigmoid; degree=5; gamma=0.105</code></pre>
-<pre><code>## [Tune-y] 27: f1.test.mean=0.7338148; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 28: cost=76; kernel=polynomial; degree=7; gamma=0.102</code></pre>
-<pre><code>## [Tune-y] 28: f1.test.mean=0.7714444; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 29: cost=135; kernel=polynomial; degree=8; gamma=0.239</code></pre>
-<pre><code>## [Tune-y] 29: f1.test.mean=0.6420390; time: 0.0 min</code></pre>
-<pre><code>## [Tune-x] 30: cost=80; kernel=sigmoid; degree=8; gamma=0.324</code></pre>
-<pre><code>## [Tune-y] 30: f1.test.mean=0.7415613; time: 0.0 min</code></pre>
-<pre><code>## [Tune] Result: cost=163; kernel=linear; degree=8; gamma=0.101 : f1.test.mean=0.7762582</code></pre>
-<pre class="r"><code>modelS &lt;- train(resS$learner, task2)
+resS &lt;- tuneParams(renraelS, task=task2, resampling=cv,
+                   par.set=parSet2, control=ctrlR, measures=list(acc, f1),
+                   show.info=F)
+resS$x</code></pre>
+<pre><code>## $cost
+## [1] 103
+## 
+## $kernel
+## [1] &quot;polynomial&quot;
+## 
+## $degree
+## [1] 5
+## 
+## $gamma
+## [1] 0.05612909</code></pre>
+<p>Nakładamy zaproponowane parametry:</p>
+<pre class="r"><code>renraelS &lt;- setHyperPars(renraelS,
+                         kernel=resS$x$kernel, cost=resS$x$cost, degree=resS$x$degree, gamma=resS$x$gamma)
+modelS &lt;- train(renraelS, task2)
 pred20 &lt;- predict(modelS, newdata=test2)
-measureF1(pred20$data$response, pred20$data$truth, &quot;0&quot;)</code></pre>
-<pre><code>## [1] 0.776699</code></pre>
+measureACC(pred20$data$response, pred20$data$truth)</code></pre>
+<pre><code>## [1] 0.7142857</code></pre>
+<pre class="r"><code>measureF1(pred20$data$response, pred20$data$truth, &quot;1&quot;)</code></pre>
+<pre><code>## [1] 0.6976744</code></pre>
+<p>Ostatecznie lepsze, choć w mniejszym stopniu niż model dla “apartments”.</p>
 </div>
 </div>
 
