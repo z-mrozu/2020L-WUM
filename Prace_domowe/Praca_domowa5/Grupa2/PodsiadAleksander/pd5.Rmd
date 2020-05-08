@@ -1,0 +1,151 @@
+---
+title: "Praca Domowa 4"
+author: "Aleksander Podsiad"
+output: 
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(cluster)
+library(factoextra)
+library(genie)
+```
+
+## Przygotowanie danych
+
+### Wczytywanie danych
+
+```{r}
+clustering <- read_csv("clustering.csv", col_names = FALSE)
+```
+
+### Normalizacja danych
+
+```{r}
+clustering_s <- as.data.frame(scale(clustering))
+```
+
+### Wykres
+
+```{r}
+ggplot(clustering_s) + geom_point(aes(x = X1, y = X2)) + xlab("x") + ylab("y")
+```
+
+### Macierz odległości
+
+Przydatna w metodach hierarchicznych.
+
+```{r}
+d <- dist(clustering_s)
+```
+
+## Metoda k-średnich
+
+Jedna z metod opartych na optymalizowaniu położenia środków klastrów.
+
+### Metoda łokcia
+
+Najpierw wyznaczam optymalną liczbę klastrów za pomocą metody `łokcia`.
+
+```{r}
+set.seed(123)
+wss <- fviz_nbclust(clustering_s, FUN = kmeans, method = "wss", k.max = 12)
+plot(wss)
+```
+
+Na pierwszy rzut oka można stwierdzić, że wypłaszczenie linii wykresu następuje dla **6** klastrów.
+
+### Klastrowanie
+
+```{r}
+set.seed(123)
+clusters1 <- as.factor(kmeans(clustering_s, centers = 6, iter.max = 100)$cluster)
+clustering_s1 <- cbind(clustering_s, clusters1)
+```
+
+### Wykres
+
+```{r}
+ggplot(clustering_s1) + geom_point(aes(x = X1, y = X2, col = clusters1)) + 
+  xlab("x") + ylab("y") + scale_color_brewer(palette = "Dark2")
+```
+
+## Metoda aglomeracyjna
+
+W klastrowaniu hierarchicznym używam zmodyfikowanej metody Warda.
+
+### Metryka silhouette
+
+Wyznaczam optymalną liczbę klastrów kierując się metryką `silhouette`.
+
+```{r}
+set.seed(123)
+sil <- fviz_nbclust(clustering_s, FUN = hcut, method = "silhouette", k.max = 12)
+plot(sil)
+```
+
+Widać, że w tym przypadku najlepsza liczba klastrów to **8**.
+
+### Klastrowanie
+
+```{r}
+set.seed(123)
+clusters2 <- as.factor(cutree(hclust(d, method = "ward.D2"), 8))
+clustering_s2 <- cbind(clustering_s, clusters2)
+```
+
+### Wykres
+
+```{r}
+ggplot(clustering_s2) + geom_point(aes(x = X1, y = X2, col = clusters2)) + 
+  xlab("x") + ylab("y") + scale_color_brewer(palette = "Dark2")
+```
+
+## Metoda genie
+
+Metoda ta jest ulepszoną wersją klastrowania hierarchicznego.
+
+### Metryka gap statistic
+
+Wyznaczam optymalną liczbę klastrów za pomocą metryki `gap statistic`.
+
+```{r}
+set.seed(123)
+gap <- fviz_nbclust(clustering_s, FUN = hcut, method = "gap_stat", k.max = 12)
+plot(gap)
+```
+
+W tym przypadku otrzymana optymalna liczba klastrów to **9**.
+
+### Klastrowanie
+
+```{r}
+set.seed(123)
+clusters3 <- as.factor(cutree(hclust2(d), 9))
+clustering_s3 <- cbind(clustering_s, clusters3)
+```
+
+### Wykres
+
+```{r}
+ggplot(clustering_s3) + geom_point(aes(x = X1, y = X2, col = clusters3)) + 
+  xlab("x") + ylab("y") + scale_color_brewer(palette = "Set1")
+```
+
+## Podsumowanie
+
+Optymalna liczba klastrów w praktyce waha się między **8** a **9**. Wszystkie trzy metody zwracają umiarkowanie satysfakcjonujące i estetyczne plastycznie wyniki. 
+Osobiście jednak preferuję podział zapewniony za pomocą metody genie ze względu na odczucie wizualne kształtów i odległości między klastrami.
