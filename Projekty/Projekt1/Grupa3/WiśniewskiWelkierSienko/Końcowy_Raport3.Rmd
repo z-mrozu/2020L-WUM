@@ -1,0 +1,397 @@
+---
+title: "Klasyfikacja"
+author: "Piotr Sieńko, Jacek Wiśniewski, Konrad Welkier"
+date: "21 04 2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+<p>&nbsp;</p>
+# 1. Eksploracja danych
+
+## 1.1 Wstęp
+
+Do projektu dotyczącego klasyfikacji wybraliśmy zbiór danych _Cervical Cancer_ zawierający dane 835 pacjentek szpitala w Caracas. Są w nim różnorakie informacje na temat pacjentek, w tym wiele dotyczących posiadanych chorób wenerycznych. Zbiór zawiera również braki danych, ponieważ część pacjentek nie chciała odpowiedzieć na niektóre, osobiste pytania. Spójrzmy na kilka pierwszych wierszy zbioru.
+
+
+```{r, message=FALSE, warning=FALSE}
+library(DataExplorer)
+library(ggplot2)
+library(visdat)
+library(mice)
+library(ggridges)
+library(dplyr)
+library(lattice)
+library(patchwork)
+library(mlr)
+library(DALEXtra)
+library(tuneRanger)
+data <- read.csv("data_cancer.csv")
+knitr::kable(head(data[,c(1:6)]), align = "c")
+```
+
+Zbiór zawiera także cztery kolumny dotyczące wyników badań przebytych przez pacjentki, które są naszymi zmiennymi celu. Poświęćmy również im trochę uwagi.
+
+```{r}
+knitr::kable(data[c(20:25),c(33:36)], row.names = FALSE, align = "c")
+```
+
+## 1.2 Podstawowe informacje
+
+Zamieniamy teraz zmienne kategoryczne na faktory, a następnie spoglądamy jak wygląda podsumowanie zbioru.
+
+```{r fig.align="Center", fig.height=10, fig.width=20}
+
+for (i in c(5, 8, 10, 12:26, 29:36)) {
+  data[,i] <- as.factor(data[,i])
+}
+DataExplorer::plot_bar(data, ggtheme = theme_bw(base_size = 20), nrow = 3, ncol = 3)
+```
+
+Jak widać sporo kolumn nie wnosi dodatkowych informacji do naszego zbioru - są to zwłaszcza kolumny odnoszące się do chorób wenerycznych. Jednakże tym problemem zajmiemy sie w dalszej części tego rozdziału.
+<p>&nbsp;</p>
+
+Dodatkowo, kiedy jeszcze raz spojrzymy na zmienne celu (4 ostatnie wykresy), możemy zauważyć, że nasz zbiór danych ma bardzo małą liczbę obserwacji pozytywnych. Powoduje to znaczne niezbalansowanie zbioru, co będzie miało istotny wpływ na działanie naszego modelu.
+
+```{r}
+#data <- data[,c(-5,-6,-8,-10,-12,-14,-15,-16,-c(19:25), -28, -31)]
+#1round(jitter(data$Age, factor = 6))
+#2abs(round(jitter(data$Number.of.sexual.partners, factor = 6)))
+#3abs(round(jitter(data$First.sexual.intercourse, factor = 6)))
+#4abs(round(jitter(data$Num.of.pregnancies, factor = 6)))
+#5round(abs(jitter(data$Smokes..packs.year., factor = 8)),2)
+#6round(abs(jitter(data$Hormonal.Contraceptives..years., factor = 8)),2)
+#7round(abs(jitter(data$IUD..years., factor = 20)),2)
+#inf <- data$STDs.condylomatosis[!is.na(data$STDs.condylomatosis)]
+#num_1 <- sample(1:length(inf), 0.05* length(inf))
+#num_2 <- sample(1:length(inf), 0.4* length(inf))
+#inf[num_1] <- 1
+#inf[num_2] <- 0
+```
+
+## 1.3 Rozkłady zmiennych ciągłych
+
+Spójrzmy teraz na kilka wykresów dotyczących zmiennych ciągłych.
+
+```{r echo=FALSE, fig.align="Center", fig.height=12, fig.width=12}
+DataExplorer::plot_density(data[,c(1:4)], ggtheme = theme_bw(base_size = 20), nrow = 2, ncol = 2)
+```
+
+Z wykresów wynika, że zdecydowana większość pacjentek ma poniżej 40 lat oraz, że inicjację seksualną przeżyła pomiędzy 15, a 20 rokiem życia. Ponadto pacjentki stosunkowo rzadko były w ciąży częściej niż 4 razy, natomiast liczba ich partnerów seksualnych wynosiła, w zdecydowanej większości, do 5 włącznie.
+
+## 1.4 Uzupełnianie brakujących danych
+
+
+Braki w danych postanowiliśmy uzupełnić przy pomocy biblioteki _MICE_. Udostępnia one wiele sposobów imputacji danych, do zmiennych ciągłych zastosowaliśmy metodę _Predictive mean matching_ (pmm), natomiast do zmiennych dyskretnych _Logistic regression_(logreg). Przy zmiennych dotyczących chorób wenerycznych, uznaliśmy, że brak danych też może być jakąś informacją, dlatego je zachowaliśmy. Na poniższym wykresie możemy jeszcze spojrzeć jak rozkładały się braki danych w naszym zbiorze.
+
+```{r echo=FALSE, fig.align="Center", fig.height=12, fig.width=12}
+vis_miss(data)
+```
+
+Największe braki, sięgające 90% są w danych dotyczących ostatniej diagnozy choroby wenerycznej. Uznaliśmy, że także te informacje mogą mieć wpływ na ostateczny model.
+
+<p>&nbsp;</p>
+
+```{r echo=FALSE, fig.align="Center", fig.height=12, fig.width=12}
+#wykres do opisania
+g <- md.pattern(data, rotate.names = TRUE)
+```
+
+Przystępujemy teraz do właściwej imputacji danych.
+
+```{r, warning=FALSE, message=FALSE, include=FALSE}
+init <- mice(data, maxit = 0)
+meth <- init$method
+predM <- init$predictorMatrix
+
+# tworzenie modelu
+set.seed(123)
+
+# STD nie będą uzupełniane, i nie będą brane pod uwagę przy budowie modelu
+meth[colnames(data[,c(14:25)])] <- ""
+predM[,colnames(data[,c(14:25)])] <- 0
+
+
+# m - liczba imputacji  maxit - liczba iteracji 
+data_imputation <- mice(data, method = meth, predictorMatrix = predM, m = 1, maxit = 100)
+```
+
+W celu utwierdzenia się w przekonaniu, że imputacja danych przebiegła pomyślnie spójrzmy jeszcze raz na wykres dotyczący braków danych.
+
+```{r}
+data_imputed <- complete(data_imputation)
+data <- data_imputed
+vis_miss(data)
+```
+
+Spojrzmy też jeszcze raz na wykresy gętości zmiennych numerycznych, aby zobaczyć jak zmieniły się po zaimputowaniu danych.
+
+```{r}
+densityplot(data_imputation, data = ~ #Number.of.sexual.partners + 
+              First.sexual.intercourse + 
+              Num.of.pregnancies+
+              Smokes..years. +
+              Hormonal.Contraceptives..years. +
+              IUD..years.) 
+```
+
+
+## 1.5 Analiza uzupełnionych danych
+
+Z uzupełnionych danych można wyciągnąć jeszcze bardziej interesujące wnioski. Pierwszy z nich odnosi się do zależności rozkładów gęstości wieku pacjentek od liczby ciąż. Jak możemy zobaczyć, jeśli rozważamy grupę pacjentek z większą liczbą przebytych ciąż to mają one średnio więcej lat. Wyjątkiem są jedynie pacjentki, które nie były dotychczas w ciąży.
+
+```{r, message=FALSE}
+#data_imputed <- read.csv("Filled_data.csv")
+ggplot(data_imputed, aes(x = Age, y = Num.of.pregnancies, group = Num.of.pregnancies, fill = Num.of.pregnancies)) +
+  geom_density_ridges() +
+  theme_bw(base_size = 20) +
+  scale_fill_continuous(type = "viridis") +
+  theme(legend.position = "none")
+```
+
+Kolejną ciekawą zależność możemy zaobserwować porównując wpływ na liczbę partnerów seksualnych faktu czy rozważana pacjentka pali papierosy. Do tego porównania wykorzystaliśmy boxplot, który dość przejrzyście pokazuje tę zależność.
+
+```{r}
+data <- data %>% filter(Number.of.sexual.partners < 10 & !is.na(Smokes))
+ggplot(data, aes(y = Number.of.sexual.partners, x = Smokes, fill = Smokes)) + geom_boxplot(notch=TRUE, outlier.colour="red", outlier.shape=8, outlier.size=4) + 
+  theme_bw()
+```
+
+Sprawdziliśmy również, jak wyglądają gęstości różnych zmiennych w podziale na pacjentki stosujące i niestosujące wkładki domaciczne. Okazało się, że rozkład wieku kobiet stosujących je jest znacznie przesunięty, dodatkowo nie występuje w nim aż tak duża skośność.
+
+```{r, message=FALSE}
+
+ggplot(data_imputed, aes(x = Age, y = IUD, group = IUD, fill = IUD)) +
+  geom_density_ridges_gradient(scale = 0.9) +
+  theme_bw(base_size = 20) +
+  scale_fill_viridis_d(begin = 0.7) +
+  scale_y_discrete(expand = expansion(mult = c(0.25, 1) )) +
+  theme(legend.position = "none")
+
+
+```
+
+Podział ten wpływał także na rozkład liczby ciąż. Był on ponownie przesunięty w prawo. 
+
+```{r, message=FALSE}
+ggplot(data_imputed, aes(x = Num.of.pregnancies, y = IUD, group = IUD, fill = IUD)) +
+  geom_density_ridges_gradient(scale = 0.9, stat = "binline") +
+  theme_bw(base_size = 20) +
+  scale_fill_viridis_d(begin = 0.7) +
+  scale_y_discrete(expand = expansion(mult = c(0.25, 1) )) +
+  theme(legend.position = "none")
+
+ggplot(data_imputed, aes(x = Num.of.pregnancies, y = IUD, group = IUD, color = IUD)) +
+  geom_jitter()+
+  theme_bw(base_size = 20) +
+  scale_fill_viridis_d(begin = 0.7) +
+  theme(legend.position = "none")
+```
+
+Niestety, w czasie analizy zmiennych, wiele początkowo interesujących zależności okazało się być oparte na bardzo małej liczbie obserwacji. Mały zbiór danych, posiadający dodatkowo niewiele rekordów dodatnich powodował, iż każdą zaobserwowaną korelację musieliśmy dokładnie sprawdzić. Było tak na przykład przy sprawdzaniu średniej wieku w podziale na testy genetyczne.
+
+```{r, message=FALSE}
+ggplot(data_imputed, aes(x = Age, y = Dx.Cancer, group = Dx.Cancer, fill = Dx.Cancer)) +
+  geom_boxplot() +
+  scale_fill_viridis_d(begin = 0.7) +
+  theme_bw(base_size = 20) +
+  theme(legend.position = "none")
+```
+
+Niestety, bardzo interesująca zależność okazała się być oparta na mniej niż 20 obserwacjach dodatnich.
+
+
+```{r, message=FALSE}
+ggplot(data_imputed, aes(x = Age, y = Dx.Cancer, color = Dx.Cancer)) +
+  geom_jitter(size = 2) +
+  theme_bw(base_size = 20) +
+  scale_fill_viridis_d(begin = 0.7) +
+  scale_y_discrete(expand = expansion(mult = c(0.5, 0.5) )) +
+  theme(legend.position = "none")
+```
+
+
+## 1.6 Pozbycie się zbędnych informacji
+
+Na koniec tej części projektu zdecydowaliśmy się zająć faktem, że niektóre zmienne kategoryczne występują tylko jako 0 lub NA. Uznaliśmy, iż nie wnoszą one żadnych informacji do zbioru, więc postanowiliśmy je usunąć. Podobnie postąpiliśmy ze zmiennymi, gdzie było jedynie kilka obserwacji pozytywnych. Dzięki temu zredukowaliśmy wymiar danych do 19 z początkowych 35 wymiarów. Większość usuniętych kolumn odnosiła się do posiadanych przez pacjentki chorób wenerycznych, co oznaczało, że bardzo niewielki odsetek pacjentek posiadał takie problemy. Zobaczmy jakie kolumny zostaną.
+
+```{r}
+data <- data[,c(-5,-6,-8,-10,-12,-c(14:25), -28, -31)]
+knitr::kable(colnames(data))
+```
+# 2. Inżynieria cech
+
+W tym fragmencie projektu zajęliśmy się przygotowaniem naszego zbioru danych do utworzenia modelów predykcyjnych. 
+
+
+Z 4 kolumn celu utworzyliśmy jedną kolumnę, która będzie nową kolumną celu. Będzie ona zawierała 1 jeśli jedna z dotychczasowych kolumn celu zawierała 1, a zero w przeciwnym razie. Oznaczymy tę kolumnę jako "Cancer" i będzie zawierała informację czy, w którymkolwiek badaniu pacjent dostał wynik pozytywny. Po takiej operacji, stosunek pozytywnych rekordów do ogólnej liczby wynosi około 1:8. 
+
+```{r}
+data$Cancer <- ifelse((data$Biopsy == 1 | data$Citology == 1 | data$Schiller == 1 | data$Hinselmann == 1), 1, 0)
+data$Cancer <- as.factor(data$Cancer)
+```
+
+Kolumny zawierające zmienne kategoryczne zostały już wcześniej zamienione na faktory, natomiast zmienne numeryczne ulegną teraz normalizacji - taka operacja z pewnością nie zaszkodzi naszemu modelowi.
+
+```{r}
+data[, c(1:10)] <- normalizeFeatures(data[, c(1:10)])
+```
+
+## 2.1 Target encoding
+
+Na tym etapie spróbujemy też pewne inne sposoby podejścia do danych, które czasami mogą okazać się bardzo przydatne. Zastosujemy metodę zwaną target encoding kodując wiek za pomocą średniej wieku pacjentek według podziału względem liczby ciąż - utworzonych zostało 6 takich grup. Otrzymana w ten sposób nowa kolumna prezentuje się następująco.
+
+``` {r, warning=FALSE, message=FALSE}
+data_cut <- data
+data_cut$Num.of.pregnancies <- cut(data_cut$Num.of.pregnancies, c(-1, 1, 2, 3, 4, 5, 11))
+tmp <- data_cut %>% group_by(Num.of.pregnancies) %>% dplyr::summarise(Mean = mean(Age))
+data_cut <- inner_join(data_cut, tmp)
+data_cut <- data_cut[, -4]
+colnames(data_cut)[18] <- "Num.of.pregnancies"
+data_cut <- data_cut[,c(1,2,3,18,4,5,6,7,8,9,10,11,12,13,14,15,16,17)]
+knitr::kable(head(data_cut[,4]), align = "c")
+```
+
+Jednakże w naszym przypadku target encoding nie zostanie zastosowany.
+
+## 2.2 One-hot encoding
+
+Spróbowaliśmy również zastosować metodę zwaną one-hot encoding, na dwóch kolumnach dotyczących chorób wenerycznych. W wyniku tej operacji powstały 4 dodatkowe kolumny - po dwie na każdą chorobę. W jednej z nich znajduje się 1 jeśli pacjentka była zdiagnozowana z tą chorobą, a w przeciwnym razie wartość 1 pojawia się w drugiej z kolumn odpowiadających tej chorobie.
+
+```{r results="asis"}
+
+for (i in c(11:18)) {
+  data_cut[,i] <- as.factor(data_cut[,i])
+}
+
+data_cut <- createDummyFeatures(data_cut)
+
+knitr::kable(head(data_cut[,c(18:21)]), align = "c")
+
+```
+
+Jak widać, w tym przypadku, wykorzystanie tego narzędzia nie ułatwi pracy modelowi nie wnosząc żadnej wartości dodatniej, więc po zbadaniu tego rozwiązania zdecydowaliśmy się nie implementować go w naszym projekcie.
+
+# 3. Modele
+
+Ostatecznie zdecydowaliśmy się na dwa modele, które zostaną zaprezentowane w najbliższym paragrafie. Pierwszy z nich to las losowy - Ranger, natomiast drugi to Gradient Boosting Machine.
+
+## 3.1 Zbiór treningowy
+
+Przed przystąpieniem do trenowania modeli wzbogacimy zbiór treningowy o dodatkowe wyniki pozytywne, ponieważ jest ich na razie stosunkowo niewiele. Zostaną one stworzone poprzez losowe zaszumienie istniejących rekordów dodatnich. 
+```{r}
+#data <- data[!is.na(data)]
+data <- data[,-c(14:17)]
+n <- sample(1:nrow(data), 0.7* nrow(data))
+data_train <- data[n,]
+data_test <- data[-n,]
+data_positive <- data_train[data_train$Cancer == 1, ]
+data_positive$Age <- round(jitter(as.integer(data_positive$Age), factor = 6))
+data_positive$Number.of.sexual.partners <- abs(round(jitter(as.integer(data_positive$Number.of.sexual.partners), factor = 6)))
+data_positive$First.sexual.intercourse <- abs(round(jitter(as.integer(data_positive$First.sexual.intercourse), factor = 6)))
+data_positive$Num.of.pregnancies <- abs(round(jitter(as.integer(data_positive$Num.of.pregnancies), factor = 6)))
+data_positive$Smokes..packs.year. <- round(abs(jitter(as.integer(data_positive$Smokes..packs.year.), factor = 8)),2)
+data_positive$Hormonal.Contraceptives..years. <- round(abs(jitter(as.integer(data_positive$Hormonal.Contraceptives..years.), factor = 8)),2)
+data_positive$IUD..years. <- round(abs(jitter(as.integer(data_positive$IUD..years.), factor = 20)),2)
+data_train_extra <- rbind(data_train, data_positive)
+data_train_extra <- data_train_extra[sample(nrow(data_train_extra), replace = FALSE),]
+```
+## 3.2 Model Ranger
+
+Pierwszy model jest oparty o klasyfikator _ranger_. Do strojenia danych użyliśmy funkcji _tuneRanger_ z pakietu o takiej samej nazwie. Aby upewnić się, że nasz algorytm tworzenia działa stabilnie, pięciokrotnie powtórzyliśmy całą procedurę. 
+
+```{r, message = FALSE, warning=FALSE, cache=TRUE}
+result = NULL
+for (i in 1: 5){ 
+classif_task_4 <- makeClassifTask(data = data_train_extra, target = "Cancer", positive = 1)
+classif_lrn_4 <- makeLearner("classif.ranger", par.vals = list( "num.trees" = 2500), predict.type = "prob")
+res_ranger <- tuneRanger(classif_task_4, measure = list(gmean), num.threads = 6, num.trees = 2500)
+pred_ranger <- predict(res_ranger$model, newdata = data_test)
+performance_ranger <- performance(pred_ranger, measures = list(gmean, auc, tpr, tnr))
+result <- rbind(result, performance_ranger)
+}
+knitr::kable(result)
+```
+
+Do weryfikacji działania modelu użyliśmy miar: AUC, TPR, TNR oraz GMEAN, czyli średniej geometrycznej z czułości i swoistości. Wyniki wskazują, że nasz model wychwytuje jedynie niewielką część obserwacji pozytywnych. 
+
+
+## 3.3 Model Gradient Boosting Machine
+
+Następny model jest oparty na Gradient Boosting Machine. Hiperparametry zostały wybrane poprzez metodę _Random Search_.
+
+```{r, message = FALSE, warning=FALSE, cache=TRUE}
+task <- makeClassifTask(data = data_train_extra, target = "Cancer", positive = 1)
+lrn <- makeLearner("classif.gbm", par.vals = list(distribution = "bernoulli", "n.trees" = 10000,
+                                                  "interaction.depth" = 2, "n.minobsinnode" = 10, "shrinkage" = 0.01), predict.type = "prob")
+
+
+gbm_ps = makeParamSet(
+  makeIntegerParam("interaction.depth", lower = 1, upper = 10),
+  makeIntegerParam("n.minobsinnode", lower = 1, upper = 10),
+  makeNumericParam("shrinkage", lower = -10, upper = -1, trafo = function(x) 2^x)
+)
+
+cv <- makeResampleDesc("CV", iter = 5, stratify = TRUE)
+ctrl_random <- makeTuneControlRandom(maxit = 20)
+res_random <- tuneParams(lrn, task = task, resampling = cv,
+                         par.set = gbm_ps, control = ctrl_random, list(auc, gmean, tpr))
+
+
+model_random <- train(res_random$learner, task)
+
+gbm_cv <- resample(lrn, task, cv, measures = list(tpr, tnr, f1, auc, gmean))
+
+
+pred_gbm <- predict(model_random, newdata = data_test)
+
+performance_gbm <- performance(pred_gbm, measures = list(tpr, tnr, f1, auc, gmean))
+
+knitr::kable(performance_gbm)
+```
+
+Podobnie jak w przypadku rangera, także GBM nie był w stanie wychwycić znacznej liczby obserwacji pozytywnych. Drugi model cechował się jednak mniejszą skłonnością do "fałszywych alarmów", czyli do błędnego przypisywania dodatniej predykcji, co pokazuje wyższa miara TNR.
+
+
+## 3.3 Porównanie modeli
+
+Wyniki modeli ranger i gbm wskazały delikatną przewagę tego pierwszego. Przyjrzyjmy się z czego ta różnica może wynikać.
+
+```{r, message = FALSE, warning=FALSE, fig.width=15, fig.height=10}
+explainer_random <- explain_mlr(model_random, data = data_test, y = as.numeric(data_test$Cancer), label = "gbm")
+explainer_ranger <- explain_mlr(res_ranger$model, data = data_test, y = as.numeric(data_test$Cancer), label = "ranger")
+
+vi_random <- variable_importance(explainer_random, loss_function = loss_root_mean_square)
+vi_ranger <- variable_importance(explainer_ranger, loss_function = loss_root_mean_square)
+plot(vi_random, vi_ranger)
+```
+
+Z wykresu ważności zmiennych czytamy, że w przypadku obu modeli istotnymi dla wyniku zmiennymi były zmienne mówiące o liczbie ciąż ankietowanych oraz o ich wieku. Model gbm czerpał więcej informacji z wieku inicjacji seksualnej ankietowanych niż model ranger. Obydwa modele uznały informacje dotyczące chorób wenerycznych za mało istotne co potwierdza nasze wcześniejsze założenia, które doprowadziły nas do usunięcie części tego typu informacji.
+
+```{r, message = FALSE, warning=FALSE, fig.width=15, fig.height=10}
+
+pdp_random  <- variable_effect(explainer_random, variable =  "Age", type = "partial_dependency")
+pdp_ranger  <- variable_effect(explainer_ranger, variable =  "Age", type = "partial_dependency")
+plot(pdp_random, pdp_ranger)
+```
+Następny wykres pokazuje różnice w interpretowaniu wieku ankietowanych. Obydwa modele zachowują się podobnie w przypadku większości przedziałów wiekowych. Różnicę widzimy w przypadku osób starszych. Model ranger przewiduje w ich przypadku większą szanse na wynik pozytywny niż model gbm.
+
+```{r, message = FALSE, warning=FALSE, fig.width=15, fig.height=10}
+bd_random <- predict_parts(explainer_random, new_observation = data[1,])
+bd_ranger <- predict_parts(explainer_ranger, new_observation = data[1,])
+
+plot(bd_random) | plot(bd_ranger)
+
+```
+Na koniec zobaczmy analizę dla 1 (w tym przypadku pierwszego) rekordu. W tym przypadku znaczącą rolę dla wyniku miały kolumny mówiące o liczbie partnerów seksualnych oraz czasu od ostatniej diagnozy choroby wenerycznej.
+
+# Podsumowanie
+
+Głównymi czynnikiami utrudniającymi stworzenie efektywnego modelu było jego niezbalansowanie oraz mała liczba obserwacji. Bardzo pomocne okazało się wytworzenie sztucznych rekordów pozytywnych, dzięki czemu nasze algorytmy były w stanie chociaż częściowo wykrywać przypadki dodatnie. Ważna była również eksploracja oraz inżynieria cech, które pozwoliły zmodyfikować nasze dane w celu zoptymalizowania działania klasyfikatorów. Niestety, wszytkie te narzędzia nie były wystarczające do stworzenia niezawodnie działającego modelu. Niemniej uważamy, że dzięki wybraniu, jak się później okazało wymagającego zbioru, mogliśmy nauczyć się wielu przydatnych technik. 
+
+## Oświadczenie
+
+Potwierdzamy samodzielność powyższej pracy oraz niekorzystanie przez nas z niedozwolonych źródeł
