@@ -1,0 +1,642 @@
+---
+title: "WUM - Praca domowa 4"
+author: "Patryk Wrona"
+date: "14 kwietnia 2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true 
+---
+
+```{r setup, include=FALSE}
+library(caret)
+library(DALEX)
+library(VIM)
+library(dplyr)
+set.seed(44)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, cache = TRUE)
+```
+
+
+# Ładowanie zbiorów danych
+
+W tej pracy domowej wykorzystam 2 zbiory danych w celu modelowania SVM z losowym strojeniem hiperparametrów:
+
+- *apartments* (z pakietu DALEX)
+- *diabetes* (z pakietu VIM)
+
+
+```{r}
+data(apartments, package = "DALEX")
+data(diabetes, package = "VIM")
+```
+
+# Apartments
+
+```{r}
+# PRAWIE ROWNOLICZNE KLASY:
+apartments %>% group_by(district) %>% count() %>% arrange(desc(n))
+```
+
+Dzielnice (zmienna celu) w zbiorze danych są w przybliżeniu równoliczne - nasz zbiór danych jest zbalansowany.
+
+## Rzut okiem na zbiór
+
+```{r}
+
+ggplot( data = apartments,
+        aes(x = m2.price, y = surface, color =  district)) +
+      geom_point()
+ggplot( data = apartments,
+        aes(x = m2.price, y = no.rooms, color =  district)) +
+      geom_point()
+
+```
+
+Śródmieście jest jako jedyne liniowo separowalne. Należy się spodziewać, że modele będą dobrze dokonywały predykcji tylko Śródmieścia, a reszta dzielnic będzie bardziej "chybił trafił". Spodziewam się (hipoteza), że jądro Gaussowskie będzie w tym przypadku najlepsze, gdyż nauczy się klasyfikować dzielnice (inne niż Śródmieście) lepiej od innych jąder: liniowego i wielomianowego.
+
+
+## Train/test 80%/20% split
+
+```{r}
+indexes <- createDataPartition(apartments$district, p = 0.8, list = F )
+
+trainset <- apartments[indexes,]
+testset <- apartments[-indexes,]
+```
+
+## Modele - bez skalowania
+
+Najpierw rozważmy **modele o hiperparametrach domyślnych**, które potem porównamy z modelami strojonymi:
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmRadial"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+```{r}
+set.seed(44)
+# Fit svmPoly:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmPoly"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+```{r}
+set.seed(44)
+# Fit svmLinear:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmLinear"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+
+Modele ze strojonymi hiperparametrami po losowej siatce:
+
+```{r}
+
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  district ~ . ,
+  tuneLength = 20, # ilość losowań
+  data = trainset, 
+  method = "svmRadial",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random"# losowe strojenie hiperparametrow
+  )
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+```{r}
+set.seed(44)
+# Fit svmPoly:
+model <- train(
+  district ~ . ,
+  tuneLength = 20, # ilość losowań
+  data = trainset, 
+  method = "svmPoly",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random" # losowe strojenie hiperparametrow
+  )
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+
+```{r}
+set.seed(44)
+# Fit svmLinear:
+model <- train(
+  district ~ . ,
+  tuneLength = 20, # ilość losowań
+  data = trainset, 
+  method = "svmLinear",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random"# losowe strojenie hiperparametrow
+  )
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+O dziwo liniowe jądro poradziło sobie lepiej od Gaussowskiego, a oto jego hiperparametry:
+
+```{r}
+model
+```
+
+
+## Ze skalowaniem
+
+Teraz zbadam czy skalowanie zmiennych ma duży wpływ w przypadku *apartments*. Wyznaczę **Accuracy** modeli ze skalowaniem. Poniżej wykonuję skalowanie zmiennych ilościowych, czyli wszystkich oprócz zmiennej celu:
+
+```{r}
+trainset[,1:5] <- trainset[,1:5] %>% scale(center = F, scale = T)
+testset[,1:5] <- testset[,1:5] %>% scale(center = F, scale = T)
+```
+
+Najpierw rozważmy **modele o hiperparametrach domyślnych**, które potem porównamy z modelami strojonymi:
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmRadial"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+```{r}
+set.seed(44)
+# Fit svmPoly:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmPoly"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+```{r}
+set.seed(44)
+# Fit svmLinear:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmLinear"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+
+Modele ze strojonymi hiperparametrami po losowej siatce:
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  district ~ . ,
+  tuneLength = 20, # ilość losowań
+  data = trainset, 
+  method = "svmRadial",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random"# losowe strojenie hiperparametrow
+  )
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+
+```{r}
+set.seed(44)
+# Fit svmPoly:
+model <- train(
+  district ~ . ,
+  tuneLength = 20, # ilość losowań
+  data = trainset,
+  method = "svmPoly",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random"# losowe strojenie hiperparametrow
+  )
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+
+```{r}
+set.seed(44)
+# Fit svmLinear:
+model <- train(
+  district ~ . ,
+  tuneLength = 20, # ilość losowań
+  data = trainset, 
+  method = "svmLinear",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random" # losowe strojenie hiperparametrow
+  )
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+
+
+## Podsumowanie apartments
+
+Podsumujmy uzyskane **Accuracy** z uwzględnieniem skalowania oraz różnych jąder.
+
+### Bez skalowania
+
+Bez skalowania, hiperparametry **domyślne**:
+
+- *svmRadial*: 0.3046
+- *svmPoly*: 0.2893
+- *svmLinear*: **0.335**
+
+
+Bez skalowania, hiperparametry **strojone**:
+
+- *svmRadial*: 0.3096
+- *svmPoly*: 0.2944
+- *svmLinear*: **0.3401**
+
+### Ze skalowaniem
+
+Ze skalowaniem, hiperparametry **domyślne**:
+
+- *svmRadial*: 0.2944
+- *svmPoly*: 0.2893
+- *svmLinear*: 0.3299 
+
+
+Ze skalowaniem, hiperparametry **strojone**:
+
+- *svmRadial*: **0.3401**
+- *svmPoly*: 0.3147
+- *svmLinear*: 0.335 
+
+Strojenie modeli przyniosło dobre aczkolwiek niewielkie rezultaty; dzięki niemu modele miały lepsze Accuracy.
+
+Jak również widzimy, skalowanie znacznie pomogło jądru gaussowskiemu i wielomianowemu, jednakże jądro liniowe osiągnęło gorszy wynik.
+
+Nasze modele, zgodnie z oczekiwaniami, **bezbłędnie klasyfikowały apartamenty w Śródmieściu**. Niestety klasyfikacja innych dzielnic była obarczona częstymi błędami.
+
+Jest 10 dzielnic i stąd mogło wynikać Accuracy około **0.3**. Warto zauważyć, że klasyfikator losowy osiągnąłby Accuracy w okolicach **0.1**, a umiący rozróżnić tylko Śródmieście oscylowałby gdzieś w Accuracy = **0.2**. Z tego powodu powższe klasyfikatory nauczyły się w pewnym sensie rozróżniać dzielnice. Faktycznie, jeśli zerknąć na wcześniejsze wykresy punktowe w ggplot2, można dostrzec, że niektóre 'pasma' punktów są zajęte przez poszczególne dzielnice. Jednakże, te pasma nachodzą na siebie dla różnych dzielnic, stąd trudności z klasyfikacją.
+
+
+
+
+# diabetes
+
+Zbiór danych medycznych o pacjentach zawierający 8 kolumn numerycznych i 1 kolumnę celu - Outcome - określającą czy pacjent ma cukrzycę 'yes' czy nie 'no'. Może poza 'DiabetesPedigreeFunction', wiadomo co oznaczają poszczególne kolumny.
+
+
+```{r}
+names(diabetes)
+```
+
+
+## Diabetes - niezbalansowany
+
+```{r}
+summary(diabetes$Outcome)
+```
+
+Jak widzimy 2 razy więcej było pacjentów u których nie rozpoznano cukrzycy - zbiór jest niezbalansowany, ale stopień niezbalansowania nie jest duży.
+
+Na zbiorze *diabetes* trzeba było zastosować imputację. Wykorzystałem narzędzie z pakietu VIM.
+
+## Imputacja braków danych
+
+```{r}
+set.seed(44)
+## irmi
+form <- list(
+  Pregnancies = c('Age'),
+  Glucose = c('Insulin'),
+  BloodPressure = c('BMI'),
+  SkinThickness = c('BMI'),
+  BMI = c('BloodPressure','SkinThickness')
+) # kolumny od których ma zależeć imputacja
+# wyznaczone używając pairs() i sprawdzając liniową zależność
+
+aux <- irmi(diabetes, modelFormulas = form, trace = F, imp_var = F)
+
+# zaokraglanie wartosci dyskretnych:
+aux$Pregnancies <- round(aux$Pregnancies)
+aux$Age <- round(aux$Age)
+
+```
+
+
+## Train/test 80%/20% split
+
+
+```{r}
+indexes <- createDataPartition(aux$Outcome, p = 0.8, list = F )
+
+trainset2 <- aux[indexes,]
+testset2 <- aux[-indexes,]
+```
+
+## Modele - bez skalowania
+
+Najpierw rozważmy **modele o hiperparametrach domyślnych**, które potem porównamy z modelami strojonymi:
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmRadial"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmPoly"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmLinear"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+Modele ze strojonymi hiperparametrami po losowej siatce:
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  tuneLength = 10, # ilość losowań
+  data = trainset2, 
+  method = "svmRadial",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random"
+  )
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+
+```{r}
+set.seed(44)
+# Fit svmPoly:
+model <- train(
+  Outcome ~ . ,
+  tuneLength = 10, # ilość losowań
+  data = trainset2, 
+  method = "svmPoly",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random"
+  )
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+
+```{r}
+set.seed(44)
+# Fit svmLinear:
+model <- train(
+  Outcome ~ . ,
+  tuneLength = 10, # ilość losowań
+  data = trainset2, 
+  method = "svmLinear",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random"
+  )
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+## Ze skalowaniem
+
+Teraz zbadam czy skalowanie zmiennych ma duży wpływ w przypadku *diabetes*. Wyznaczę **Accuracy/Sensitivity/Specificity** modeli ze skalowaniem. Poniżej wykonuję skalowanie zmiennych ilościowych, czyli wszystkich oprócz zmiennej celu:
+
+```{r}
+trainset2[,1:8] <- trainset2[,1:8] %>% scale(center = F, scale = T)
+testset2[,1:8] <- testset2[,1:8] %>% scale(center = F, scale = T)
+```
+
+Najpierw rozważmy **modele o hiperparametrach domyślnych**, które potem porównamy z modelami strojonymi:
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmRadial"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmPoly"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmLinear"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+
+Modele ze strojonymi hiperparametrami po losowej siatce:
+
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  tuneLength = 10, # ilość losowań
+  data = trainset2, 
+  method = "svmRadial",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random"
+  )
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+
+```{r}
+set.seed(44)
+# Fit svmPoly:
+model <- train(
+  Outcome ~ . ,
+  tuneLength = 10, # ilość losowań
+  data = trainset2, 
+  method = "svmPoly",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random"
+  )
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+
+```{r}
+set.seed(44)
+# Fit svmLinear:
+model <- train(
+  Outcome ~ . ,
+  tuneLength = 10, # ilość losowań
+  data = trainset2, 
+  method = "svmLinear",
+  trControl = trainControl(
+    method = "cv", 
+    number = 5, 
+    verboseIter = F,
+    search = "random"
+  )
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+## Podsumowanie diabetes
+
+Podsumujmy uzyskane **Accuracy/Sensitivity/Specificity** z uwzględnieniem skalowania oraz różnych jąder.
+
+### Bez skalowania
+
+Bez skalowania, hiperparametry **domyślne**:
+
+- *svmRadial*: 0.7516/0.8700/0.5283 # Acc i Sens większe niż po strojeniu
+- *svmPoly*: **0.7516/0.9100/0.4528**
+- *svmLinear*: 0.7974/0.86/0.5094
+
+Bez skalowania, hiperparametry **strojone**:
+
+- *svmRadial*: 0.7451/0.8500/0.5472
+- *svmPoly*: **0.7974/0.9300/0.5472**
+- *svmLinear*: 0.7974/0.9300/0.5472
+
+### Ze skalowaniem
+
+Ze skalowaniem, hiperparametry **domyślne**:
+
+- *svmRadial*: 0.7582/0.8700/0.5472 # Acc i Sens większe niż po strojeniu
+- *svmPoly*: **0.7516/0.9000/0.4717**
+- *svmLinear*: 0.7386/0.8600/0.5094
+
+Ze skalowaniem, hiperparametry **strojone**:
+
+- *svmRadial*: 0.7451/0.8500/0.5472
+- *svmPoly*: **0.8039/0.9300/0.5660**
+- *svmLinear*: 0.7974/0.9300/0.5472
+
+Strojenie modeli przyniosło dobre rezultaty również dla tego zbioru danych; dzięki niemu modele miały lepsze Accuracy. **Tylko jądro Gaussowskie po strojeniu wykazywało gorszy performance.**
+
+Widzimy, że skalowanie nie zaszkodziło, a pomogło jedynie w przypadku SVM z jądrem wielomianowym.
+
+Chociaż Accuracy wynosi około 0.75-0.8 w zależności od modeli, to Specificity jest wyjątkowo niskie. W tym zagadnieniu medycznym powinniśmy calować w jak największe Specificity, gdyż negatywne etykietki to 'yes', a pozytywne to 'no'. W celu zwiększenia Specificity można by zmniejszyć próg (threshold) prawdopodoieństwa zaklasyfikowania negatywnego 'yes'. Zmniejszy to już i tak olbrzymie Sensitivity, ale lepsza detekcja chorych jest ważniejsza, niż kilka fałszywych alarmów.
+Mimo wszystko, ze względu na niezbalansowanie danych, klasyfikator losowy miałby Sensitivity ok. *0.67* oraz Specificity ok. *0.33*. Obie te wartości są *większe o ok. 0.2*, więc nasze modele wykryły niektóre zależności i nauczyły się dzięki nim rozpoznawać chorobę (lepiej lub gorzej).
+
+# Uwagi/wnioski
+
+Domyślne hiperparametry zazwyczaj osiągały gorsze rezultaty niż hiperparametry po strojeniu. W obydwu zbiorach wyniki strojenia hiperparametrów były oczywiście losowe. Czasami mogłoby się zdażyć tak, że przy większej ilości losowań najlepszy zestaw hiperparametrów okazałby się gorszy niż ten wyznaczony z mniejszą ilością losowań. Jeśli chciałoby się mieć nad tym procesem lepszą kontrolę, powinno się rozważyć szukanie po zadanej z góry siatce hiperparametrów. Jak wiemy z [artykułu - Figure 6](http://pyml.sourceforge.net/doc/howto.pdf) patrząc na siatkę hiperparametrów jako heatmapę możemy stwierdzić, że ta siatka jest regularna. **Pewne zakresy hiperparametrów, które są najlepsze mogą nigdy nie być wylosowane poprzez 'random search'**, natomiast szukanie po ustalonej siatce jest w tym przypadku bardziej wskazane. Możliwe, że ten jeden przypadek dla zbioru *diabetes* z jądrem Gaussowsim wylosował gorsze hiperparametry, a domyślnie używa tych dających lepsze osiągi, które można dostrzec w artykule.
+
