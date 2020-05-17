@@ -1,20 +1,11 @@
-Szymon Maksymiuk is inviting you to a scheduled Zoom meeting.
+Stanislaw Pawlak is inviting you to a scheduled Zoom meeting.
 
-Topic: WUM LAB
-Time: Mar 17, 2020 08:00 AM Warsaw
+Topic: WUM LAB 10
+Time: May 5, 2020 08:30 AM Warsaw
 
 Join Zoom Meeting
-https://zoom.us/j/620780652
+https://us04web.zoom.us/j/77396493765?pwd=ODk2T1ZmUm9UNFJEdnZ6Q3dLbTlpUT09
 
-Meeting ID: 620 780 652
+Meeting ID: 773 9649 3765
+Password: 033459
 
-One tap mobile
-,,620780652# US Toll
-
-Dial by your location
-         US Toll
-        
-Meeting ID: 620 780 652
-Find your local number: https://zoom.us/u/abpTtzkTnq
-
-Oczywiście zajęcia zaczynają się o 8:15, ale zoom rozumie tylko pełne lub połowy godziny.

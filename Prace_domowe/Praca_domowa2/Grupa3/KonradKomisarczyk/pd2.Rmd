@@ -1,0 +1,192 @@
+---
+title: "WUM - PD2"
+author: "Konrad Komisarczyk"
+date: "23.03.2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true 
+---
+
+```{r setup, include=FALSE}
+library(mlr)
+library(mice)
+library(dplyr)
+
+set.seed(213)
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+```{r}
+data <- read.csv("https://www.dropbox.com/s/360xhh2d9lnaek3/allegro-api-transactions.csv?dl=1")
+#data <- read.csv("allegro-api-transactions.csv")
+```
+
+# Kodowanie zmiennych kategorycznych
+
+## Target encoding
+
+Metoda target encoding polega na zastąpieniu kolumny z danymi kategorycznymi średnią wartością kolumny celu spośród danej kategorii.
+
+```{r}
+cleaned_data <- data %>% 
+  mutate(it_location = stringi::stri_trans_tolower(it_location))
+
+means <- cleaned_data %>% 
+  group_by(it_location) %>% 
+  summarise(it_location_mean_price = mean(price))
+
+target_encoded <- cleaned_data %>% 
+  left_join(means, by = "it_location") %>% 
+  select(-it_location)
+```
+
+```{r}
+target_encoded %>% head() %>% select(1:5, it_location_mean_price) %>% knitr::kable()
+```
+
+
+Używając metody target encoding możemy narażać nasz model na nadmierne dopasowanie, szczególnie w takim jak tutaj przypadku, gdzie kolumna kategoryczna ma dużo (tutaj 7903) poziomów. Ta duża ilość poziomów w tym przypadku wynika z tego, że dane są brudne, wprowadzane przez użytkowników jako ciąg znaków, często z błędami, czy jakieś wartości typu "INTERNET". 
+
+Metoda target encoding może powodować też kolizje, gdy dwie kategorie mają taką samą średnią wartość w kolumnie celu, jeżeli się ich obawiamy, możemy starać się im zapobiec dodając do zakodowanej kolumny małe losowe zaburzenie wyniku dla każdej kategorii.
+
+## One-hot encoding
+
+Metoda one hot encoding  polega na zastąpieniu kolumny kategorycznej kolumnami zawierającymi wartości `0` i `1`. W metodzie `1-of-n` tworzymy po jednej kolumnie odpowiadającej każde z kategorii i odpowiadająca danej kategorii kolumna przyjmuje wartość 1 wtedy i tylko wtedy gdy obserwacja należy do tej kategorii. Możemy pozbyć się dowolnej z tych kolumn nie tracąc informacji, zatem w metodzie `reference` pozbywamy się jednej z nich.
+
+```{r}
+dummy_1 <- data$main_category %>% createDummyFeatures(method = "1-of-n")
+dummy_1 %>% head() %>% select(1:10) %>% knitr::kable()
+```
+
+```{r}
+dummy_2 <- data$main_category %>% createDummyFeatures(method = "reference")
+dummy_2 %>% head() %>% select(1:10) %>% knitr::kable()
+```
+
+W naszym przypadku metody tworzą odpowiednio 27 i 26 kolumn.
+
+
+Stosując metodę `one-hot encoding` w przeciwieństwie do `target encoding` możemy znacznie zwiększyć liczbę kolumn, w przypadku kiedy poziomów kodowanej kolumny kategorycznej jest dużo.
+
+One-hot encoding w przypadku dużej ilości kategorii może też szczególnie wpływać na modele drzewiaste. Po pierwsze drzewa "rosną w kierunku zer" - jeżeli drzewo splituje po jednej z utworzonych przez one-hot encoding kolumn, to w gałęzi, do której idą obserwacje z wartością `1` nie można już splitować po żadnej innej z tych kolumn, bo wszystkie pozostałe są równe `0`. Po drugie, z powodu tego, jak wybierane są kryteria podziału w drzewach, jest mało prawdopodobne, żeby drzewo splitowało blisko korzenia po którejś z dummy features, jeżeli jest ich dużo - splitowanie takie dawałoby mały Gain.
+
+# Uzupełnianie braków danych
+
+Wybieram tylko kolumny numeryczne:
+
+```{r}
+numerical <- data %>% 
+  select(price, it_seller_rating, it_quantity) %>% 
+  slice(sample(nrow(data), 10000))
+
+n <- nrow(numerical)
+```
+
+```{r include=FALSE}
+n_experiments <- 10
+```
+
+
+Przeprowadzam 10 krotnie eksperyment zastąpienia 10% danych w 1 kolumnie brakami, a następnie zastąpienia braków metodą `pmm` z pakietu `mice` oraz zastąpienia ich losowymi innymi wartościami tej kolumny. Zbieram błędy obu metod, czyli ich róznice z prawdziwą wartością jaka była w tym miejscu. 
+
+```{r message=FALSE, results="hide"}
+error <- numeric(0)
+random_error <- numeric(0)
+for (i in 1:n_experiments) {
+  missing <- numerical
+  misses <- sample(n, n / 10)
+  missing[misses, "it_seller_rating"] <- NA
+  
+  imputation <- missing %>% mice(method = "pmm")
+  imputed <- complete(imputation, action = 1)
+  
+  imputs <- imputed[misses, "it_seller_rating"]
+  #random_imputs <- runif(n, min(numerical$it_seller_rating), max(numerical$it_seller_rating))
+  random_imputs <- sample(missing$it_seller_rating[-misses], length(misses))
+  originals <- numerical[misses, "it_seller_rating"]
+  error <- c(error, abs(originals - imputs))
+  random_error <- c(random_error, abs(originals - random_imputs))
+}
+```
+
+Czerwona linia to wykres gęstości błędu losowego zastąpienia danych, a niebieska błędu `pmm`:
+
+```{r}
+plot(density(random_error), col = "red")
+lines(density(error), col = "blue")
+```
+
+Okazuje się że obie metody dają podobne wyniki. Metoda `pmm` jest tylko minimalnie lepsza. Stosunek średnich błędów wynosi zaledwie:
+
+```{r}
+mean(error) / mean(random_error)
+```
+
+
+Teraz powtórzę eksperyment usuwając dane z dwóch kolumn:
+
+```{r message=FALSE, results="hide"}
+error1 <- numeric(0)
+random_error1 <- numeric(0)
+error2 <- numeric(0)
+random_error2 <- numeric(0)
+for (i in 1:n_experiments) {
+  missing <- numerical
+  misses1 <- sample(n, n / 10)
+  misses2 <- sample(n, n / 10)
+  missing[misses1, "it_seller_rating"] <- NA
+  missing[misses2, "it_quantity"] <- NA
+  
+  imputation <- missing %>% mice(method = "pmm")
+  imputed <- complete(imputation, action = 1)
+  
+  imputs1 <- imputed[misses1, "it_seller_rating"]
+  random_imputs1 <- sample(missing$it_seller_rating[-misses1], length(misses1))
+  originals1 <- numerical[misses1, "it_seller_rating"]
+  error1 <- c(error1, abs(originals1 - imputs1))
+  random_error1 <- c(random_error1, abs(originals1 - random_imputs1))
+  
+  imputs2 <- imputed[misses2, "it_quantity"]
+  random_imputs2 <- sample(missing$it_quantity[-misses2], length(misses2))
+  originals2 <- numerical[misses2, "it_quantity"]
+  error2 <- c(error2, abs(originals2 - imputs2))
+  random_error2 <- c(random_error2, abs(originals2 - random_imputs2))
+}
+```
+
+
+Czerwona linia to wykres gęstości błędu losowego zastąpienia danych, a niebieska błędu `pmm`:
+
+```{r}
+plot(density(random_error1), col = "red", title = "it_seller_rating:")
+lines(density(error1), col = "blue")
+```
+
+
+```{r}
+plot(density(random_error2), col = "red", title = "it_quantity:")
+lines(density(error2), col = "blue")
+```
+
+Także w tym przypadku metoda daje podobnie dobre wyniki do losowego zastąpienia danych.
+
+```{r}
+mean(error1) / mean(random_error1)
+```
+
+```{r}
+mean(error2) / mean(random_error2)
+```
+
+
+Możemy teraz porównać błędy imputacji w przypadku zastępywania jednej i dwóch kolumn. Zielona linia to gęstość błędu w pierwszym eksperymencie, a niebieska w drugim:
+
+```{r}
+plot(density(error), col = "green", title = "it_quantity density:")
+lines(density(error1), col = "blue")
+```

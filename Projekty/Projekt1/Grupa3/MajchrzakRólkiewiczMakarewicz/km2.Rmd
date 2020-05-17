@@ -1,0 +1,638 @@
+---
+title: "Kamień milowy 2"
+author: "Agata Makarewicz, Martyna Majchrzak, Renata Rólkiewicz"
+date: "24 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(dplyr)
+library(ggplot2)
+library(DataExplorer)
+library(gridExtra)
+library(visdat)
+library(mlr3)
+library(naniar)
+library(mlr3learners)
+library(mlr3measures)
+library(mice)
+library(mlr3viz)
+library(factoextra)
+library(data.table)
+
+```
+
+## Wprowadzenie 
+
+Poniższa analiza eksploracyjna dotyczy [zbioru danych](https://datahub.io/machine-learning/breast-w#data-cl) zawierającego informacje na temat przypadków raka piersi u kobiet z Wisconsin, USA.
+
+```{r data}
+# wczytanie zbioru danych 
+
+data_breast <- read.csv("breast-w_csv.csv", sep=",")
+
+#data_breast <- read.csv("C:\\Users\\acer\\Desktop\\WUM\\NiewiastyWRS\\breast-w_csv.csv", sep=",")
+data_breast <- read.csv("breast-w_csv.csv", sep = ",")
+
+
+knitr::kable(head(data_breast), caption = "Tab.1. Fragment ramki danych")
+```
+
+Zobaczmy najpierw co oznaczają poszczególne zmienne:
+
+- 1 - Clump_Thickness	- grubość grudki, określa czy komórki są jedno- / wielowarstwowe	
+- 2 - Cell_Size_Uniformity - regularność/jednorodność wielkości komórek
+- 3 - Cell_Shape_Uniformity	- regularność/jednorodność kształtu komórek
+- 4 - Marginal_Adhesion	-	zrosty na brzegach
+- 5 - Single_Epi_Cell_Size - epithelial cells, czy komórki nabłonkowe są znacznie powiększone
+- 6 - Bare_Nuclei	- proporcja komórek nieotoczonych cytoplazmą do tych, które są nią otoczone
+- 7 - Bland_Chromatin	-	jednolitość tekstury jądra (od drobnego do grubego)
+- 8 - Normal_Nucleoli	- normalne jąderka (?)  określa czy są małe i ledwo widoczne czy duże
+- 9 - Mitoses -	mitozy
+- 10 - Class - czy rak jest łagodny(benign) czy złośliwy(malignant)
+
+```{r data2}
+knitr::kable(summary(data_breast), caption = "Tab.2. Statystyki danych")
+```
+
+## Rozkłady zmiennych
+
+Zacznijmy od sprawdzenia struktury naszych danych. 
+
+```{r str}
+str(data_breast)
+```
+
+Jak widać, większość stanowią zmienne dyskretne, zobaczmy zatem ich rozkłady.
+
+```{r density, fig.height=4, fig.width=8}
+
+plot1 <- ggplot(data_breast, aes(x=data_breast$Bare_Nuclei)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Bare_Nuclei", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot2 <- ggplot(data_breast, aes(x=data_breast$Bland_Chromatin)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Bland_Chromatin", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot3 <- ggplot(data_breast, aes(x=data_breast$Cell_Shape_Uniformity)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Cell_Shape_Uniformity", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot4 <- ggplot(data_breast, aes(x=data_breast$Cell_Size_Uniformity)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Cell_Size_Uniformity", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot5 <- ggplot(data_breast, aes(x=data_breast$Clump_Thickness)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Clump_Thickness", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot6 <- ggplot(data_breast, aes(x=data_breast$Marginal_Adhesion)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Marginal_Adhesion", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot7 <- ggplot(data_breast, aes(x=data_breast$Mitoses)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Mitoses", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot8 <- ggplot(data_breast, aes(x=data_breast$Normal_Nucleoli)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Normal_Nucleoli", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+
+plot9 <- ggplot(data_breast, aes(x=data_breast$Single_Epi_Cell_Size)) +
+   geom_histogram(aes(y=..density..),colour="black",fill="lightblue", bins=10) +
+   geom_density(aes(y=..density..), colour = "black", size=1)+
+   labs(x = "Single_Epi_Cell_Size", y = "Density")+
+   scale_x_continuous(breaks = c(1:10))
+grid.arrange(plot1,plot2, ncol=2)
+grid.arrange(plot3,plot4, ncol=2)
+grid.arrange(plot5,plot6, ncol=2)
+grid.arrange(plot7,plot8, ncol=2)
+plot9
+
+```
+
+```{r boxplot, fig.height=10, fig.width=10}
+plot_boxplot(data_breast, by = "Class", title="Boxploty względem Class", ncol = 3)
+plot_boxplot(data_breast, by = "Mitoses", title = "Boxploty względem Mitoses")
+
+```
+
+Jedyną zmienną kategoryczą w naszych danych jest nasza zmienna celu, czyli Class.
+
+```{r target}
+# rozkład zmiennej celu
+plot_bar(data_breast)
+```
+
+Widzimy, że przypadków złośliwych jest o połowę mniej niż przypadków łagodnych. Stanowią one około 1/3 wszystkich rekordów.
+
+## Braki danych
+
+```{r}
+miss_var_summary(data_breast)
+```
+
+Jak widać, w naszych danych znajduje się 16 rekordów z brakującymi danymi w kolumnie Bare_Nuclei. Zajmiemy się nimi później, przy trenowaniu modeli.
+
+## Korelacje między zmiennymi 
+
+```{r correlation, fig.height=10, fig.width=10}
+plot_correlation(na.omit(data_breast), title = "Korelacje między zmiennymi")
+```
+
+## Zależności między zmiennymi 
+
+```{r dependencies}
+ggplot(data_breast, aes(x=Cell_Size_Uniformity, y=Cell_Shape_Uniformity)) +
+  geom_point() +
+  geom_smooth()
+
+ggplot(data_breast, aes(y=Cell_Shape_Uniformity,
+                        group=Cell_Size_Uniformity,
+                        x=Cell_Size_Uniformity))+
+  geom_boxplot()
+
+ggplot(data_breast, aes(y=Clump_Thickness,
+                        group=Cell_Size_Uniformity,
+                        x=Cell_Size_Uniformity))+
+  geom_boxplot()
+```
+
+```{r, fig.height=4, fig.width=8}
+plot_1 <- ggplot(data_breast, aes(x=Cell_Shape_Uniformity, fill=Class))+
+  geom_density(alpha=0.4)
+plot_2 <- ggplot(data_breast, aes(x=Cell_Size_Uniformity, fill=Class))+
+  geom_density(alpha=0.4)
+grid.arrange(plot_1, plot_2, ncol=2)
+
+```
+
+## Trzeba się temu bliżej przyjrzeć
+
+To zrobie ja - Renia :)
+
+```{r, echo=TRUE}
+table(data_breast$Mitoses, data_breast$Class)
+table(data_breast$Single_Epi_Cell_Size, data_breast$Class)
+table(data_breast$Normal_Nucleoli, data_breast$Class)
+#table(data_breast$Cell_Size_Uniformity, data_breast$Cell_Shape_Uniformity)
+
+```
+
+## PCA - Principal Component Analysis
+
+```{r, echo=TRUE}
+data_pca <- prcomp(na.omit(data_breast[,-10]), scale. = TRUE, center = TRUE)
+summary(data_pca)
+```
+
+
+```{r, echo=TRUE}
+fviz_screeplot(data_pca, addlabels = TRUE, ylim = c(0, 70))
+```
+
+
+```{r, echo=TRUE}
+
+# Korelacja zmiennych i ich wplyw na glowne skladowe
+fviz_pca_var(data_pca,
+             col.var = "contrib",
+             gradient.cols = c("#FFFF00", "orange", "red"),
+             repel = TRUE)
+
+
+```
+
+```{r, echo=TRUE}
+c1 <- fviz_contrib(data_pca, choice = "var", axes = 1, top = 10)
+c2 <- fviz_contrib(data_pca, choice = "var", axes = 2, top = 10)
+grid.arrange(c1, c2, ncol=2)
+```
+
+```{r, echo=TRUE}
+fviz_pca_ind(data_pca,
+             label = "none", #hide individual labels
+             habillage = na.omit(data_breast)$Class, #color by groups
+             palette = c("#00AFBB","#FC4E07"),
+             addEllipses = TRUE #concentration ellipses
+)
+```
+
+## Podział na zbiór treningowy i testowy oraz imputacja danych 
+
+Zaczynamy od podzielenia naszego zbioru danych na treningowy i testowy. Pierwszy z nich składa się z 80% losowo wybranych rekordów, drugi z pozostałych 20%. 
+
+Na tak podzielonych danych zastosujemy dwie różne metody imputacji.
+
+```{r}
+set.seed(23)
+
+# podzial na zbior testowy i treningowy
+n<-nrow(data_breast)
+train_set = sample(n, 0.8 * n)
+test_set = setdiff(seq_len(n), train_set)
+data_train <- data_breast[train_set,]
+data_test <- data_breast[test_set,]
+
+```
+
+### Metoda 1 - usunięcie rekordów zawierających NA
+
+```{r}
+# usunięcie rekordów zawierających NA
+
+data_train1 <- na.omit(data_train)
+data_test1 <- na.omit(data_test)
+
+task1<-TaskClassif$new(id = "breast_naomit", backend = data_train1, target = "Class")
+```
+
+### Metoda 2 - uzupełnienie brakujących danych za pomocą funkcji mice
+```{r}
+# Używamy metody pmm
+
+# Zbiór treningowy
+na <- subset(data_train, is.na(data_train$Bare_Nuclei))
+row_id <- row.names(na)
+# Usuwamy tymczasowo target, żeby nie 
+imp <- mice(data_train[,-10], method = "pmm", m=5, maxit =5, seed = 1)
+data_train2 <- complete(imp)
+# dołączamy spowrotem target
+data_train2<-cbind(data_train2, data_train$Class)
+colnames(data_train2)[10]<-"Class"
+
+
+# Zbiór testowy
+na <- subset(data_test, is.na(data_test$Bare_Nuclei))
+row_id <- row.names(na)
+# Usuwamy tymczasowo target, żeby nie 
+imp <- mice(data_test[,-10], method = "pmm", m=5, maxit =5, seed = 1)
+data_test2 <- complete(imp)
+# dołączamy spowrotem target
+data_test2<-cbind(data_test2, data_test$Class)
+colnames(data_test2)[10]<-"Class"
+
+task2<-TaskClassif$new(id = "breast_imp", backend = data_train2, target = "Class")
+```
+
+## Metody klasyfikacji {.tabset .tabset.pills}
+
+Wytrenujemy na obu zbiorach danych po 5 modeli:
+
+   1. SVM - Support Vector Machine 
+   2. RF - Random Forest
+   3. BN - Bayesian Networks
+   4. LDA - Linear Discriminal Analysis
+   5. RPART - Recursive Partitioning and Regression Trees
+
+Następnie przeprowadzimy kroswalidację na zbiorze treningowym (dzieląc na 5 części) oraz predykcję na testowym.
+
+```{r, include = FALSE}
+# funcja do modeli - imo jednak się nie da bo nie ma jak zapisywać prediction dla danego modelu którego potrzebujemy na końcu w recall
+
+model <- function(method){
+  learner = mlr_learners$get(method)
+
+  learner$train(task, row_ids = train_set)
+  #print(learner$model)
+
+  prediction = learner$predict(task, row_ids = test_set)
+  head(as.data.table(prediction))
+
+  confusion_matrix(prediction$truth, prediction$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+  autoplot(prediction)
+}
+```
+
+```{r}
+cv = rsmp("cv", folds = 5)
+```
+
+
+### SVM - Support Vector Machine 
+
+#### Metoda 1
+```{r}
+learner_svm1 = mlr_learners$get("classif.svm")
+learner_svm1$param_set$values = list(kernel = "linear") #ustawiamy hiperparametry
+learner_svm1$predict_type = "prob"
+learner_svm1$train(task1)
+#print(learner_svm$model)
+
+rr_svm1 = resample(task1, learner_svm1, cv, store_models = TRUE)
+prediction_svm1 = learner_svm1$predict_newdata(data_test1)
+head(as.data.table(prediction_svm1))
+
+confusion_matrix(prediction_svm1$truth, prediction_svm1$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+measure = msr("classif.recall")  #można się przyjrzeć mlr_measures
+#prediction_svm$score(measure)
+
+autoplot(prediction_svm1)
+
+#model("classif.svm")
+```
+
+#### Metoda 2 - pmm
+```{r}
+learner_svm2 = mlr_learners$get("classif.svm")
+#print(learner_svm)
+#learner_svm$param_set
+learner_svm2$param_set$values = list(kernel = "linear") #ustawiamy hiperparametry
+learner_svm2$predict_type = "prob"
+
+learner_svm2$train(task2)
+#print(learner_svm$model)
+
+rr_svm2 = resample(task2, learner_svm2, cv, store_models = TRUE)
+prediction_svm2 = learner_svm2$predict_newdata(data_test2)
+head(as.data.table(prediction_svm2))
+
+confusion_matrix(prediction_svm2$truth, prediction_svm2$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_svm2)
+
+#model("classif.svm")
+```
+
+
+### RF - Random Forest
+
+#### Metoda 1
+```{r}
+learner_ranger1 = mlr_learners$get("classif.ranger")
+learner_ranger1$predict_type = "prob"
+learner_ranger1$train(task1)
+#print(learner_ranger$model)
+
+rr_ranger1 = resample(task1, learner_ranger1, cv, store_models = TRUE)
+prediction_ranger1 = learner_ranger1$predict_newdata(data_test1)
+head(as.data.table(prediction_ranger1))
+
+confusion_matrix(prediction_ranger1$truth, prediction_ranger1$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_ranger1)
+
+#model("classif.ranger") <- daje gorsze wyniki bo bez parametru ustawionego
+```
+
+#### Metoda 2
+```{r}
+learner_ranger2 = mlr_learners$get("classif.ranger")
+learner_ranger2$predict_type = "prob"
+learner_ranger2$train(task2)
+#print(learner_ranger$model)
+
+rr_ranger2 = resample(task2, learner_ranger2, cv, store_models = TRUE)
+prediction_ranger2 = learner_ranger2$predict_newdata(data_test2)
+head(as.data.table(prediction_ranger2))
+
+confusion_matrix(prediction_ranger2$truth, prediction_ranger2$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_ranger2)
+```
+### BN - Bayesian Networks
+
+#### Metoda 1
+```{r}
+learner_bn1 = mlr_learners$get("classif.naive_bayes")
+learner_bn1$predict_type = "prob"
+learner_bn1$train(task1)
+#print(learner_nb$model)
+
+rr_bn1 = resample(task1, learner_bn1, cv, store_models = TRUE)
+prediction_bn1 = learner_bn1$predict_newdata(data_test1)
+head(as.data.table(prediction_bn1))
+
+confusion_matrix(prediction_bn1$truth, prediction_bn1$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_bn1)
+
+#model("classif.naive_bayes")
+```
+
+#### Metoda 1
+```{r}
+learner_bn2 = mlr_learners$get("classif.naive_bayes")
+learner_bn2$predict_type = "prob"
+learner_bn2$train(task2)
+#print(learner_nb$model)
+
+rr_bn2 = resample(task2, learner_bn2, cv, store_models = TRUE)
+prediction_bn2 = learner_bn2$predict_newdata(data_test2)
+head(as.data.table(prediction_bn2))
+
+confusion_matrix(prediction_bn2$truth, prediction_bn2$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_bn2)
+
+#model("classif.naive_bayes")
+```
+### LDA - Linear Discriminal Analysis
+
+#### Metoda 1
+```{r}
+learner_lda1 = mlr_learners$get("classif.lda")
+learner_lda1$predict_type = "prob"
+learner_lda1$train(task1)
+#print(learner_lda$model)
+
+rr_lda1 = resample(task1, learner_lda1, cv, store_models = TRUE)
+prediction_lda1 = learner_lda1$predict_newdata(data_test1)
+head(as.data.table(prediction_lda1))
+
+confusion_matrix(prediction_lda1$truth, prediction_lda1$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_lda1)
+
+#model("classif.lda")
+```
+
+#### Metoda 2
+```{r}
+learner_lda2 = mlr_learners$get("classif.lda")
+learner_lda2$predict_type = "prob"
+learner_lda2$train(task2)
+#print(learner_lda2$model)
+
+rr_lda2 = resample(task2, learner_lda2, cv, store_models = TRUE)
+prediction_lda2 = learner_lda2$predict_newdata(data_test2)
+head(as.data.table(prediction_lda2))
+
+confusion_matrix(prediction_lda2$truth, prediction_lda2$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_lda2)
+
+#model("classif.lda")
+```
+
+### RPART - Recursive Partitioning and Regression Trees
+
+#### Metoda 1
+```{r}
+learner_rpart1 = mlr_learners$get("classif.rpart")
+learner_rpart1$predict_type = "prob"
+learner_rpart1$train(task1)
+#print(learner_rpart1$model)
+
+rr_rpart1 = resample(task1, learner_rpart1, cv, store_models = TRUE)
+prediction_rpart1 = learner_rpart1$predict_newdata(data_test1)
+head(as.data.table(prediction_rpart1))
+
+confusion_matrix(prediction_rpart1$truth, prediction_rpart1$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_rpart1)
+
+#model("classif.rpart")
+```
+
+#### Metoda 1
+
+```{r}
+learner_rpart2 = mlr_learners$get("classif.rpart")
+learner_rpart2$predict_type = "prob"
+learner_rpart2$train(task2)
+#print(learner_rpart1$model)
+
+rr_rpart2 = resample(task2, learner_rpart2, cv, store_models = TRUE)
+prediction_rpart2 = learner_rpart2$predict_newdata(data_test2)
+head(as.data.table(prediction_rpart2))
+
+confusion_matrix(prediction_rpart2$truth, prediction_rpart2$response, "benign", na_value = NaN, relative = FALSE)$matrix
+
+autoplot(prediction_rpart2)
+
+#model("classif.rpart")
+```
+
+## Zestawienie powyższych metod
+
+Do oceny wyników zastosujemy następujących miar:
+
+   - AUC
+   
+   - Accuracy
+   
+   - Precision
+   
+   - Recall
+   
+   - False Positive Rate - ta będzie dla nas szczególnie ważna, ponieważ oznacza dla nas % pacjentów, którzy mieli raka złośliwego (malignant), a zostali zakwalifikowani jako przypadek łagodny (benign). W pierwszej kolejności zależy nam, aby liczba takich przypadków była jak najmniejsza
+
+```{r}
+
+auc<-msr("classif.auc")
+acc<-msr("classif.acc")
+precision<-msr("classif.precision")
+recall<-msr("classif.recall")
+fpr<-msr("classif.fpr")
+fp<-msr("classif.fp")
+
+list_of_measures<-c(auc,acc,precision, recall, fpr, fp)
+```
+
+### Wyniki kroswalidacji
+
+```{r}
+# dla każdej metody zapisujemy średni wynik z kroswalidacji
+rr_svm1_measures<-rr_svm1$aggregate(list_of_measures)
+rr_svm2_measures<-rr_svm2$aggregate(list_of_measures)
+rr_ranger1_measures<-rr_ranger1$aggregate(list_of_measures)
+rr_ranger2_measures<-rr_ranger2$aggregate(list_of_measures)
+rr_bn1_meassures<-rr_bn1$aggregate(list_of_measures)
+rr_bn2_meassures<-rr_bn2$aggregate(list_of_measures)
+rr_lda1_meassures<-rr_lda1$aggregate(list_of_measures)
+rr_lda2_meassures<-rr_lda2$aggregate(list_of_measures)
+rr_rpart1_meassures<-rr_rpart1$aggregate(list_of_measures)
+rr_rpart2_meassures<-rr_rpart2$aggregate(list_of_measures)
+
+rr_measures<-as.data.frame(rbind(
+                           rr_svm1_measures,
+                           rr_svm2_measures,
+                           rr_ranger1_measures,
+                           rr_ranger2_measures,
+                           rr_bn1_meassures,
+                           rr_bn2_meassures,
+                           rr_lda1_meassures,
+                           rr_lda2_meassures,
+                           rr_rpart1_meassures,
+                           rr_rpart2_meassures))
+colnames(rr_measures)<-c("AUC", "ACCURACY", "PRECISION", "RECALL", "FalsePositiveRate", "FalsePositive")
+rownames(rr_measures)<-c("SVM1","SVM2","RF1","RF2","BN1","BN2","LDA1","LDA2", "RPART1", "RPART2")
+
+rr_measures<-cbind(method=rownames(rr_measures),rr_measures)
+data.table(rr_measures%>%arrange(FalsePositive))
+```
+
+### Wyniki predykcji
+
+```{r}
+svm1_measures<-prediction_svm1$score(list_of_measures)
+svm2_measures<-prediction_svm2$score(list_of_measures)
+ranger1_measures<-prediction_ranger1$score(list_of_measures)
+ranger2_measures<-prediction_ranger2$score(list_of_measures)
+bn1_meassures<-prediction_bn1$score(list_of_measures)
+bn2_meassures<-prediction_bn2$score(list_of_measures)
+lda1_meassures<-prediction_lda1$score(list_of_measures)
+lda2_meassures<-prediction_lda2$score(list_of_measures)
+rpart1_meassures<-prediction_rpart1$score(list_of_measures)
+rpart2_meassures<-prediction_rpart2$score(list_of_measures)
+
+prediction_measures<-as.data.frame(rbind(svm1_measures,
+                           svm2_measures,
+                           ranger1_measures,
+                           ranger2_measures,
+                           bn1_meassures,
+                           bn2_meassures,
+                           lda1_meassures,
+                           lda2_meassures,
+                           rpart1_meassures,
+                           rpart2_meassures))
+colnames(prediction_measures)<-c("AUC", "ACCURACY", "PRECISION", "RECALL", "FalsePositiveRate", "FalsePositive")
+rownames(prediction_measures)<-c("SVM1","SVM2","RF1","RF2","BN1","BN2","LDA1","LDA2", "RPART1", "RPART2")
+
+prediction_measures<-cbind(method=rownames(prediction_measures), prediction_measures)
+data.table(prediction_measures%>%arrange(FalsePositive))
+```
+
+### Krzywe ROC
+
+```{r}
+plot1 <- autoplot(prediction_svm1, type = "roc") 
+plot1
+# plot2 <- autoplot(prediction_ranger, type = "roc") 
+# plot3 <- autoplot(prediction_bn, type = "roc") 
+# plot4 <- autoplot(prediction_lda, type = "roc") 
+# grid.arrange(plot1,plo2,plot3,plot4, ncol=2) nie działa xd
+
+```
+
+### Inne..
+```{r , echo=FALSE}
+
+# mlr3viz ma fajne funkcje, np. plot_learner_prediction
+# ROC  autoplot(prediction_svm, type = "roc") jest na razie wrzucona przy SVM tylko, mo?na zrobi? dla wszystkich metod i wrzuci? tu na jednym wykresie 
+# AUC
+
+```
+

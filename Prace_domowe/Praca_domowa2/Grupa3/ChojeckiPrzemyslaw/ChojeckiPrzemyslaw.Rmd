@@ -1,0 +1,181 @@
+---
+title: "Praca domowa 2"
+author: "Przemysław Chojecki"
+date: "22 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE, message = FALSE)
+
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(mlr)
+library(mice)
+library(ddpcr)
+```
+
+## Kodowanie zmiennych kategorycznych
+Jeśli mamy do czynienia ze zmiennymi kategorycznymi w czasie uczenia maszynowego musimy te zmienne w jakis sposób zakodować.\
+* `target encoding` polega na tym, że w ramach każdej z kategorii liczymy średnią z kolumny `target` i wpisujemy ją zamiast zmiennej kategorycznej.\
+* `one-hot encoding` polega na tym, że każdą z kategorii zamieniamy na nową kolumnę z zerami, jeśli rekord nie jest w danej kategorii oraz jedynkami, jeśli jest.\
+
+
+
+### Przyklad
+
+```{r}
+A <- read.csv("allegro-api-transactions.csv")
+data <- A
+
+# pozbedziemy sie powtorek
+data$it_location %>% table %>% length # 10_056
+data$it_location %>% str_to_upper() %>% table %>% length # 7_903
+data$it_location <- data$it_location %>% str_to_upper()
+```
+
+
+
+#### `target encoding`
+
+```{r}
+srednie <- data %>% group_by(it_location) %>% summarise(avr_price = mean(price))
+data <- data %>% left_join(srednie, by = c("it_location" = "it_location")) %>% select(-it_location, it_location_avr_price = avr_price)
+```
+
+
+Ile jest rekordow o okreslonej wielkosci parametru `it_location_avr_price`?\
+```{r}
+x <- (data$it_location_avr_price/10) %>% floor()
+qplot(x[x<50], geom="histogram")
+```
+
+
+
+#### `one-hot encodeing`
+
+```{r}
+B <- data %>% select(price, main_category) %>% createDummyFeatures(target = "price", method = "1-of-n")
+data_1_of_n <- data %>% select(-main_category) %>% cbind(B)
+data_1_of_n %>% colnames() %>% length() # jest 41 kolumn
+
+B <- data %>% select(price, main_category) %>% createDummyFeatures(target = "price", method = "reference")
+data_reference <- data %>% select(-main_category) %>% cbind(B)
+data_reference %>% colnames() %>% length() # jest 40 kolumn, o jedna mniej, gdyz jest zbedna
+```
+\
+W metodzie `reference` efekt końcowy ma jedna kolumnę mniej, gdyż jest to kolumna, ktora ma jedynki dokladnie tam, gdzie wszystkie pozostale nowoutworzone mają zera.
+
+
+### Zady i walety
+Oba rozwiązania mają swoje plusy i minusy. Jeśli zastosujemy `target encoding` nie zwiękrzymy wolumenu danych, gdyż jedną kolumnę zastępujemy inną. Odwrotnie w `one-hot encodeing`, gdzie tworzymy tyle nowych kolumn, ile jest różnych wartości `factor`a, dlatego nie mogliśmy urzyć tej metody w pierwszym przypadku, gdyrz powstałyby $7903$ kolumny, co jest niedopuszczalne przy uczeniu, obliczenia niesamowicie by się wydłużyły.\
+Problemem natomiast `target encoding`u jest, że bardzo łatwo jest wpaść w `over-fitting`. Wystarczy, że mamy wartość faktora występującą dokładnie raz i zamieniamy ją na dokładną wartość `target`u, co może być problematyczne przy uczeniu.
+
+
+
+
+## Uzupelnianie braków
+
+Zmniejszenie wolumenu danych:\
+```{r wulumen_down}
+m <- (A %>% dim)[1]
+wybor <- sample(m, floor(m/10))
+data <- (A %>% select(price, it_seller_rating, it_quantity))[wybor,]
+```
+
+
+### `it_seller_rating`
+\
+Obliczenie $10$cio krotne:\
+```{r it_sell, dependson="wulumen_down"}
+odchylenie_standardowe_x <- numeric(10)
+odchylenie_standardowe_x_missing <- numeric(10)
+
+for(i in 1:10){
+  m <- (data %>% dim)[1]
+  
+  data_NA_seller_rating <- data
+  missing <- sample(m, floor(m/10))
+  data_NA_seller_rating$it_seller_rating[missing] <- NA
+  
+  init <- mice(data_NA_seller_rating, maxit=0)
+  meth <- init$method
+  predM <- init$predictorMatrix
+  
+  quiet( imputed <- mice(data_NA_seller_rating, method=meth, predictorMatrix=predM, m=1) )
+  
+  imputed1 <- complete(imputed, action=1)
+  
+  x <- cbind(data %>% select(true = it_seller_rating), imputed1 %>% select(imputed = it_seller_rating))
+  x_missing <- x[missing,]
+  x %>% summary
+  x_missing %>% summary
+  
+  odchylenie_standardowe_x[i] <- sqrt( ((x$true - x$imputed)^2 %>% sum)/(m) )
+  odchylenie_standardowe_x_missing[i] <- sqrt( ((x_missing$true - x_missing$imputed)^2 %>% sum)/(m/10) )
+}
+
+```
+
+\
+Rysuneczek:\
+```{r, dependson="it_sell"}
+par(mfrow = c(1,2))
+odchylenie_standardowe_x %>% sort %>% plot
+odchylenie_standardowe_x_missing %>% sort %>% plot
+```
+
+
+### `it_seller_rating` oraz `it_quantity`
+\
+Obliczenie $10$cio krotne:\
+```{r it_quan, dependson="wulumen_down"}
+odchylenie_standardowe_x <- numeric(10)
+odchylenie_standardowe_x_missing <- numeric(10)
+
+for(i in 1:10){
+  m <- (data %>% dim)[1]
+  
+  data_NA_quantity <- data
+  missing <- sample(m, floor(m/10))
+  data_NA_quantity$it_quantity[missing] <- NA
+  
+  missing <- sample(m, floor(m/10))
+  data_NA_quantity$it_seller_rating[missing] <- NA
+  
+  init <- mice(data_NA_quantity, maxit=0)
+  meth <- init$method
+  predM <- init$predictorMatrix
+  
+  quiet( imputed <- mice(data_NA_quantity, method=meth, predictorMatrix=predM, m=1) )
+  
+  imputed1 <- complete(imputed, action=1)
+  
+  x <- cbind(data %>% select(true = it_seller_rating), imputed1 %>% select(imputed = it_seller_rating))
+  x_missing <- x[missing,]
+  x %>% summary
+  x_missing %>% summary
+  
+  odchylenie_standardowe_x[i] <- sqrt( ((x$true - x$imputed)^2 %>% sum)/(m) )
+  odchylenie_standardowe_x_missing[i] <- sqrt( ((x_missing$true - x_missing$imputed)^2 %>% sum)/(m/10) )
+}
+
+```
+
+\
+Rysuneczek:\
+```{r, dependson="it_quan"}
+par(mfrow = c(1,2))
+odchylenie_standardowe_x %>% sort %>% plot
+odchylenie_standardowe_x_missing %>% sort %>% plot
+```
+
+
+
+
+
+
+
+
+

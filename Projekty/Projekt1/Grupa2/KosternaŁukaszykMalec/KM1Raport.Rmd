@@ -1,0 +1,221 @@
+---
+title: "Wstęp do Uczenia Maszynowego 2020: projekt I [kamień milowy I]"
+author: "Jakub Kosterna, Marcin Łukaszyk, Mikołaj Malec"
+date: "16/03/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\tableofcontents
+
+# 1. Wstęp i pierwszy ogląd
+
+Poniżej znajduje sie raport z analizy zbioru danych dotyczących klientów banku.
+Dane zostały pobrane z [tej strony](https://www.mldata.io/dataset-details/german_credit_data/#customize_download).
+
+Zanim zaczniemy właściwą robotę, wczytajmy potrzebne pakiety.
+
+```{r pakiety, message = FALSE, cache = TRUE, warning = FALSE}
+# install.packages("dplyr") # if not installed
+library(dplyr)
+# install.packages("ggplot2") # if not installed
+library(ggplot2)
+# install.packages("DataExplorer") # if not installed
+library(DataExplorer)
+```
+
+Otwórzmy także naszą ramkę danych i upewnijmy się, że została ona wczytana poprawnie.
+
+```{r wstep, warning = FALSE, cache = TRUE}
+data <- read.csv("german_credit_data_weka_dataset.csv")
+ggplot(data = data,aes(x = duration,y = credit_amount)) +
+  geom_point()
+
+set.seed(124)
+knitr::kable(sample_n(data, 10))
+```
+
+Dane w takiej postaci dużo nam nie mówią - na szczęście dziękim dostępnym szczegółom poszczególnych oznaczeń możemy lepiej zorientować się, o co w tym wszystkim biega.
+
+# 2. Czyszczenie danych
+
+W celu ludzkiego przedstawienia danych zmodyfikujemy je tak, żeby wszystko stało się jasne.
+
+```{r modyfikacja, cache = TRUE}
+# przeksztalcanie na dane numeryczne i z faktorami
+levels(data[,1]) <- c("low", "fair", "high", "not_have") #DM low<0<fair<200<high
+levels(data[,3]) <- c("all_paid", "all_paid_here", "paid_till_now", "delay", "critical")
+levels(data[,4]) <- c("new_car", "used_car", "furniture/equipment", "radio/television", "domestic", "repairs", "education", "retraining", "business", "other") #note: 0 for vacation
+levels(data[,6]) <- c("low","normal","high","very_high","not_have/unknown") #DM low<100<normal<500<high<1000<very_high
+levels(data[,7]) <- c("unemployed", "less_than_year", "1-3_years", "4-6_yeras","7+_years")
+levels(data[,9]) <- c("male_d/s", "female_d/s/m", "male_single", "male_m/w") #d = divorsed, s = seperated, m = married, w = widowed ,#note: 0 female single
+levels(data[,10]) <- c("none", "co-applicant", "guarantor")
+levels(data[,12]) <- c("real_estate", "building_savings", "car", "not_have/unknown")
+levels(data[,14]) <- c("bank", "stores", "none")
+levels(data[,15]) <- c("rent", "own", "for_free")
+levels(data[,17]) <- c("unskilled_non_resident", "unskilled_resident", "skilled_eployee", "highly_qualified_employee*") # also management, self-employed, officer
+levels(data[,19]) <- c("no", "yes")
+levels(data[,20]) <- c("yes", "no")
+data[,21] <- as.factor(as.character(data[,21]))
+levels(data[,21]) <- c("Good", "Bad")
+```
+
+Jak teraz wygąląda nasze losowe 20 wierszy?
+```{r losowe_20, cache = TRUE}
+knitr::kable(sample_n(data, 20))
+```
+
+Doskonale!
+
+# 3. Eksploracja
+
+## 3.1. Automatyczny ogląd
+
+Poznaliśmy już bardzo wygodne narzędzie jakim jest *DataExplorer*. Wykorzystajmy je na początek naszej analizy.
+
+```{r wstepna_eksploracja, eval = FALSE, cache = TRUE}
+DataExplorer::create_report(data)
+```
+
+Co możemy wywnioskować po przyjrzeniu się bardzo przyjemnemu raportowi, który można znaleźć w pliku *report.html*?
+
+1. Zbiór danych nie jest jakiś ogromny - ma zaledwie **1000 wierszy** i **21 kolumn**.
+2. 2/3 kolumn reprezentuje wartości dyskretne - pozostałe - ciągłe.
+3. Nie mamy do czynienia z **żadnymi brakami danych**.
+4. Przeważają klienci w wieku lat 20-40, potem mniej-więcej im starsza grupa, tym mniej osobników.
+5. Kredyt zwykle zostaje wzięty na parę tysięcy Euro.
+6. Pożyczka jest brana zwykle na okres od kilku miesięcy do paru lat.
+7. Większość osobników wzięła tylko pojedynczy kredyt, ale niektórzy także na 2, 3 lub 4.
+8. Ogromna część klientów wywiązuje się ze spłacania pożyczki.
+9. Najczęstsze podawane powody wzięcia kredytu to te na dom, samochód czy radio / telewizję.
+10. Większość klientów nie może się pochwalić sporą ilością oszczędności i często również długim stażem zatrudnienia.
+11. Spośród grupy 1000 osób które skorzystały z usługi w banku prawie 600 to nieżonaci mężczyźni.
+
+## 3.2. Dodatkowe wnioski
+
+Poszukajmy jeszcze ręcznie jakichś ciekawych własności i faktów, które wynikają z naszej ramki.
+
+Dla przypomnienia
+```{r kolumny, cache = TRUE}
+colnames(data)
+```
+
+### 3.2.1. Potrzeby męskie a żeńskie
+
+Czy klienci okazali się stereotypowi i to facet prędzej sięgnie po pieniądze na telewizor zaś kobieta na gospodarstwo domowe?
+
+```{r potrzeby, cache = TRUE}
+n_of_personal <- data %>%
+  group_by(personal) %>%
+  count()
+
+data_1 <- data %>%
+  select("purpose", "personal") %>%
+  group_by(personal, purpose) %>%
+  count() %>%
+  inner_join(n_of_personal, by = "personal") %>%
+  mutate(percent_of_group = n.x / n.y * 100) %>%
+  select(-c(n.x, n.y))
+
+ggplot(data_1, aes(fill = percent_of_group, x = personal, y = purpose)) +
+  geom_tile() +
+  ggtitle("Personal marital status and gender by purpose of credit") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+Okazuje się, że stereotypy można wyrzucić do kosza - mężczyźni o wiele częściej biorą kredyt ze względu na potrzebę funduszy na gospodarstwo domowe i nie widać znaczącej przewagi w stosunku do kobiet jeśli idzie o chęć postawienia pieniędzy na auto.
+
+Bez zaskoczeń o wiele częściej na dom stawiają mężczyźni po ślubie niż ci samotni czy rozwodnicy. Co ciekawe ci sami ani razu nie wzięli pożyczki na wyposażenie / meble [przynajmniej na te 1000 osobników], zaś rozwodnicy i separatyści... przeciwnie do pozostałych grup nie myślą tu wręcz wcale o dodatkowej mamonie na biznes.
+
+### 3.2.2. Wiek a przewidywane spłacenie kredytu
+
+Czy abstrahując od kilkunastu ważnych parametrów - to raczej stosunkowo młodzi ludzie biorą uznawani są za tych, którzy pożyczki nie spłacą?
+
+```{r wiek_a_splata, cache = TRUE, message = FALSE}
+data_2 <- data %>% select(customer_type, age)
+data_2 <- data_2 %>% mutate(customer_type = ifelse(customer_type == "Good", 1, 0))
+
+ggplot(data_2, aes(x = age, y = customer_type)) +
+  geom_jitter(alpha = 0.9, width = 0.1, height = 0.1) +
+  ggtitle("Customer type by his age") +
+  ylab("customer type") +
+  geom_smooth() +
+  theme_bw()
+```
+
+A właśnie że nie! To starszym mniej ufamy.
+
+## 3.2.3. Wiek a płeć i stan cywilny a ocena zaufania
+
+Weźmy pod uwagę to co pozornie najważniejsze i sprawdźmy wyniki szacowania wyrabialności klientów na ich podstawie.
+
+Pogrupujmy klientów do grup po 10 lat.
+
+```{r wiek_plec_stan_cywilny, cache = TRUE}
+data_3 <- data %>%
+  select(age, personal, customer_type) %>%
+  mutate(age = as.integer(age / 10) * 10) %>%
+  group_by(age, personal, customer_type) %>%
+  count()
+
+ggplot(data = data_3, aes(x = age, y = n, fill = customer_type)) +
+  geom_col(position = "dodge") +
+  ggtitle("Customer type by sex, marital status and age") +
+  ylab("number of good / bad types") +
+  facet_wrap(~personal) +
+  scale_fill_manual("legend", values = c("Good" = "blue", "Bad" = "red")) +
+  theme_dark()
+```
+
+Jakie wnioski?
+
+1. Najmniej ufamy rozwiedzionym facetom - zwłaszcza tym po 30, im zwykle nie dajemy.
+2. Najbezpieczniejsi za to są też faceci po 30... ale single.
+3. Żonaci to też dobre ziomki.
+4. Kobiety są gorsze od mężczyzn, ale tylko przed 40. Potem raczej spokój, za wyjątkiem 70-tki psującej obraz.
+
+## 3.4.3. Okres kredytu a chęć banku na danie go
+
+Strzelam że przychylniej będzie dać na krótki czas - w końcu im dłuższy okres tym większa szansa na jakiś kryzys, hiperinflację, śmierć czy innego megawirusa.
+
+Pozwolimy sobie wziąć tylko te okresy, na jakie zdecydował się przynajmniej 1% populacji - dla higieny wizualizacji, która nie powinna być myląca.
+
+```{r okres, cache = TRUE}
+n_of_duration <- data %>% select(duration, customer_type) %>%
+  group_by(duration) %>%
+  count()
+n_of_duration <- n_of_duration[n_of_duration$n >= 10, ]
+
+sum(n_of_duration$n)
+```
+
+Jak widać usunęliśmy tylko 70 wierszy z 1000 - biorąc pod uwagę, że pewnie jest podobnie mało osób biorących np. 25 miesięcy zamiast 24 miesięcy a 11 miesięcy zamiast 12, nie powinno to wpłynąć negatywnie na nasz rezultat.
+
+```{r okres_2, cache = TRUE}
+data_4 <- data %>%
+  select(duration, customer_type) %>%
+  inner_join(n_of_duration, by = "duration")
+
+ggplot(data = data_4, aes(x = customer_type)) +
+  geom_bar() +
+  ggtitle("Customer type by duration") +
+  facet_wrap(~duration) +
+  xlab("customer type") +
+  ylab("number of good / bad types") +
+  theme_light()
+```
+
+Rzeczywiście owa zależność jest zauważana. Do okresu jednego roku niemalże każdy dostaje kredyt, z czasem zaś procent maleje. Przy trzech latach osiągamy niemalże po połowie przypadków zaakceptowanych i odrzuconych, a przy 4 latach (na które zdecydowało się o wiele więcej osób niż na 5) większość próśb jest odrzucana.
+
+## 4. Zakończenie
+
+To by było na tyle.
+
+Zobaczmy jeszcze efekt działania funkcji session_info:
+
+```{r session_info}
+sessionInfo()
+```

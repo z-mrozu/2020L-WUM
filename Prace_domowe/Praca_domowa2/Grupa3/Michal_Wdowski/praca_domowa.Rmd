@@ -1,0 +1,190 @@
+---
+title: "Praca Domowa 2"
+author: "Michał Wdowski"
+date: "3/23/2020"
+output:
+  html_document:
+    code_folding: hide
+---
+
+# Wczytanie danych
+```{r, cache=TRUE}
+library(dplyr)
+library(ggplot2)
+data <- read.csv("allegro-api-transactions.csv")
+```
+
+# Wstępne spojrzenie
+```{r, cache=TRUE}
+summary(data)
+```
+
+# Zmiana na zmienne kategoryczne to co w istocie powinno nimi być
+```{r, cache=TRUE}
+data$date <- as.POSIXct(data$date)
+data$pay_option_on_delivery <- as.factor(data$pay_option_on_delivery)
+data$pay_option_transfer <- as.factor(data$pay_option_transfer)
+data$it_is_allegro_standard <- as.factor(data$it_is_allegro_standard)
+data$it_is_brand_zone <- as.factor(data$it_is_brand_zone)
+
+summary(data)
+```
+
+Kodowanie zmiennych kategorycznych
+Te zmienne to:
+Categories - listy z kilkoma kategoriami
+
+```{r, cache=TRUE, results='hide'}
+table(data$categories)
+```
+Ma ponad 8 tysięcy kategorii, ale na szczęscie jest main_cathegory, może to się do czegoś przyda.
+
+Pay_option_on_delivery
+```{r, cache=TRUE, results='hide'}
+table(data$pay_option_on_delivery)
+```
+Same zera i jedynki.
+
+Pay_option_transfer
+```{r, cache=TRUE, results='hide'}
+table(data$pay_option_transfer)
+```
+Same zera i jedynki.
+
+Seller
+```{r, cache=TRUE, results='hide'}
+table(data$seller)
+```
+Ponad 50 tysięcy rekordów, ale może da się znależć kilka najbardziej dominujących.
+
+```{r, cache=TRUE}
+data %>%
+  group_by(seller) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n)) -> sellers_summary
+```
+Nie robi sie ich sporo mniej, ale może spróbujemy.
+
+It_is_allegro_standard
+```{r, cache=TRUE}
+table(data$it_is_allegro_standard)
+```
+Same zera i jedynki.
+
+It_is_brand_zone
+```{r, cache=TRUE}
+table(data$it_is_brand_zone)
+```
+Same zera i jedynki.
+
+```{r, cache=TRUE, results='hide'}
+table(data$it_location)
+```
+Ponad 9 tysięcy lokalizacji (w tym takie jak "CAŁOWANIE" albo "cały kraj" zapisane na 10 różnych sposobów - małymi i wielkimi literami, z polskimi znakami i bez...)
+```{r, cache=TRUE}
+data %>%
+  group_by(it_location) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n)) -> localization_summary
+```
+12 i 13 pozycja to "internet" oraz "INTERNET". No ale też spróbujemy.
+
+Main_category
+```{r, cache=TRUE}
+table(data$main_category)
+```
+Tych jest mało - 27
+```{r, cache=TRUE}
+data %>%
+  group_by(main_category) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n)) -> main_category_summary
+```
+No to dużo mniej, ale też zobaczymy.
+
+Dobra, robimy tak - zostaje main_cathegory i te z wartościami binarnymi, a reszta - wyjazd z budowy.
+```{r, cache=TRUE}
+data %>%
+  select(-it_location, -seller, -categories) -> data_dropped
+```
+
+# One-hot encoding
+```{r, cache=TRUE}
+library(mlr)
+data_onehot_encoded1 <- createDummyFeatures(data_dropped, target = "price", method = "1-of-n")
+data_onehot_encoded2 <- createDummyFeatures(data_dropped, target = "price", method = "reference")
+```
+
+```{r, cache=TRUE}
+head(data_onehot_encoded1)
+```
+
+```{r, cache=TRUE}
+head(data_onehot_encoded2)
+```
+# Imputacja
+
+Używam metody pmm z pakietu mice:
+
+```{r, cache=TRUE, results='hide'}
+
+data2 <- data %>% select(price, it_seller_rating, it_quantity)
+
+library("missForest")
+library("mice")
+library(Metrics)
+
+set.seed(2137)
+
+values <- rep(0, 10)
+data_predeleted <- head(data2, 42000)
+
+for(i in seq(1, 10, 1))
+{
+    print(i)
+    data_deleted <- cbind(data_predeleted, prodNA(as.data.frame(data_predeleted$it_seller_rating), noNA = 0.1))
+    colnames(data_deleted) <- c("price", "usun_to", "it_quantity", "it_seller_rating")
+    data_deleted <- select(data_deleted, -usun_to)
+    data_imputed <- mice(data_deleted, m = 3, method = "pmm", maxit = 5)
+    data_imputed_1 <- complete(data_imputed, 2)
+    values[i] <- rmse(data_predeleted$it_seller_rating, data_imputed_1$it_seller_rating)
+}
+
+values2 <- rep(0, 10)
+
+for(i in seq(1, 10, 1))
+{
+    print(i)
+    data_deleted <- cbind(data_predeleted, prodNA(as.data.frame(data_predeleted$it_seller_rating), noNA = 0.1), prodNA(as.data.frame(data_predeleted$it_quantity), noNA = 0.1))
+    colnames(data_deleted) <- c("price", "usun_to", "to_tez", "it_seller_rating", "it_quantity")
+    data_deleted <- select(data_deleted, -usun_to, -to_tez)
+    data_imputed <- mice(data_deleted, m = 3, method = "pmm", maxit = 5)
+    data_imputed_1 <- complete(data_imputed, 2)
+    values2[i] <- rmse(data_predeleted$it_seller_rating, data_imputed_1$it_seller_rating)
+}
+
+values2
+```
+
+To są wyniki w zależności RMSE od liczby imputowanych kolumn w 10 próbach: czerwona to jedna, niebieska to dwie:
+
+```{r, cache=TRUE}
+library(ggplot2)
+results <- cbind(seq(1, 10, 1), values, values2)
+ggplot(as.data.frame(results), aes(x = V1)) +
+    geom_line(aes(y = values), color = "red") + 
+    geom_line(aes(y = values2), color = "blue")
+```
+
+A to średnie z wyników testu RMSE:
+
+```{r, cache=TRUE}
+results <- as.data.frame(results)
+x <- c(mean(results$values), mean(results$values2))
+
+ggplot(as.data.frame(x), aes(x = c("1 kolumna", "2 kolumny"), y = x)) +
+    geom_bar(stat = "identity") +
+    xlab("") +
+    ylab("RMSE")
+```
+

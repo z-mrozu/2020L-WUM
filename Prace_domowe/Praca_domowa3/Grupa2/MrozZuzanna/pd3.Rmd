@@ -1,0 +1,122 @@
+---
+title: "PD3"
+author: "Zuzanna Mróz"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, cache = TRUE, message = FALSE)
+# install.packages(c("dplyr", "MLmetrics", "mlr", "pROC", "kknn"))
+library(dplyr)
+library(MLmetrics)
+library(mlr)
+library(pROC)
+library(kknn)
+set.seed(666)
+```
+
+### Wprowadzenie
+Do utworzenia trzech modeli przewidujących pogodę zostaną użyte metody:
+
+* `ranger`
+* `rpart`
+* `kknn`
+
+I ocenione zostaną za pomocą:
+
+* `Confusion Matrix` - dzięki temu będziemy mogli odczytać stosunki true/false positives/negatives
+* Wykresu `ROC`
+* `AUC` tego wykresu
+
+#### Import danych i zmiana na faktory
+```{r}
+data <- read.csv("../../australia.csv")
+data$Cloud3pm <- as.factor(data$Cloud3pm)
+data$Cloud9am <- as.factor(data$Cloud9am)
+data$RainToday <- as.factor(data$RainToday)
+data$RainTomorrow <- as.factor(data$RainTomorrow)
+summary(data)
+```
+
+
+```{r}
+summary(data$Cloud3pm)
+```
+
+Z opisu wynika że zachmurzenie miało być z zakresu [0-8], ale jak widać powyżej jedna obserwacja ma 9. Wygląda to na błąd więc usuniemy ten wiersz.
+
+```{r}
+data2 <- data %>% filter(Cloud3pm != 9)
+```
+
+#### Zbiór treningowy, testowy i task
+```{r}
+index_test <- sample(1:nrow(data2), 0.4*nrow(data2))
+train <- data2[index_test, ]
+test <- data2[-index_test, ]
+task <- makeClassifTask(data = train, target = "RainTomorrow")
+```
+
+
+### `Ranger`
+
+#### Model
+```{r}
+learner_ranger <- makeLearner("classif.ranger", 
+                              par.vals = list(num.trees = 666, mtry = 6), 
+                              predict.type = "prob")
+model_ranger <- train(learner_ranger, task)
+prediction_ranger <- predict(model_ranger, newdata = test)$data
+```
+
+#### Ocena
+```{r}
+table(prediction_ranger$truth, prediction_ranger$response)
+plot(roc(as.numeric(prediction_ranger$truth), as.numeric(prediction_ranger$response)))
+AUC(prediction_ranger$truth, prediction_ranger$response)
+```
+
+### `rpart`
+#### Model
+```{r}
+learner_rpart <- makeLearner("classif.rpart", 
+                             par.vals = list(minsplit = 66, maxdepth = 6), 
+                             predict.type = "prob")
+model_rpart <- train(learner_rpart, task)
+prediction_rpart <- predict(model_rpart, newdata = test)$data
+```
+
+#### Ocena
+```{r}
+table(prediction_rpart$truth, prediction_rpart$response)
+plot(roc(as.numeric(prediction_rpart$truth), as.numeric(prediction_rpart$response)))
+AUC(prediction_rpart$truth, prediction_rpart$response)
+```
+
+
+### `kknn`
+#### Model
+```{r}
+learner_kknn <- makeLearner("classif.kknn", 
+                            par.vals = list("k" = 66), 
+                            predict.type = "prob")
+model_kknn <- train(learner_kknn, task)
+prediction_kknn <- predict(model_kknn, newdata = test)$data
+```
+
+#### Ocena
+```{r}
+table(prediction_kknn$truth, prediction_kknn$response)
+plot(roc(as.numeric(prediction_kknn$truth), as.numeric(prediction_kknn$response)))
+AUC(prediction_kknn$truth, prediction_kknn$response)
+```
+
+### Podsumowanie
+
+Z modeli powyżej najlepiej spisała się metoda `Ranger`, głównie z uwagi na znacznie większą ilość true positives niż `rpart` i tylko nieznacznie mniejszą ilość true negatives. `Ranger` ma także większe AUC. Najgorzej spisała się metoda `kknn` - znacznie mniej true positives i true negatives niż `rpart` i `Ranger`.
+
