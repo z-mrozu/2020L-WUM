@@ -1,10 +1,11 @@
 Stanislaw Pawlak is inviting you to a scheduled Zoom meeting.
 
-Topic: WUM LAB9
-Time: Apr 28, 2020 08:30 AM Warsaw
+Topic: WUM LAB 10
+Time: May 5, 2020 08:30 AM Warsaw
 
 Join Zoom Meeting
-https://us04web.zoom.us/j/73888373496?pwd=NmJUL2JVeVFkaThESGNJaWZITjBFZz09
+https://us04web.zoom.us/j/77396493765?pwd=ODk2T1ZmUm9UNFJEdnZ6Q3dLbTlpUT09
 
-Meeting ID: 738 8837 3496
-Password: 050856
+Meeting ID: 773 9649 3765
+Password: 033459
+
