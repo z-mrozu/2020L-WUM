@@ -1,0 +1,253 @@
+---
+title: "Praca Domowa 4"
+author: "Aleksander Podsiad"
+output: 
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(mlr)
+library(DALEX)
+library(ggplot2)
+library(readr)
+library(parallelMap)
+library(parallel)
+set.seed(1234)
+```
+
+# Apartments
+
+## Wczytywanie danych
+
+Zbiór `apartments` z pakietu `DALEX`.
+Zmienną celu będzie dzielnica.
+
+```{r}
+data1 <- apartments
+head(data1)
+```
+
+## Wstępna eksploracja
+
+```{r}
+knitr::kable(na.omit(summary(data1)))
+knitr::kable(summary(data1$district))
+```
+
+Klasy są mniej więcej równoliczne, więc jest to zbalansowany zbiór danych.
+
+## Wykresy wybranych zmiennych
+
+```{r}
+ggplot(data1) + geom_point(aes(m2.price, surface, col = district)) + scale_color_brewer(palette="Paired")
+ggplot(data1) + geom_point(aes(m2.price, construction.year, col = district)) + scale_color_brewer(palette="Paired")
+```
+
+Prawdopodobnie najłatwiej będzie zaklasyfikować Śródmieście, ponieważ punkty są najbardziej odseparowane.
+
+## Tworzenie zadania klasyfikacyjnego
+
+Do tworzenia modelu używam pakietu `mlr`.
+
+Wybrane hiperparametry:
+
+```{r}
+getParamSet("classif.svm")$pars[c(2,6,8,14)]
+```
+
+```{r}
+task_aparts <- makeClassifTask(data = data1, target = "district")
+
+# bez skalowania
+learner_poly_F <- makeLearner("classif.svm", par.vals = 
+                                list(kernel = 'polynomial', scale = FALSE))
+learner_rad_F <- makeLearner("classif.svm", par.vals = 
+                               list(kernel = 'radial', scale = FALSE))
+
+# ze skalowaniem
+learner_poly_T <- makeLearner("classif.svm", par.vals = 
+                                list(kernel = 'polynomial', scale = TRUE))
+learner_rad_T <- makeLearner("classif.svm", par.vals = 
+                               list(kernel = 'radial', scale = TRUE))
+```
+
+## Tuning hiperparametrów
+
+```{r}
+param_set <- makeParamSet(
+  makeIntegerParam("degree", lower = 1, upper = 3),
+  makeNumericParam("cost", lower = 0.1, upper = 10),
+  makeNumericParam("gamma", lower = 0.1, 10))
+
+tune_control <- makeTuneControlRandom(maxit = 20)
+ 
+cv <- makeResampleDesc("CV", iters = 4)
+```
+
+Żeby przyśpieszyć pracę komputera stosuję wielordzeniowe obliczenia.
+
+```{r}
+parallelStartSocket(cpus = parallel::detectCores())
+
+tuned_pars_pol_F <- tuneParams(learner_poly_F,
+                    task = task_aparts,
+                    resampling = cv,
+                    par.set = param_set,
+                    control = tune_control,
+                    measures = list(mmce, acc))
+
+tuned_pars_rad_F <- tuneParams(learner_rad_F,
+                    task = task_aparts,
+                    resampling = cv,
+                    par.set = param_set,
+                    control = tune_control,
+                    measures = list(mmce, acc))
+
+tuned_pars_pol_T <- tuneParams(learner_poly_T,
+                    task = task_aparts,
+                    resampling = cv,
+                    par.set = param_set,
+                    control = tune_control,
+                    measures = list(mmce, acc))
+
+tuned_pars_rad_T <- tuneParams(learner_rad_T,
+                    task = task_aparts,
+                    resampling = cv,
+                    par.set = param_set,
+                    control = tune_control,
+                    measures = list(mmce, acc))
+parallelStop()
+```
+
+## Wyniki
+
+```{r}
+results <-
+  list(
+    tuned_pars_pol_F$y %>% as.list() %>% as.data.frame() %>% bind_cols(tuned_pars_pol_F$x %>% as.list() %>% as.data.frame()),
+    tuned_pars_rad_F$y %>% as.list() %>% as.data.frame() %>% bind_cols(tuned_pars_rad_F$x %>% as.list() %>% as.data.frame()),
+    tuned_pars_pol_T$y %>% as.list() %>% as.data.frame() %>% bind_cols(tuned_pars_pol_T$x %>% as.list() %>% as.data.frame()),
+    tuned_pars_rad_T$y %>% as.list() %>% as.data.frame() %>% bind_cols(tuned_pars_rad_T$x %>% as.list() %>% as.data.frame())
+      )
+knitr::kable(bind_rows(results) %>% 
+               mutate(kernel = c("polynominal", "radial", "polynominal", "radial")) %>% 
+               mutate(scaling = c(FALSE, FALSE, TRUE, TRUE)))
+```
+
+Niestety `SVM` ma niską efektywność na tym zbiorze danych.
+
+# Wine quality
+
+## Wczytywanie danych
+
+Zbiór zawierający dane chemiczne i ocenę jakości różnych rodzajów czerwonych win.
+Zmienną celu będzie ocena jakości wina.
+
+```{r}
+data2 <- read_delim("winequality-red.csv", ";", escape_double = FALSE, trim_ws = TRUE)
+data2 <- data2 %>% rename(`fixed_acidity`=`fixed acidity`, 
+                          `volatile_acidity`=`volatile acidity`,
+                          `citric_acid`=`citric acid`,
+                          `residual_sugar`=`residual sugar`,
+                          `free_sulfur_dioxide`=`free sulfur dioxide`,
+                          `total_sulfur_dioxide`=`total sulfur dioxide`)
+head(data2)
+```
+
+## Wstępna eksploracja
+
+```{r}
+data2$quality <- as.factor(data2$quality)
+summary(data2)
+```
+
+Niestety mamy do czynienia z niezbalansowanym zbiorem danych.
+
+## Wykresy wybranych zmiennych
+
+```{r}
+ggplot(data2) + geom_point(aes(`fixed_acidity`, `residual_sugar`, col = quality)) + scale_color_brewer(palette="Paired")
+ggplot(data2) + geom_point(aes(`citric_acid`, `total_sulfur_dioxide`, col = quality)) + scale_color_brewer(palette="Paired")
+```
+
+Tutaj klasy są trudniejsze do rozróżnienia "na oko" niż w poprzednim zbiorze danych.
+
+## Tworzenie zadania klasyfikacyjnego
+
+Używam tych samych modeli uczących co poprzednio.
+
+```{r}
+task_wines <- makeClassifTask(data = data2, target = "quality")
+```
+
+## Tuning hiperparametrów
+
+```{r}
+parallelStartSocket(cpus = parallel::detectCores())
+
+tuned_pars_pol_F_w <- tuneParams(learner_poly_F,
+                    task = task_wines,
+                    resampling = cv,
+                    par.set = param_set,
+                    control = tune_control,
+                    measures = list(mmce, acc))
+
+tuned_pars_rad_F_w <- tuneParams(learner_rad_F,
+                    task = task_wines,
+                    resampling = cv,
+                    par.set = param_set,
+                    control = tune_control,
+                    measures = list(mmce, acc))
+
+tuned_pars_pol_T_w <- tuneParams(learner_poly_T,
+                    task = task_wines,
+                    resampling = cv,
+                    par.set = param_set,
+                    control = tune_control,
+                    measures = list(mmce, acc))
+
+tuned_pars_rad_T_w <- tuneParams(learner_rad_T,
+                    task = task_wines,
+                    resampling = cv,
+                    par.set = param_set,
+                    control = tune_control,
+                    measures = list(mmce, acc))
+
+parallelStop()
+```
+
+## Wyniki
+
+```{r}
+results_w <-
+  list(
+    tuned_pars_pol_F_w$y %>% as.list() %>% as.data.frame() %>% 
+      bind_cols(tuned_pars_pol_F_w$x %>% as.list() %>% as.data.frame()),
+    tuned_pars_rad_F_w$y %>% as.list() %>% as.data.frame() %>% 
+      bind_cols(tuned_pars_rad_F_w$x %>% as.list() %>% as.data.frame()),
+    tuned_pars_pol_T_w$y %>% as.list() %>% as.data.frame() %>% 
+      bind_cols(tuned_pars_pol_T_w$x %>% as.list() %>% as.data.frame()),
+    tuned_pars_rad_T_w$y %>% as.list() %>% as.data.frame() %>% 
+      bind_cols(tuned_pars_rad_T_w$x %>% as.list() %>% as.data.frame())
+      )
+knitr::kable(bind_rows(results_w) %>% 
+               mutate(kernel = c("polynominal", "radial", "polynominal", "radial")) %>% 
+               mutate(scaling = c(FALSE, FALSE, TRUE, TRUE)))
+```
+
+# Podsumowanie
+
+Na obu zbiorach danych przeprowadziłem klasyfikację za pomocą modelu `SVM`. Jak widać zbiór `apartments` jest pod tym względem trudny do predykcji ze względu na niewystarczający związek zmiennej celu z pozostałymi zmiennymi. O wiele lepsze wyniki daje klasyfikacja oceny jakości czerwonego wina na podstawie jego chemicznych parametrów (`winequality-red`). Zgodnie z przewidywaniami poczynionymi na podstawie artykułu o metodzie [SVM](http://pyml.sourceforge.net/doc/howto.pdf) skalowanie zmiennych pozytywnie wpływa na skuteczność przewidywania modelu, ale tylko w przypadku jądra gaussowskiego (`radial`).

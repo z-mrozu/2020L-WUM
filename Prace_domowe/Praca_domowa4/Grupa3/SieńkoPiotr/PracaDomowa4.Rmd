@@ -1,0 +1,461 @@
+---
+title: "Praca Domowa "
+author: "Piotr Sieńko"
+date: "23 04 2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+---
+
+# Wstęp
+<p>&nbsp;</p>
+
+Do pracy domowej użyłem zbioru _apartments_ z pakietu _DALEX_ oraz znanego nam z wcześniejszej pracy domowej zbioru _australia_. Dla przypomnienia, ten drugi zawiera dane pogodowe ze stacji meteorologicznych, a naszym celem jest stwierdzenie, czy następnego dnia wystąpił opad atmosferyczny.
+<p>&nbsp;</p>
+
+
+```{r setup, include=FALSE}
+
+library(DALEX)
+library(mlr)
+
+```
+
+# Zbiór _apartments_
+
+## Brak normalizacji
+<p>&nbsp;</p>
+Jako klasyfikator mojego modelu, użyłem _classif.svm_ z pakietu _e1071_. Jest on oparty o maszynę wektorów nośnych. Najważniejszymi hiperparametrami są w niej koszt oraz gamma. Do ich strojenia użyłem metody Random Search ustawionej na 100 iteracji. Zgodnie z poleceniem zbadałem czy normalizacja danych wpływa na uzyskiwane wyniki. Wybrany przeze mnie klasyfikator robi to domyślnie sam, jednak istnieje opcja wyłączenia tej funkcji poprzez ustawienie parametru _scale_ = FALSE. Aby wyniki były bardziej wiarygodne, cały proces tworzenia modelu wraz z jego strojeniem powtórzyłem 5 razy.
+
+```{r cache=TRUE, echo = TRUE, results='hide', message=FALSE}
+
+# Wektor miar dla braku normalizacji
+perf_apart_F <- c(0, 0, 0)
+
+apart_F_table <- as.data.frame(NULL)
+
+for (i in 1:5){
+  
+# Nasza zmienna celu to dzielnica
+task_apart <- makeClassifTask(data = apartments, target = "district")
+lrn_apart <- makeLearner("classif.svm", predict.type = "prob", par.vals = list("cost" = 5.6, "gamma" = 0.123, "scale" = FALSE))
+
+# Strojenie
+
+apart_param = makeParamSet(
+  makeNumericParam("cost", lower = 0.1, upper = 10),
+  makeNumericParam("gamma", lower = 0.01, upper = 0.5)
+                          )
+
+# RandomSearch 
+
+cv <- makeResampleDesc("CV", iter = 5, stratify = TRUE)
+
+# 100 iteracji 
+ctrl_apart <- makeTuneControlRandom(maxit = 100)
+res_apart <- tuneParams(lrn_apart, task_apart, resampling = cv,
+                         par.set = apart_param, control = ctrl_apart, list(acc))
+
+# Przypisanie wybranego learnera
+lrn_apart <- res_apart$learner
+
+
+# Standardowa formułka 
+model_apart <- train(lrn_apart, task_apart)
+
+pred_apart <- predict(model_apart, newdata = apartments_test)
+
+perf_apart <- performance(pred = pred_apart, measures = list(acc, multiclass.aunu, mmce))
+
+# Zapis wyników
+apart_F_table[i,1:3] <- perf_apart
+
+perf_apart_F <- perf_apart_F + perf_apart
+}
+
+perf_apart_F <- perf_apart_F / 5
+
+# Listujemy dzielnice 
+dzielnice_F <- pred_apart$data
+```
+<p>&nbsp;</p>
+
+Do oceny modelu użyłem miar: _accuracy_, _mmce_ oraz zmodyfikowanej miary AUC - AUNU, przystosowanej do klasyfikacji wieloklasowej.
+
+```{r}
+
+perf_apart_F
+
+```
+
+<p>&nbsp;</p>
+Model w którym dane nie są standaryzowane odznacza się bardzo niską skutecznością. Jedynie około 10% mieszkań miało właściwie dopasowane dzielnice.
+
+```{r}
+table(dzielnice_F$truth)
+table(dzielnice_F$response)
+
+```
+<p>&nbsp;</p>
+Po bliższym przyjrzeniu się wynikom, widać, iż nasz model prawie wszystkie mieszkania przypisał do Mokotowa. 
+<p>&nbsp;</p>
+
+## Normalizacja
+<p>&nbsp;</p>
+
+Podobną procedurę przeprowadziłem przy włączonej wewnętrznej standaryzacji danych.
+
+```{r, cache=TRUE, echo = TRUE, results='hide', message=FALSE}
+
+# Wektor miar dla normalizacji
+perf_apart_T <- c(0, 0, 0)
+apart_T_table <- as.data.frame(NULL)
+
+for (i in 1:5){
+  
+  # Nasza zmienna celu to dzielnica
+  task_apart <- makeClassifTask(data = apartments, target = "district")
+  lrn_apart <- makeLearner("classif.svm", predict.type = "prob", par.vals = list("cost" = 5.6, "gamma" = 0.123, "scale" = TRUE))
+  
+  # Strojenie
+  
+  apart_param = makeParamSet(
+    makeNumericParam("cost", lower = 0.1, upper = 10),
+    makeNumericParam("gamma", lower = 0.01, upper = 0.5)
+  )
+  
+  # RandomSearch 
+  
+  cv <- makeResampleDesc("CV", iter = 5, stratify = TRUE)
+  
+  # 100 iteracji 
+  ctrl_apart <- makeTuneControlRandom(maxit = 100)
+  res_apart <- tuneParams(lrn_apart, task_apart, resampling = cv,
+                          par.set = apart_param, control = ctrl_apart, list(acc))
+  
+  # Przypisanie wybranego learnera
+  lrn_apart <- res_apart$learner
+  
+
+  # Standardowa formułka z trening - predict - performance
+  model_apart <- train(lrn_apart, task_apart)
+  
+  pred_apart <- predict(model_apart, newdata = apartments_test)
+  
+  perf_apart <- performance(pred = pred_apart, measures = list(acc, multiclass.aunu, mmce))
+  
+  apart_T_table[i,1:3] <- perf_apart
+  
+  
+  perf_apart_T <- perf_apart_T + perf_apart
+}
+
+perf_apart_T <- perf_apart_T / 5
+
+# Listujemy dzielnice 
+dzielnice_T <- pred_apart$data
+```
+<p>&nbsp;</p>
+Po ustandaryzowaniu danych, wyniki, mimo iż nadal niskie, były znacząco lepsze niż w poprzedniej próbie.
+```{r}
+
+perf_apart_T
+
+```
+
+```{r}
+table(dzielnice_T$truth)
+table(dzielnice_T$response)
+
+```
+<p>&nbsp;</p>
+Model nadal faworyzował niektóre dzielnice (Mokotów, Ursus, Wola), a inne pomijał (Praga, Bielany, Żoliborz, Bemowo). Nie zmienia to jednak faktu, że skalowanie danych znacząco polepszyło działanie klasfykatora. 
+<p>&nbsp;</p>
+
+# Zbiór _australia_
+
+## Brak normalizacji
+<p>&nbsp;</p>
+Następny zbiór posiada 18 zmiennych z czego zdecydowana większość jest numeryczna. Warto zauważyć, że zakresy zmiennych są silnie zróżnicowane, temperatury wahają się od -5 do +45, natomiast zmienna ciśnienia atmosferycznego przyjmuje wartości w okolicach 1000. Brak standaryzacji danych powinien mieć więc znaczny wpływ na wynik. 
+
+```{r}
+
+australia <- read.csv("australia.csv")
+str(australia)
+
+```
+<p>&nbsp;</p>
+W sposób analogiczny do poprzedniego zbioru danych, utworzyłem model _SVM_ z parametrem _scale_ = FALSE i poddałem go strojeniu. 
+
+
+```{r, cache=TRUE, echo = TRUE, results='hide', message=FALSE}
+perf_aus_F <- c(0, 0, 0)
+
+  
+australia <- read.csv("australia.csv")
+  
+
+# Podział na zbiór treningowy i testowy
+
+# Zmniejszam rozmiar zbioru
+m <- sample(1:nrow(australia), 0.1*nrow(australia))
+australia <- australia[m, ]
+
+n <- sample(1:nrow(australia), 0.7*nrow(australia))
+australia_train <- australia[n,]
+australia_test <- australia[-n,]
+
+# Nasza zmienna celu to wskazanie czy jutro wystąpi opad atmosferyczny
+task_aus <- makeClassifTask(data = australia_train, target = "RainTomorrow")
+lrn_aus <- makeLearner("classif.svm", predict.type = "prob", par.vals = list("cost" = 5.6, "gamma" = 0.123, "scale" = FALSE))
+
+# Strojenie
+
+aus_param = makeParamSet(
+  makeNumericParam("cost", lower = 0.1, upper = 10),
+  makeNumericParam("gamma", lower = 0.01, upper = 0.5)
+)
+
+# RandomSearch 
+
+cv <- makeResampleDesc("CV", iter = 5, stratify = TRUE)
+
+# tylko 40 iteracji 
+ctrl_aus <- makeTuneControlRandom(maxit = 40)
+res_aus <- tuneParams(lrn_aus, task_aus, resampling = cv,
+                        par.set = aus_param, control = ctrl_aus, list(auc))
+
+# Przypisanie wybranego learnera
+lrn_aus <- res_aus$learner
+
+
+# Standardowa formułka
+model_aus <- train(lrn_aus, task_aus)
+
+pred_aus <- predict(model_aus, newdata = australia_test)
+
+perf_aus_F <- performance(pred = pred_aus, measures = list(auc, gmean, acc))
+
+
+```
+<p>&nbsp;</p>
+
+Okazało się, że AUC było znacznie gorsze niż w przypadku wyboru losowego. Zerowa średnia geometryczna z czułości i swoistości oraz dość wysoka celność wskazują, że model każdej pozycji przypisywał wartość częściej występującą w zbiorze, czyli 0. 
+
+
+```{r}
+
+perf_aus_F
+
+```
+
+## Normalizacja
+<p>&nbsp;</p>
+
+Tym razem stworzyłem model z parametrem _scale_ = TRUE. 
+
+```{r, cache=TRUE, echo = TRUE, results='hide', message=FALSE}
+
+  australia <- read.csv("australia.csv")
+  
+  
+  # Podział na zbiór treningowy i testowy
+  
+  # Zmniejszam rozmiar zbioru
+  m <- sample(1:nrow(australia), 0.1*nrow(australia))
+  australia <- australia[m, ]
+  
+  n <- sample(1:nrow(australia), 0.7*nrow(australia))
+  australia_train <- australia[n,]
+  australia_test <- australia[-n,]
+  
+  # Nasza zmienna celu to wskazanie czy jutro wystąpi opad atmosferyczny
+  task_aus <- makeClassifTask(data = australia_train, target = "RainTomorrow")
+  lrn_aus <- makeLearner("classif.svm", predict.type = "prob", par.vals = list("scale" = TRUE))
+  
+  # Strojenie
+  
+  aus_param = makeParamSet(
+    makeNumericParam("cost", lower = 0.1, upper = 10),
+    makeNumericParam("gamma", lower = 0.01, upper = 0.5)
+  )
+  
+  # RandomSearch 
+  
+  cv <- makeResampleDesc("CV", iter = 5, stratify = TRUE)
+  
+  # tylko 40 iteracji 
+  ctrl_aus <- makeTuneControlRandom(maxit = 40)
+  res_aus <- tuneParams(lrn_aus, task_aus, resampling = cv,
+                        par.set = aus_param, control = ctrl_aus, list(auc))
+  
+  # Przypisanie wybranego learnera
+  lrn_aus <- res_aus$learner
+  
+
+  # Standardowa formułka z trening - predict - performance
+  model_aus <- train(lrn_aus, task_aus)
+  
+  pred_aus <- predict(model_aus, newdata = australia_test)
+  
+  perf_aus_T <- performance(pred = pred_aus, measures = list(auc, gmean, acc))
+  
+
+```
+<p>&nbsp;</p>
+Zgodnie z przewidywaniami, wyniki były zdecydowanie wyższe. AUC wynoszące 0.85 oraz średnia geometryczna na poziomie 0.68 pokazują jak poprzez zwykłe skalowanie danych można uzyskać drastyczną poprawę działania modelu. Warto o tym pamiętać, szczególnie przy klasyfikatorach, które nie normalizują danych automatycznie. 
+
+```{r}
+
+perf_aus_T
+
+```
+<p>&nbsp;</p>
+
+# Zmiana jądra
+<p>&nbsp;</p>
+Dodatkowo postanowiłem sprawdzić, jak SVM zachowa się przy zmianie kernela z "gaussowskiego" na wielomianowe. Próba została wykonana na zbiorze _apartments_ z włączonym skalowaniem domyślnym. Do strojonych parametrów dodałem stopień wielomianu.
+
+```{r, cache=TRUE, echo = TRUE, results='hide', message=FALSE}
+
+# Wektor miar dla normalizacji
+perf_apart_P <- c(0, 0, 0)
+apart_P_table <- as.data.frame(NULL)
+
+for (i in 1:5){
+  
+  # Nasza zmienna celu to dzielnica
+  task_apart <- makeClassifTask(data = apartments, target = "district")
+  lrn_apart <- makeLearner("classif.svm", predict.type = "prob", par.vals = list("scale" = TRUE, "kernel" = "polynomial"))
+  
+  # Strojenie
+  
+  apart_param = makeParamSet(
+    makeNumericParam("cost", lower = 0.1, upper = 10),
+    makeNumericParam("gamma", lower = 0.01, upper = 0.5),
+    makeIntegerParam("degree", lowe = 2, upper = 5)
+  )
+  
+  # RandomSearch 
+  
+  cv <- makeResampleDesc("CV", iter = 5, stratify = TRUE)
+  
+  # 100 iteracji 
+  ctrl_apart <- makeTuneControlRandom(maxit = 100)
+  res_apart <- tuneParams(lrn_apart, task_apart, resampling = cv,
+                          par.set = apart_param, control = ctrl_apart, list(acc))
+  
+  # Przypisanie wybranego learnera
+  lrn_apart <- res_apart$learner
+  
+
+  # Standardowa formułka z trening - predict - performance
+  model_apart <- train(lrn_apart, task_apart)
+  
+  pred_apart <- predict(model_apart, newdata = apartments_test)
+  
+  perf_apart <- performance(pred = pred_apart, measures = list(acc, multiclass.aunu, mmce))
+  
+  apart_P_table[i,1:3] <- perf_apart
+  
+  
+  perf_apart_P <- perf_apart_P + perf_apart
+}
+
+perf_apart_P <- perf_apart_P / 5
+
+# Listujemy dzielnice 
+dzielnice_P <- pred_apart$data
+```
+<p>&nbsp;</p>
+Wartości miar były bardzo zbliżone do rezultatów uzyskanych przy jądrze gaussowskim. 
+
+```{r}
+
+perf_apart_P
+
+```
+
+```{r}
+table(dzielnice_P$truth)
+table(dzielnice_P$response)
+
+```
+<p>&nbsp;</p>
+Najczęściej wybieranym przez model stopniem był stopień domyślny, czyli 3. Rozkład mieszkań na dzielnice nadal nie był równomierny
+
+<p>&nbsp;</p>
+Podobna próba z kernelem liniowym. Oczywiście w tym przypadku nie stroimy hiperparametru _degree_.
+```{r, cache=TRUE, echo = TRUE, results='hide', message=FALSE}
+
+# Wektor miar dla normalizacji
+perf_apart_L <- c(0, 0, 0)
+apart_L_table <- as.data.frame(NULL)
+
+for (i in 1:5){
+  
+  # Nasza zmienna celu to dzielnica
+  task_apart <- makeClassifTask(data = apartments, target = "district")
+  lrn_apart <- makeLearner("classif.svm", predict.type = "prob", par.vals = list("scale" = TRUE, "kernel" = "linear"))
+  
+  # Strojenie
+  
+  apart_param = makeParamSet(
+    makeNumericParam("cost", lower = 0.1, upper = 10),
+    makeNumericParam("gamma", lower = 0.01, upper = 0.5)
+  )
+  
+  # RandomSearch 
+  
+  cv <- makeResampleDesc("CV", iter = 5, stratify = TRUE)
+  
+  # 100 iteracji 
+  ctrl_apart <- makeTuneControlRandom(maxit = 100)
+  res_apart <- tuneParams(lrn_apart, task_apart, resampling = cv,
+                          par.set = apart_param, control = ctrl_apart, list(acc))
+  
+  # Przypisanie wybranego learnera
+  lrn_apart <- res_apart$learner
+  
+
+  # Standardowa formułka z trening - predict - performance
+  model_apart <- train(lrn_apart, task_apart)
+  
+  pred_apart <- predict(model_apart, newdata = apartments_test)
+  
+  perf_apart <- performance(pred = pred_apart, measures = list(acc, multiclass.aunu, mmce))
+  
+  apart_L_table[i,1:3] <- perf_apart
+  
+  
+  perf_apart_L <- perf_apart_L + perf_apart
+}
+
+perf_apart_L <- perf_apart_L / 5
+
+# Listujemy dzielnice 
+dzielnice_L <- pred_apart$data
+```
+<p>&nbsp;</p>
+Model uzyskał minimalnie lepszą celność oraz AUC i nieznacznie niższy średni błąd przypisania.  
+
+```{r}
+
+perf_apart_L
+
+```
+
+```{r}
+table(dzielnice_L$truth)
+table(dzielnice_L$response)
+
+```
+<p>&nbsp;</p>
+Niestety model oparty o jądro liniowe znacznie faworyzował niektóre dzielnice. Warto dodać, że niezaprzeczalnym plusem jądra liniowego jest jego szybkość działania. 
+
+# Podsumowanie
+<p>&nbsp;</p>
+
+Stworzone na dwóch zbiorach danych modele wyraźnie pokazują istotność skalowania danych w przypadku maszyny wektorów nośnych. Wyniki modeli wytrenowanych na nieustandaryzowanych danych są drastycznie gorsze. W przypadku zbioru _apartments_ jądro gaussowskie oraz wielomianowe osiągnęły najlepsze wyniki w podziale mieszkań na dzielnice. Jądro liniowe, mimo iż uzyskało podobne wartości miar oraz było najszybsze, pomijało niektóre dzielnice co spowodowało bardzo wysokie niezrównoważenie predykcji w zbiorze testowym.

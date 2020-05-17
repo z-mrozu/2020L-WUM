@@ -18,7 +18,7 @@
 | 5.05  |                                                                         | Konsultacje                      | Oddanie kamienia milowego 1. |
 | 12.05 | Brak zajęć -- piątek na PW                                              |                                  |                              |
 | 19.05 | Klasteryzacja c.d.                                                      | Termin oddania PD5, początek PD6 | Konsultacje                  |
-| 26.06 |                                                                         | Konsultacje                      | Oddanie kamienia milowego 2. |
+| 26.05 |                                                                         | Konsultacje                      | Oddanie kamienia milowego 2. |
 | 2.06  | Redukcja wymiarów                                                       | Termin oddania PD6, początek PD7 | Konsultacje                  |
 | 9.06  |                                                                         | Konsultacje                      | Prezentacja projektu 2.      |
 | 16.06 | Analiza koszykowa                                                       | Termin oddania PD7               |                              |
