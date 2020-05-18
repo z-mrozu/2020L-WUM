@@ -1,0 +1,233 @@
+---
+title: "Praca domowa 3"
+author: "Martyna Majchrzak"
+date: "1 04 2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mlr)
+library(dplyr)
+
+set.seed(1)
+```
+
+W celu treningowym cała praca domowa została wykonana z użyciem mlr, bez posługiwania się mlr3.
+
+# Zbiór danych
+
+Poniższy raport prezentuje wyniki nauki klasyfikatorów na zbiorze danych https://www.kaggle.com/jsphyg/weather-dataset-rattle-package. Zawiera on dane ze stacji pogodowych na terenie Australii.  Jest on już przygotowany do pracy i nie zawiera brakujących wartości i kolumn z tekstem. Na jego podstawie postaramy się przewidzieć, czy następnego dnia padało, czy nie.
+
+ Kolumny:
+ 
+- **MinTemp** - Minimalna temperatura [C]
+
+- **MaxTemp** - Maksymalna temperatura [C]
+
+- **Rainfall** - Suma opadów [mm]
+
+- **Evaporation** - Miara odparowywania [mm]
+
+- **Sunshine** - Suma czasu nasłonecznienia [h]
+
+- **WindGustSpeed** - Najwyższa prędkość wiatru [km/h]
+
+- **WindSpeed9am** - Prędkość wiatru o 9:00 [km/h]
+
+- **WindSpeed3pm** - Prędkość wiatru o 15:00 [km/h]
+
+- **Humidity9am** - Wilgotność o 9:00 [%]
+
+- **Humidity3pm** - Wilgotność o 15:00 [%]
+
+- **Pressure9am** - Ciśnienie atmosferyczne o 9:00 [hPa]
+
+- **Pressure3pm** - Ciśnienie atmosferyczne o 15:00 [hPa]
+
+- **Cloud9am** - Zachmurzenie o 9:00 [skala: 0 - słońce, 8 - całkowite zachmurzenie]
+
+- **Cloud3pm** - Zachmurzenie o 15:00 [skala: 0 - słońce, 8 - całkowite zachmurzenie]
+
+- **Temp9am** - Temperatura o 9:00 [C]
+
+- **Temp3pm** - Temperatura o 15:00 [C]
+
+- **RainToday** - Czy dzisiaj padał deszcz [0 - nie, 1 - tak]
+
+-  **Zmienna celu:** **RainTomorrow** - Czy jutro będzie padał deszcz [0 - nie, 1 - tak]
+
+```{r}
+# wczytanie zbioru danych
+data<-read.csv2("C:/Users/marty/OneDrive/Dokumenty/WUM/2020L-WUM/Prace_domowe/Praca_domowa3/australia.csv", sep=",")
+str(data)
+```
+Ponieważ dane w kolumnach kategorycznych są liczbowe, zostały zrzutowane na typ numeric.
+```{r}
+numeric_columns<-1:16
+data[numeric_columns]<-sapply(data[numeric_columns],as.numeric)
+str(data)
+```
+
+# Podział na zbiór treningowy i testowy
+
+Zbiór danych zostaje podzielony losowo na treningowy (80%) i testowy (20%). Na zbiorze treningowym zostanie użyty do wyuczenia klasyfikatorów, a zbiór testowy do oceny ich efektywności.
+
+```{r}
+n<-nrow(data)
+train_set = sample(n, 0.8 * n)
+test_set = setdiff(seq_len(n), train_set)
+data_train <- data[train_set,]
+data_test <- data[test_set,]
+```
+
+# Klasyfikatory
+
+Następnie na zbiorze treningowym zostanie przeprowadzona klasyfikacja przy pomocy:
+
+ - Weighted K-Nearest Neighbor Classifier (dalej skrótowo: kknn)
+ 
+ - Naive Bayes (dalej skrótowo: nb)
+ 
+ - Recursive Partitioning and Regression Trees (dalej skrótowo: rpart)
+
+Za zmienną celu uznawana będzie RainTomorrow, oznaczająca, czy kolejnego dnia padało, czy nie.
+
+## Weighted K-Nearest Neighbours Classifier
+
+Metoda K-Nearest Neighbours polega na przyporządkowaniu obserwacji wyniku na podstawie klasy k-najbliższych sąsiadów, czyli określonej liczby obserwacji, które są do niej najbardziej podobne (mają najmniejszą odległość z wielowymiarowej przestrzeni zmiennych).
+
+Klasyfikator Weighted K-Nearest Neighbours różni się od od standardowego K-Nearest Neighbours tym, że potrafi zwrócić prawdopodobieństwa, z jakim każda obserwacja jest przyporządkowana do danej kategorii. Ta cecha będzie potrzebna do późniejszej oceny klasyfikatorów.
+
+
+```{r}
+# Tworzenie zadania
+kknn_task <- makeClassifTask(id = "kknn", data = data_train, target = "RainTomorrow")
+
+# Parametry klasyfikatora knn
+kknn_params<-getLearnerParamSet("classif.kknn")
+kknn_params
+```
+
+Ustawiony zostanie parametr k, oznaczający liczbę najbliższych sąsiadów, których bierze się pod uwagę podczas modelowania oraz predict.type na "prob", tak aby otrzymać prawdopodobieństwo uzyskania danej odpowiedzi.
+
+```{r}
+kknn_lrn <- makeLearner("classif.kknn", k=7, predict.type = "prob")
+
+# Model
+kknn_model <- train(kknn_lrn, kknn_task)
+# Predykcja
+kknn_prediction<-predict(kknn_model, newdata = data_test)
+
+kknn_prediction
+```
+
+## Naive Bayes
+
+Naive Bayes to klasyfikator, który zakłada (naiwnie), że wszystkie zmienne są niezależne, a następnie oblicza prawdopodobieństwa wszystkich możliwych zdarzeń, mnożąc przez siebie prawdopodobieństwa zdarzeń 'składowych'. 
+
+```{r}
+# Utworzenie zadania
+nb_task <- makeClassifTask(id = "nb", data = data_train, target = "RainTomorrow")
+
+# Parametry tego klasyfikatora
+nb_params<-getLearnerParamSet("classif.naiveBayes")
+nb_params
+
+```
+
+Parametr laplace jest niewielką liczbą, która zostanie dodana do prawdopodobieństwa każdego zdarzenia, tak aby żadne nie zostało potraktowane jako niemożliwe (nawet jeśli nigdy się nie wystąpiło w zbiorze treningowym). Ustawimy również predict.type na "prob", tak aby otrzymać prawdopodobieństwo uzyskania danej odpowiedzi.
+
+```{r}
+nb_lrn <- makeLearner("classif.naiveBayes", laplace=1, predict.type = "prob")
+nb_model <- train(nb_lrn, nb_task)
+nb_prediction<-predict(nb_model, newdata = data_test)
+nb_prediction
+```
+
+## Recursive Partitioning and Regression Trees
+
+Klasyfikator RPART dzieli zbiór ze względu na ilość obserwacji pozytywnych i negatywnych (czyli w przypadku tego zbioru RainTomorrow=0 i RainTomorrow=1)  według kolejnych zmiennych, tworząć drzewo decyzyjne, na podstawie którego może później przewidzieć klasę nowej obserwacji.
+
+```{r}
+# Utworzenie zadani
+rpart_task <- makeClassifTask(id = "rpart", data = data_train, target = "RainTomorrow")
+
+# parametry tego klasyfikatora
+rpart_params<-getLearnerParamSet("classif.rpart")
+rpart_params
+```
+
+Problemem często występującym w drzewach decyzyjnych jest to, że nadmiernie się rozrastają, co może powodować zbytnie dopasowanie się do danych treningowych. Argumenty 'minsplit' oraz 'maxdepth' pozwalają zatrzymać rozrastanie się drzewa w momencie w którym odpowiedni: zostanie przekroczona minimalna liczność rozpatrywanej grupy lub maksymalna liczba poziomów drzewa.
+
+Zastosowany zostanie minsplit=10. Dzięki temu, gdy liczność obserwacji w danej 'gałęzi' drzewa spadnie poniżej 10, dalsze podziały nie zostaną wykonane.
+
+```{r}
+rpart_lrn <- makeLearner("classif.rpart", minsplit=10, predict.type = "prob")
+# Model
+rpart_model <- train(rpart_lrn, rpart_task)
+# Predykcja
+rpart_prediction<-predict(rpart_model, newdata = data_test)
+rpart_prediction
+```
+
+# Porównanie klasyfikatorów
+
+Do oceny efektywności zastosowane zostały 4 miary:
+
+ - Accuracy (acc)
+ 
+ - AUC (pole pod krzywą ROC)
+ 
+ - FalsePositiveRate (fpr) - stosunek obserwacji, w których padało, a model przewidział, że nie będzie padać , do wszystkich obserwacji, w których padało
+ 
+ - FalseNegativeRate (fnr) - stosunek obserwacji, w których  nie padało, a model przewidział, że padało , do wszystkich obserwacji, w których  nie padało
+
+```{r}
+class_performanes<-as.data.frame(rbind(
+  performance(kknn_prediction, list(acc, auc, fpr, fnr)),
+  performance(nb_prediction, list(acc, auc, fpr, fnr)),
+  performance(rpart_prediction, list(acc, auc, fpr, fnr)))
+)
+class_performanes$classificator<-c("kknn", "naiveBayes", "rpart")
+class_performanes<-class_performanes[,c(5,1,2,3,4)]
+class_performanes%>%arrange(desc(acc,auc))
+```
+
+Najlepszym klasyfikatorem dla tego zbioru okazał się kknn (Weighted K-Nearest Neighbor Classifier), osiągając zarówno największą dokładność, jak i AUC.
+
+Na dalszą analizę zasługują jednak wyniki FalsePositive i FalseNegative.
+
+Wszystkie algorytmy mają bardzo wysoki FalsePositiveRate ( padało, a model przewidział, że nie będzie padać). Gdyby zależało nam na jego zminimalizowaniu (co wydaje się sensowne np. dla prognozy pogody) to możnaby również rozważyć naiveBayes, któy wyniki Accuracy i AUC ma niewiele gorsze, ale FalsePositiveRate aż o 0.12 niższy.
+
+Z kolei rpart najlepiej wypada pod względem FalseNegativeRate (nie padało, a model przewidział, że padało) z wynikiem 0.036, czyli 2 razy lepszym niż knn i 5 razy lepszym niż naiveBayes.
+
+Poniżej przedstawiono, jak rozkładają się te przypadki liczbowo przy użyciu Confusion Matrix.
+
+Dla przypomnienia : 
+
+ - 0 - nie będzie padało
+ 
+ - 1 - będzie padało
+ 
+## KKNN
+```{r}
+calculateConfusionMatrix(kknn_prediction)
+```
+
+## NaiveBayes
+```{r}
+calculateConfusionMatrix(nb_prediction)
+```
+
+## RPART
+```{r}
+calculateConfusionMatrix(rpart_prediction)
+```
+
+Sumaryczny błąd (FalseNegative+FalsePositive) jest najmniejszy dla kknn, zatem pozostaje on najlepszym klasyfikatorem.
