@@ -315,6 +315,263 @@ testset &lt;- apartments[-indexes,]</code></pre>
 </div>
 <div id="modele---bez-skalowania" class="section level2">
 <h2><span class="header-section-number">2.3</span> Modele - bez skalowania</h2>
+<p>Najpierw rozważmy <strong>modele o hiperparametrach domyślnych</strong>, które potem porównamy z modelami strojonymi:</p>
+<pre class="r"><code>set.seed(44)
+# Fit svmRadial:
+model &lt;- train(
+  district ~ . ,
+  data = trainset, 
+  method = &quot;svmRadial&quot;
+)
+pred &lt;- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##              Reference
+## Prediction    Bemowo Bielany Mokotow Ochota Praga Srodmiescie Ursus
+##   Bemowo           4       4       0      0     3           0     5
+##   Bielany          5       1       0      0     3           0     5
+##   Mokotow          0       1      10      6     0           0     0
+##   Ochota           0       0       3      5     0           0     0
+##   Praga            2       0       0      0     1           0     2
+##   Srodmiescie      0       0       0      0     0          20     0
+##   Ursus            3       5       0      0     4           0     4
+##   Ursynow          3       4       0      0     3           0     1
+##   Wola             2       4       0      0     4           0     4
+##   Zoliborz         0       0       8      8     0           0     0
+##              Reference
+## Prediction    Ursynow Wola Zoliborz
+##   Bemowo            3    0        0
+##   Bielany           2    5        0
+##   Mokotow           0    0        7
+##   Ochota            0    0        2
+##   Praga             4    4        0
+##   Srodmiescie       0    0        0
+##   Ursus             5    4        0
+##   Ursynow           2    5        0
+##   Wola              4    3        0
+##   Zoliborz          0    0       10
+## 
+## Overall Statistics
+##                                          
+##                Accuracy : 0.3046         
+##                  95% CI : (0.2412, 0.374)
+##     No Information Rate : 0.1066         
+##     P-Value [Acc &gt; NIR] : 2.97e-14       
+##                                          
+##                   Kappa : 0.2267         
+##                                          
+##  Mcnemar's Test P-Value : NA             
+## 
+## Statistics by Class:
+## 
+##                      Class: Bemowo Class: Bielany Class: Mokotow
+## Sensitivity                0.21053       0.052632        0.47619
+## Specificity                0.91573       0.887640        0.92045
+## Pos Pred Value             0.21053       0.047619        0.41667
+## Neg Pred Value             0.91573       0.897727        0.93642
+## Prevalence                 0.09645       0.096447        0.10660
+## Detection Rate             0.02030       0.005076        0.05076
+## Detection Prevalence       0.09645       0.106599        0.12183
+## Balanced Accuracy          0.56313       0.470136        0.69832
+##                      Class: Ochota Class: Praga Class: Srodmiescie
+## Sensitivity                0.26316     0.055556             1.0000
+## Specificity                0.97191     0.932961             1.0000
+## Pos Pred Value             0.50000     0.076923             1.0000
+## Neg Pred Value             0.92513     0.907609             1.0000
+## Prevalence                 0.09645     0.091371             0.1015
+## Detection Rate             0.02538     0.005076             0.1015
+## Detection Prevalence       0.05076     0.065990             0.1015
+## Balanced Accuracy          0.61753     0.494258             1.0000
+##                      Class: Ursus Class: Ursynow Class: Wola
+## Sensitivity                0.1905        0.10000     0.14286
+## Specificity                0.8807        0.90960     0.89773
+## Pos Pred Value             0.1600        0.11111     0.14286
+## Neg Pred Value             0.9012        0.89944     0.89773
+## Prevalence                 0.1066        0.10152     0.10660
+## Detection Rate             0.0203        0.01015     0.01523
+## Detection Prevalence       0.1269        0.09137     0.10660
+## Balanced Accuracy          0.5356        0.50480     0.52029
+##                      Class: Zoliborz
+## Sensitivity                  0.52632
+## Specificity                  0.91011
+## Pos Pred Value               0.38462
+## Neg Pred Value               0.94737
+## Prevalence                   0.09645
+## Detection Rate               0.05076
+## Detection Prevalence         0.13198
+## Balanced Accuracy            0.71821</code></pre>
+<pre class="r"><code>set.seed(44)
+# Fit svmPoly:
+model &lt;- train(
+  district ~ . ,
+  data = trainset, 
+  method = &quot;svmPoly&quot;
+)
+pred &lt;- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##              Reference
+## Prediction    Bemowo Bielany Mokotow Ochota Praga Srodmiescie Ursus
+##   Bemowo           6       4       0      0     6           0     4
+##   Bielany          2       1       0      0     2           0     3
+##   Mokotow          0       0       8      3     0           0     0
+##   Ochota           0       0       3      6     0           0     0
+##   Praga            2       2       0      0     1           0     3
+##   Srodmiescie      0       0       0      0     0          20     0
+##   Ursus            4       6       0      0     4           0     4
+##   Ursynow          3       4       0      0     3           0     4
+##   Wola             2       2       0      0     2           0     3
+##   Zoliborz         0       0      10     10     0           0     0
+##              Reference
+## Prediction    Ursynow Wola Zoliborz
+##   Bemowo            8    1        0
+##   Bielany           1    3        0
+##   Mokotow           0    0        8
+##   Ochota            0    0        2
+##   Praga             4    5        0
+##   Srodmiescie       0    0        0
+##   Ursus             4    4        0
+##   Ursynow           0    6        0
+##   Wola              3    2        0
+##   Zoliborz          0    0        9
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.2893          
+##                  95% CI : (0.2271, 0.3581)
+##     No Information Rate : 0.1066          
+##     P-Value [Acc &gt; NIR] : 1.373e-12       
+##                                           
+##                   Kappa : 0.2103          
+##                                           
+##  Mcnemar's Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: Bemowo Class: Bielany Class: Mokotow
+## Sensitivity                0.31579       0.052632        0.38095
+## Specificity                0.87079       0.938202        0.93750
+## Pos Pred Value             0.20690       0.083333        0.42105
+## Neg Pred Value             0.92262       0.902703        0.92697
+## Prevalence                 0.09645       0.096447        0.10660
+## Detection Rate             0.03046       0.005076        0.04061
+## Detection Prevalence       0.14721       0.060914        0.09645
+## Balanced Accuracy          0.59329       0.495417        0.65923
+##                      Class: Ochota Class: Praga Class: Srodmiescie
+## Sensitivity                0.31579     0.055556             1.0000
+## Specificity                0.97191     0.910615             1.0000
+## Pos Pred Value             0.54545     0.058824             1.0000
+## Neg Pred Value             0.93011     0.905556             1.0000
+## Prevalence                 0.09645     0.091371             0.1015
+## Detection Rate             0.03046     0.005076             0.1015
+## Detection Prevalence       0.05584     0.086294             0.1015
+## Balanced Accuracy          0.64385     0.483085             1.0000
+##                      Class: Ursus Class: Ursynow Class: Wola
+## Sensitivity                0.1905         0.0000     0.09524
+## Specificity                0.8750         0.8870     0.93182
+## Pos Pred Value             0.1538         0.0000     0.14286
+## Neg Pred Value             0.9006         0.8870     0.89617
+## Prevalence                 0.1066         0.1015     0.10660
+## Detection Rate             0.0203         0.0000     0.01015
+## Detection Prevalence       0.1320         0.1015     0.07107
+## Balanced Accuracy          0.5327         0.4435     0.51353
+##                      Class: Zoliborz
+## Sensitivity                  0.47368
+## Specificity                  0.88764
+## Pos Pred Value               0.31034
+## Neg Pred Value               0.94048
+## Prevalence                   0.09645
+## Detection Rate               0.04569
+## Detection Prevalence         0.14721
+## Balanced Accuracy            0.68066</code></pre>
+<pre class="r"><code>set.seed(44)
+# Fit svmLinear:
+model &lt;- train(
+  district ~ . ,
+  data = trainset, 
+  method = &quot;svmLinear&quot;
+)
+pred &lt;- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##              Reference
+## Prediction    Bemowo Bielany Mokotow Ochota Praga Srodmiescie Ursus
+##   Bemowo           8       6       0      0     4           0     3
+##   Bielany          1       0       0      0     2           0     1
+##   Mokotow          0       0       7      4     0           0     0
+##   Ochota           0       0       6      7     0           0     0
+##   Praga            3       2       0      0     3           0     2
+##   Srodmiescie      0       0       0      0     0          20     0
+##   Ursus            3       4       0      0     3           0     4
+##   Ursynow          2       3       0      0     2           0     4
+##   Wola             2       4       0      0     4           0     7
+##   Zoliborz         0       0       8      8     0           0     0
+##              Reference
+## Prediction    Ursynow Wola Zoliborz
+##   Bemowo            4    2        0
+##   Bielany           3    0        0
+##   Mokotow           0    0        5
+##   Ochota            0    0        5
+##   Praga             5    4        0
+##   Srodmiescie       0    0        0
+##   Ursus             4    4        0
+##   Ursynow           3    6        0
+##   Wola              1    5        0
+##   Zoliborz          0    0        9
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.335           
+##                  95% CI : (0.2695, 0.4056)
+##     No Information Rate : 0.1066          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.261           
+##                                           
+##  Mcnemar's Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: Bemowo Class: Bielany Class: Mokotow
+## Sensitivity                0.42105        0.00000        0.33333
+## Specificity                0.89326        0.96067        0.94886
+## Pos Pred Value             0.29630        0.00000        0.43750
+## Neg Pred Value             0.93529        0.90000        0.92265
+## Prevalence                 0.09645        0.09645        0.10660
+## Detection Rate             0.04061        0.00000        0.03553
+## Detection Prevalence       0.13706        0.03553        0.08122
+## Balanced Accuracy          0.65716        0.48034        0.64110
+##                      Class: Ochota Class: Praga Class: Srodmiescie
+## Sensitivity                0.36842      0.16667             1.0000
+## Specificity                0.93820      0.91061             1.0000
+## Pos Pred Value             0.38889      0.15789             1.0000
+## Neg Pred Value             0.93296      0.91573             1.0000
+## Prevalence                 0.09645      0.09137             0.1015
+## Detection Rate             0.03553      0.01523             0.1015
+## Detection Prevalence       0.09137      0.09645             0.1015
+## Balanced Accuracy          0.65331      0.53864             1.0000
+##                      Class: Ursus Class: Ursynow Class: Wola
+## Sensitivity                0.1905        0.15000     0.23810
+## Specificity                0.8977        0.90395     0.89773
+## Pos Pred Value             0.1818        0.15000     0.21739
+## Neg Pred Value             0.9029        0.90395     0.90805
+## Prevalence                 0.1066        0.10152     0.10660
+## Detection Rate             0.0203        0.01523     0.02538
+## Detection Prevalence       0.1117        0.10152     0.11675
+## Balanced Accuracy          0.5441        0.52698     0.56791
+##                      Class: Zoliborz
+## Sensitivity                  0.47368
+## Specificity                  0.91011
+## Pos Pred Value               0.36000
+## Neg Pred Value               0.94186
+## Prevalence                   0.09645
+## Detection Rate               0.04569
+## Detection Prevalence         0.12690
+## Balanced Accuracy            0.69190</code></pre>
+<p>Modele ze strojonymi hiperparametrami po losowej siatce:</p>
 <pre class="r"><code>set.seed(44)
 # Fit svmRadial:
 model &lt;- train(
@@ -634,6 +891,263 @@ confusionMatrix(pred , testset$district)</code></pre>
 <p>Teraz zbadam czy skalowanie zmiennych ma duży wpływ w przypadku <em>apartments</em>. Wyznaczę <strong>Accuracy</strong> modeli ze skalowaniem. Poniżej wykonuję skalowanie zmiennych ilościowych, czyli wszystkich oprócz zmiennej celu:</p>
 <pre class="r"><code>trainset[,1:5] &lt;- trainset[,1:5] %&gt;% scale(center = F, scale = T)
 testset[,1:5] &lt;- testset[,1:5] %&gt;% scale(center = F, scale = T)</code></pre>
+<p>Najpierw rozważmy <strong>modele o hiperparametrach domyślnych</strong>, które potem porównamy z modelami strojonymi:</p>
+<pre class="r"><code>set.seed(44)
+# Fit svmRadial:
+model &lt;- train(
+  district ~ . ,
+  data = trainset, 
+  method = &quot;svmRadial&quot;
+)
+pred &lt;- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##              Reference
+## Prediction    Bemowo Bielany Mokotow Ochota Praga Srodmiescie Ursus
+##   Bemowo           4       4       0      0     4           0     6
+##   Bielany          3       1       1      0     3           0     6
+##   Mokotow          0       1       8      4     0           0     0
+##   Ochota           0       0       4      5     0           0     1
+##   Praga            2       0       0      0     2           0     1
+##   Srodmiescie      0       0       0      0     0          20     0
+##   Ursus            4       5       0      0     4           0     3
+##   Ursynow          4       4       0      0     2           0     2
+##   Wola             2       4       0      0     3           0     2
+##   Zoliborz         0       0       8     10     0           0     0
+##              Reference
+## Prediction    Ursynow Wola Zoliborz
+##   Bemowo            3    2        0
+##   Bielany           2    4        0
+##   Mokotow           0    0        7
+##   Ochota            0    0        2
+##   Praga             4    4        0
+##   Srodmiescie       0    0        0
+##   Ursus             5    4        0
+##   Ursynow           2    4        0
+##   Wola              4    3        0
+##   Zoliborz          0    0       10
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.2944          
+##                  95% CI : (0.2318, 0.3634)
+##     No Information Rate : 0.1066          
+##     P-Value [Acc &gt; NIR] : 3.919e-13       
+##                                           
+##                   Kappa : 0.2157          
+##                                           
+##  Mcnemar's Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: Bemowo Class: Bielany Class: Mokotow
+## Sensitivity                0.21053       0.052632        0.38095
+## Specificity                0.89326       0.893258        0.93182
+## Pos Pred Value             0.17391       0.050000        0.40000
+## Neg Pred Value             0.91379       0.898305        0.92655
+## Prevalence                 0.09645       0.096447        0.10660
+## Detection Rate             0.02030       0.005076        0.04061
+## Detection Prevalence       0.11675       0.101523        0.10152
+## Balanced Accuracy          0.55189       0.472945        0.65639
+##                      Class: Ochota Class: Praga Class: Srodmiescie
+## Sensitivity                0.26316      0.11111             1.0000
+## Specificity                0.96067      0.93855             1.0000
+## Pos Pred Value             0.41667      0.15385             1.0000
+## Neg Pred Value             0.92432      0.91304             1.0000
+## Prevalence                 0.09645      0.09137             0.1015
+## Detection Rate             0.02538      0.01015             0.1015
+## Detection Prevalence       0.06091      0.06599             0.1015
+## Balanced Accuracy          0.61192      0.52483             1.0000
+##                      Class: Ursus Class: Ursynow Class: Wola
+## Sensitivity               0.14286        0.10000     0.14286
+## Specificity               0.87500        0.90960     0.91477
+## Pos Pred Value            0.12000        0.11111     0.16667
+## Neg Pred Value            0.89535        0.89944     0.89944
+## Prevalence                0.10660        0.10152     0.10660
+## Detection Rate            0.01523        0.01015     0.01523
+## Detection Prevalence      0.12690        0.09137     0.09137
+## Balanced Accuracy         0.50893        0.50480     0.52881
+##                      Class: Zoliborz
+## Sensitivity                  0.52632
+## Specificity                  0.89888
+## Pos Pred Value               0.35714
+## Neg Pred Value               0.94675
+## Prevalence                   0.09645
+## Detection Rate               0.05076
+## Detection Prevalence         0.14213
+## Balanced Accuracy            0.71260</code></pre>
+<pre class="r"><code>set.seed(44)
+# Fit svmPoly:
+model &lt;- train(
+  district ~ . ,
+  data = trainset, 
+  method = &quot;svmPoly&quot;
+)
+pred &lt;- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##              Reference
+## Prediction    Bemowo Bielany Mokotow Ochota Praga Srodmiescie Ursus
+##   Bemowo           6       5       0      0     8           0     5
+##   Bielany          2       1       0      0     1           0     3
+##   Mokotow          0       0       5      2     0           0     0
+##   Ochota           0       0       5      6     0           0     0
+##   Praga            2       2       0      0     2           0     3
+##   Srodmiescie      0       0       0      0     0          20     0
+##   Ursus            4       5       0      0     3           0     4
+##   Ursynow          3       3       0      0     3           0     4
+##   Wola             2       3       0      0     1           0     2
+##   Zoliborz         0       0      11     11     0           0     0
+##              Reference
+## Prediction    Ursynow Wola Zoliborz
+##   Bemowo            9    1        0
+##   Bielany           1    3        0
+##   Mokotow           0    0        5
+##   Ochota            0    0        2
+##   Praga             4    6        0
+##   Srodmiescie       0    0        0
+##   Ursus             4    3        0
+##   Ursynow           0    7        0
+##   Wola              2    1        0
+##   Zoliborz          0    0       12
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.2893          
+##                  95% CI : (0.2271, 0.3581)
+##     No Information Rate : 0.1066          
+##     P-Value [Acc &gt; NIR] : 1.373e-12       
+##                                           
+##                   Kappa : 0.2109          
+##                                           
+##  Mcnemar's Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: Bemowo Class: Bielany Class: Mokotow
+## Sensitivity                0.31579       0.052632        0.23810
+## Specificity                0.84270       0.943820        0.96023
+## Pos Pred Value             0.17647       0.090909        0.41667
+## Neg Pred Value             0.92025       0.903226        0.91351
+## Prevalence                 0.09645       0.096447        0.10660
+## Detection Rate             0.03046       0.005076        0.02538
+## Detection Prevalence       0.17259       0.055838        0.06091
+## Balanced Accuracy          0.57924       0.498226        0.59916
+##                      Class: Ochota Class: Praga Class: Srodmiescie
+## Sensitivity                0.31579      0.11111             1.0000
+## Specificity                0.96067      0.90503             1.0000
+## Pos Pred Value             0.46154      0.10526             1.0000
+## Neg Pred Value             0.92935      0.91011             1.0000
+## Prevalence                 0.09645      0.09137             0.1015
+## Detection Rate             0.03046      0.01015             0.1015
+## Detection Prevalence       0.06599      0.09645             0.1015
+## Balanced Accuracy          0.63823      0.50807             1.0000
+##                      Class: Ursus Class: Ursynow Class: Wola
+## Sensitivity                0.1905         0.0000    0.047619
+## Specificity                0.8920         0.8870    0.943182
+## Pos Pred Value             0.1739         0.0000    0.090909
+## Neg Pred Value             0.9023         0.8870    0.892473
+## Prevalence                 0.1066         0.1015    0.106599
+## Detection Rate             0.0203         0.0000    0.005076
+## Detection Prevalence       0.1168         0.1015    0.055838
+## Balanced Accuracy          0.5413         0.4435    0.495400
+##                      Class: Zoliborz
+## Sensitivity                  0.63158
+## Specificity                  0.87640
+## Pos Pred Value               0.35294
+## Neg Pred Value               0.95706
+## Prevalence                   0.09645
+## Detection Rate               0.06091
+## Detection Prevalence         0.17259
+## Balanced Accuracy            0.75399</code></pre>
+<pre class="r"><code>set.seed(44)
+# Fit svmLinear:
+model &lt;- train(
+  district ~ . ,
+  data = trainset, 
+  method = &quot;svmLinear&quot;
+)
+pred &lt;- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##              Reference
+## Prediction    Bemowo Bielany Mokotow Ochota Praga Srodmiescie Ursus
+##   Bemowo           9       6       0      0     5           0     3
+##   Bielany          1       1       0      0     3           0     2
+##   Mokotow          0       0       6      4     0           0     0
+##   Ochota           0       0       6      7     0           0     0
+##   Praga            3       2       0      0     3           0     2
+##   Srodmiescie      0       0       0      0     0          20     0
+##   Ursus            3       3       0      0     3           0     4
+##   Ursynow          2       3       0      0     1           0     4
+##   Wola             1       4       0      0     3           0     6
+##   Zoliborz         0       0       9      8     0           0     0
+##              Reference
+## Prediction    Ursynow Wola Zoliborz
+##   Bemowo            5    3        0
+##   Bielany           3    1        0
+##   Mokotow           0    0        5
+##   Ochota            0    0        5
+##   Praga             4    4        0
+##   Srodmiescie       0    0        0
+##   Ursus             4    3        0
+##   Ursynow           3    7        0
+##   Wola              1    3        0
+##   Zoliborz          0    0        9
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.3299          
+##                  95% CI : (0.2648, 0.4003)
+##     No Information Rate : 0.1066          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.2557          
+##                                           
+##  Mcnemar's Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: Bemowo Class: Bielany Class: Mokotow
+## Sensitivity                0.47368       0.052632        0.28571
+## Specificity                0.87640       0.943820        0.94886
+## Pos Pred Value             0.29032       0.090909        0.40000
+## Neg Pred Value             0.93976       0.903226        0.91758
+## Prevalence                 0.09645       0.096447        0.10660
+## Detection Rate             0.04569       0.005076        0.03046
+## Detection Prevalence       0.15736       0.055838        0.07614
+## Balanced Accuracy          0.67504       0.498226        0.61729
+##                      Class: Ochota Class: Praga Class: Srodmiescie
+## Sensitivity                0.36842      0.16667             1.0000
+## Specificity                0.93820      0.91620             1.0000
+## Pos Pred Value             0.38889      0.16667             1.0000
+## Neg Pred Value             0.93296      0.91620             1.0000
+## Prevalence                 0.09645      0.09137             0.1015
+## Detection Rate             0.03553      0.01523             0.1015
+## Detection Prevalence       0.09137      0.09137             0.1015
+## Balanced Accuracy          0.65331      0.54143             1.0000
+##                      Class: Ursus Class: Ursynow Class: Wola
+## Sensitivity                0.1905        0.15000     0.14286
+## Specificity                0.9091        0.90395     0.91477
+## Pos Pred Value             0.2000        0.15000     0.16667
+## Neg Pred Value             0.9040        0.90395     0.89944
+## Prevalence                 0.1066        0.10152     0.10660
+## Detection Rate             0.0203        0.01523     0.01523
+## Detection Prevalence       0.1015        0.10152     0.09137
+## Balanced Accuracy          0.5498        0.52698     0.52881
+##                      Class: Zoliborz
+## Sensitivity                  0.47368
+## Specificity                  0.90449
+## Pos Pred Value               0.34615
+## Neg Pred Value               0.94152
+## Prevalence                   0.09645
+## Detection Rate               0.04569
+## Detection Prevalence         0.13198
+## Balanced Accuracy            0.68909</code></pre>
+<p>Modele ze strojonymi hiperparametrami po losowej siatce:</p>
 <pre class="r"><code>set.seed(44)
 # Fit svmRadial:
 model &lt;- train(
@@ -914,21 +1428,40 @@ confusionMatrix(pred , testset$district)</code></pre>
 <div id="podsumowanie-apartments" class="section level2">
 <h2><span class="header-section-number">2.5</span> Podsumowanie apartments</h2>
 <p>Podsumujmy uzyskane <strong>Accuracy</strong> z uwzględnieniem skalowania oraz różnych jąder.</p>
-<p>Bez skalowania:</p>
+<div id="bez-skalowania" class="section level3">
+<h3><span class="header-section-number">2.5.1</span> Bez skalowania</h3>
+<p>Bez skalowania, hiperparametry <strong>domyślne</strong>:</p>
+<ul>
+<li><em>svmRadial</em>: 0.3046</li>
+<li><em>svmPoly</em>: 0.2893</li>
+<li><em>svmLinear</em>: <strong>0.335</strong></li>
+</ul>
+<p>Bez skalowania, hiperparametry <strong>strojone</strong>:</p>
 <ul>
 <li><em>svmRadial</em>: 0.3096</li>
 <li><em>svmPoly</em>: 0.2944</li>
 <li><em>svmLinear</em>: <strong>0.3401</strong></li>
 </ul>
-<p>Ze skalowaniem:</p>
+</div>
+<div id="ze-skalowaniem-1" class="section level3">
+<h3><span class="header-section-number">2.5.2</span> Ze skalowaniem</h3>
+<p>Ze skalowaniem, hiperparametry <strong>domyślne</strong>:</p>
+<ul>
+<li><em>svmRadial</em>: 0.2944</li>
+<li><em>svmPoly</em>: 0.2893</li>
+<li><em>svmLinear</em>: 0.3299</li>
+</ul>
+<p>Ze skalowaniem, hiperparametry <strong>strojone</strong>:</p>
 <ul>
 <li><em>svmRadial</em>: <strong>0.3401</strong></li>
 <li><em>svmPoly</em>: 0.3147</li>
 <li><em>svmLinear</em>: 0.335</li>
 </ul>
-<p>Jak widzimy skalowanie znacznie pomogło jądru gaussowskiemu i wielomianowemu, jednakże jądro liniowe osiągnęło gorszy wynik.</p>
+<p>Strojenie modeli przyniosło dobre aczkolwiek niewielkie rezultaty; dzięki niemu modele miały lepsze Accuracy.</p>
+<p>Jak również widzimy, skalowanie znacznie pomogło jądru gaussowskiemu i wielomianowemu, jednakże jądro liniowe osiągnęło gorszy wynik.</p>
 <p>Nasze modele, zgodnie z oczekiwaniami, <strong>bezbłędnie klasyfikowały apartamenty w Śródmieściu</strong>. Niestety klasyfikacja innych dzielnic była obarczona częstymi błędami.</p>
 <p>Jest 10 dzielnic i stąd mogło wynikać Accuracy około <strong>0.3</strong>. Warto zauważyć, że klasyfikator losowy osiągnąłby Accuracy w okolicach <strong>0.1</strong>, a umiący rozróżnić tylko Śródmieście oscylowałby gdzieś w Accuracy = <strong>0.2</strong>. Z tego powodu powższe klasyfikatory nauczyły się w pewnym sensie rozróżniać dzielnice. Faktycznie, jeśli zerknąć na wcześniejsze wykresy punktowe w ggplot2, można dostrzec, że niektóre ‘pasma’ punktów są zajęte przez poszczególne dzielnice. Jednakże, te pasma nachodzą na siebie dla różnych dzielnic, stąd trudności z klasyfikacją.</p>
+</div>
 </div>
 </div>
 <div id="diabetes" class="section level1">
@@ -976,6 +1509,116 @@ testset2 &lt;- aux[-indexes,]</code></pre>
 </div>
 <div id="modele---bez-skalowania-1" class="section level2">
 <h2><span class="header-section-number">3.4</span> Modele - bez skalowania</h2>
+<p>Najpierw rozważmy <strong>modele o hiperparametrach domyślnych</strong>, które potem porównamy z modelami strojonymi:</p>
+<pre class="r"><code>set.seed(44)
+# Fit svmRadial:
+model &lt;- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = &quot;svmRadial&quot;
+)
+pred &lt;- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction no yes
+##        no  87  25
+##        yes 13  28
+##                                           
+##                Accuracy : 0.7516          
+##                  95% CI : (0.6754, 0.8179)
+##     No Information Rate : 0.6536          
+##     P-Value [Acc &gt; NIR] : 0.005891        
+##                                           
+##                   Kappa : 0.4207          
+##                                           
+##  Mcnemar's Test P-Value : 0.074353        
+##                                           
+##             Sensitivity : 0.8700          
+##             Specificity : 0.5283          
+##          Pos Pred Value : 0.7768          
+##          Neg Pred Value : 0.6829          
+##              Prevalence : 0.6536          
+##          Detection Rate : 0.5686          
+##    Detection Prevalence : 0.7320          
+##       Balanced Accuracy : 0.6992          
+##                                           
+##        'Positive' Class : no              
+## </code></pre>
+<pre class="r"><code>set.seed(44)
+# Fit svmRadial:
+model &lt;- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = &quot;svmPoly&quot;
+)
+pred &lt;- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction no yes
+##        no  91  29
+##        yes  9  24
+##                                           
+##                Accuracy : 0.7516          
+##                  95% CI : (0.6754, 0.8179)
+##     No Information Rate : 0.6536          
+##     P-Value [Acc &gt; NIR] : 0.005891        
+##                                           
+##                   Kappa : 0.3981          
+##                                           
+##  Mcnemar's Test P-Value : 0.002055        
+##                                           
+##             Sensitivity : 0.9100          
+##             Specificity : 0.4528          
+##          Pos Pred Value : 0.7583          
+##          Neg Pred Value : 0.7273          
+##              Prevalence : 0.6536          
+##          Detection Rate : 0.5948          
+##    Detection Prevalence : 0.7843          
+##       Balanced Accuracy : 0.6814          
+##                                           
+##        'Positive' Class : no              
+## </code></pre>
+<pre class="r"><code>set.seed(44)
+# Fit svmRadial:
+model &lt;- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = &quot;svmLinear&quot;
+)
+pred &lt;- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction no yes
+##        no  86  26
+##        yes 14  27
+##                                           
+##                Accuracy : 0.7386          
+##                  95% CI : (0.6615, 0.8062)
+##     No Information Rate : 0.6536          
+##     P-Value [Acc &gt; NIR] : 0.01536         
+##                                           
+##                   Kappa : 0.3902          
+##                                           
+##  Mcnemar's Test P-Value : 0.08199         
+##                                           
+##             Sensitivity : 0.8600          
+##             Specificity : 0.5094          
+##          Pos Pred Value : 0.7679          
+##          Neg Pred Value : 0.6585          
+##              Prevalence : 0.6536          
+##          Detection Rate : 0.5621          
+##    Detection Prevalence : 0.7320          
+##       Balanced Accuracy : 0.6847          
+##                                           
+##        'Positive' Class : no              
+## </code></pre>
+<p>Modele ze strojonymi hiperparametrami po losowej siatce:</p>
 <pre class="r"><code>set.seed(44)
 # Fit svmRadial:
 model &lt;- train(
@@ -1106,11 +1749,121 @@ confusionMatrix(pred , testset2$Outcome)</code></pre>
 ##        'Positive' Class : no              
 ## </code></pre>
 </div>
-<div id="ze-skalowaniem-1" class="section level2">
+<div id="ze-skalowaniem-2" class="section level2">
 <h2><span class="header-section-number">3.5</span> Ze skalowaniem</h2>
 <p>Teraz zbadam czy skalowanie zmiennych ma duży wpływ w przypadku <em>diabetes</em>. Wyznaczę <strong>Accuracy/Sensitivity/Specificity</strong> modeli ze skalowaniem. Poniżej wykonuję skalowanie zmiennych ilościowych, czyli wszystkich oprócz zmiennej celu:</p>
 <pre class="r"><code>trainset2[,1:8] &lt;- trainset2[,1:8] %&gt;% scale(center = F, scale = T)
 testset2[,1:8] &lt;- testset2[,1:8] %&gt;% scale(center = F, scale = T)</code></pre>
+<p>Najpierw rozważmy <strong>modele o hiperparametrach domyślnych</strong>, które potem porównamy z modelami strojonymi:</p>
+<pre class="r"><code>set.seed(44)
+# Fit svmRadial:
+model &lt;- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = &quot;svmRadial&quot;
+)
+pred &lt;- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction no yes
+##        no  87  24
+##        yes 13  29
+##                                           
+##                Accuracy : 0.7582          
+##                  95% CI : (0.6824, 0.8237)
+##     No Information Rate : 0.6536          
+##     P-Value [Acc &gt; NIR] : 0.003479        
+##                                           
+##                   Kappa : 0.4386          
+##                                           
+##  Mcnemar's Test P-Value : 0.100178        
+##                                           
+##             Sensitivity : 0.8700          
+##             Specificity : 0.5472          
+##          Pos Pred Value : 0.7838          
+##          Neg Pred Value : 0.6905          
+##              Prevalence : 0.6536          
+##          Detection Rate : 0.5686          
+##    Detection Prevalence : 0.7255          
+##       Balanced Accuracy : 0.7086          
+##                                           
+##        'Positive' Class : no              
+## </code></pre>
+<pre class="r"><code>set.seed(44)
+# Fit svmRadial:
+model &lt;- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = &quot;svmPoly&quot;
+)
+pred &lt;- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction no yes
+##        no  90  28
+##        yes 10  25
+##                                           
+##                Accuracy : 0.7516          
+##                  95% CI : (0.6754, 0.8179)
+##     No Information Rate : 0.6536          
+##     P-Value [Acc &gt; NIR] : 0.005891        
+##                                           
+##                   Kappa : 0.4039          
+##                                           
+##  Mcnemar's Test P-Value : 0.005820        
+##                                           
+##             Sensitivity : 0.9000          
+##             Specificity : 0.4717          
+##          Pos Pred Value : 0.7627          
+##          Neg Pred Value : 0.7143          
+##              Prevalence : 0.6536          
+##          Detection Rate : 0.5882          
+##    Detection Prevalence : 0.7712          
+##       Balanced Accuracy : 0.6858          
+##                                           
+##        'Positive' Class : no              
+## </code></pre>
+<pre class="r"><code>set.seed(44)
+# Fit svmRadial:
+model &lt;- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = &quot;svmLinear&quot;
+)
+pred &lt;- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction no yes
+##        no  86  26
+##        yes 14  27
+##                                           
+##                Accuracy : 0.7386          
+##                  95% CI : (0.6615, 0.8062)
+##     No Information Rate : 0.6536          
+##     P-Value [Acc &gt; NIR] : 0.01536         
+##                                           
+##                   Kappa : 0.3902          
+##                                           
+##  Mcnemar's Test P-Value : 0.08199         
+##                                           
+##             Sensitivity : 0.8600          
+##             Specificity : 0.5094          
+##          Pos Pred Value : 0.7679          
+##          Neg Pred Value : 0.6585          
+##              Prevalence : 0.6536          
+##          Detection Rate : 0.5621          
+##    Detection Prevalence : 0.7320          
+##       Balanced Accuracy : 0.6847          
+##                                           
+##        'Positive' Class : no              
+## </code></pre>
+<p>Modele ze strojonymi hiperparametrami po losowej siatce:</p>
 <pre class="r"><code>set.seed(44)
 # Fit svmRadial:
 model &lt;- train(
@@ -1244,25 +1997,44 @@ confusionMatrix(pred , testset2$Outcome)</code></pre>
 <div id="podsumowanie-diabetes" class="section level2">
 <h2><span class="header-section-number">3.6</span> Podsumowanie diabetes</h2>
 <p>Podsumujmy uzyskane <strong>Accuracy/Sensitivity/Specificity</strong> z uwzględnieniem skalowania oraz różnych jąder.</p>
-<p>Bez skalowania:</p>
+<div id="bez-skalowania-1" class="section level3">
+<h3><span class="header-section-number">3.6.1</span> Bez skalowania</h3>
+<p>Bez skalowania, hiperparametry <strong>domyślne</strong>:</p>
+<ul>
+<li><em>svmRadial</em>: 0.7516/0.8700/0.5283 # Acc i Sens większe niż po strojeniu</li>
+<li><em>svmPoly</em>: <strong>0.7516/0.9100/0.4528</strong></li>
+<li><em>svmLinear</em>: 0.7974/0.86/0.5094</li>
+</ul>
+<p>Bez skalowania, hiperparametry <strong>strojone</strong>:</p>
 <ul>
 <li><em>svmRadial</em>: 0.7451/0.8500/0.5472</li>
 <li><em>svmPoly</em>: <strong>0.7974/0.9300/0.5472</strong></li>
 <li><em>svmLinear</em>: 0.7974/0.9300/0.5472</li>
 </ul>
-<p>Ze skalowaniem:</p>
+</div>
+<div id="ze-skalowaniem-3" class="section level3">
+<h3><span class="header-section-number">3.6.2</span> Ze skalowaniem</h3>
+<p>Ze skalowaniem, hiperparametry <strong>domyślne</strong>:</p>
+<ul>
+<li><em>svmRadial</em>: 0.7582/0.8700/0.5472 # Acc i Sens większe niż po strojeniu</li>
+<li><em>svmPoly</em>: <strong>0.7516/0.9000/0.4717</strong></li>
+<li><em>svmLinear</em>: 0.7386/0.8600/0.5094</li>
+</ul>
+<p>Ze skalowaniem, hiperparametry <strong>strojone</strong>:</p>
 <ul>
 <li><em>svmRadial</em>: 0.7451/0.8500/0.5472</li>
 <li><em>svmPoly</em>: <strong>0.8039/0.9300/0.5660</strong></li>
 <li><em>svmLinear</em>: 0.7974/0.9300/0.5472</li>
 </ul>
+<p>Strojenie modeli przyniosło dobre rezultaty również dla tego zbioru danych; dzięki niemu modele miały lepsze Accuracy. <strong>Tylko jądro Gaussowskie po strojeniu wykazywało gorszy performance.</strong></p>
 <p>Widzimy, że skalowanie nie zaszkodziło, a pomogło jedynie w przypadku SVM z jądrem wielomianowym.</p>
 <p>Chociaż Accuracy wynosi około 0.75-0.8 w zależności od modeli, to Specificity jest wyjątkowo niskie. W tym zagadnieniu medycznym powinniśmy calować w jak największe Specificity, gdyż negatywne etykietki to ‘yes’, a pozytywne to ‘no’. W celu zwiększenia Specificity można by zmniejszyć próg (threshold) prawdopodoieństwa zaklasyfikowania negatywnego ‘yes’. Zmniejszy to już i tak olbrzymie Sensitivity, ale lepsza detekcja chorych jest ważniejsza, niż kilka fałszywych alarmów. Mimo wszystko, ze względu na niezbalansowanie danych, klasyfikator losowy miałby Sensitivity ok. <em>0.67</em> oraz Specificity ok. <em>0.33</em>. Obie te wartości są <em>większe o ok. 0.2</em>, więc nasze modele wykryły niektóre zależności i nauczyły się dzięki nim rozpoznawać chorobę (lepiej lub gorzej).</p>
 </div>
 </div>
+</div>
 <div id="uwagiwnioski" class="section level1">
 <h1><span class="header-section-number">4</span> Uwagi/wnioski</h1>
-<p>W obydwu zbiorach wyniki strojenia hiperparametrów były oczywiście losowe. Czasami mogłoby się zdażyć tak, że przy większej ilości losowań najlepszy zestaw hiperparametrów okazałby się gorszy niż ten wyznaczony z mniejszą ilością losowań. Jeśli chciałoby się mieć nad tym procesem lepszą kontrolę, powinno się rozważyć szukanie po zadanej z góry siatce hiperparametrów. Jak wiemy z <a href="http://pyml.sourceforge.net/doc/howto.pdf">artykułu - Figure 6</a> patrząc na siatkę hiperparametrów jako heatmapę możemy stwierdzić, że ta siatka jest regularna. Pewne zakresy hiperparametrów, które są najlepsze mogą nigdy nie być wylosowane poprzez ‘random search’, natomiast szukanie po ustalonej siatce jest w tym przypadku bardziej wskazane.</p>
+<p>Domyślne hiperparametry zazwyczaj osiągały gorsze rezultaty niż hiperparametry po strojeniu. W obydwu zbiorach wyniki strojenia hiperparametrów były oczywiście losowe. Czasami mogłoby się zdażyć tak, że przy większej ilości losowań najlepszy zestaw hiperparametrów okazałby się gorszy niż ten wyznaczony z mniejszą ilością losowań. Jeśli chciałoby się mieć nad tym procesem lepszą kontrolę, powinno się rozważyć szukanie po zadanej z góry siatce hiperparametrów. Jak wiemy z <a href="http://pyml.sourceforge.net/doc/howto.pdf">artykułu - Figure 6</a> patrząc na siatkę hiperparametrów jako heatmapę możemy stwierdzić, że ta siatka jest regularna. <strong>Pewne zakresy hiperparametrów, które są najlepsze mogą nigdy nie być wylosowane poprzez ‘random search’</strong>, natomiast szukanie po ustalonej siatce jest w tym przypadku bardziej wskazane. Możliwe, że ten jeden przypadek dla zbioru <em>diabetes</em> z jądrem Gaussowsim wylosował gorsze hiperparametry, a domyślnie używa tych dających lepsze osiągi, które można dostrzec w artykule.</p>
 </div>
 
 
