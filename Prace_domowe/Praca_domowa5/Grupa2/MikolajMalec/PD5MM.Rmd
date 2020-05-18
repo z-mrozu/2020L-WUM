@@ -1,0 +1,313 @@
+
+
+---
+title: "Clustering"
+author: "Mikołaj Malec"
+date: "5/11/2020"
+output: html_document
+---
+
+## Preparation
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r begin}
+set.seed(123)
+
+#import data
+clustering_raw <- read.csv( "clustering.csv", header = 0)
+
+#prepere data
+clustering <- scale(clustering_raw) # standardize variables
+
+#look at data
+plot( clustering)
+```
+
+The task is to cluster points on 2D plane. Data was standardize for use in algorithms. There is no big outliers, so it wont cause big problems. In my opinion there should be 8 clusters.
+
+
+```{r k_max}
+(k_max <- round( sqrt( dim( clustering)[1])))
+```
+
+Maximum predicted number of clusters. It's often set as round squared of number of points.
+
+## Algorithms
+
+### K-Means Cluster Analysis
+
+```{r K-Means chose k, echo=FALSE}
+wss <- rep(0, k_max)
+
+for (i in 1:k_max) wss[i] <- sum(kmeans(clustering, centers=i)$withinss)
+
+plot(1:k_max, wss, type="b", xlab="Number of Clusters",
+ylab="Within groups sum of squares")
+```
+
+First k has to be chosen. With k-means algorithm it should be chosen when the line is "flattened". I chose for groups 5, 6, 7, 8. For simplicity I also chose the same groups for hierarchical algorithm.
+
+```{r kmeans, echo=FALSE}
+km_5 <- kmeans(clustering, 5, nstart = 100) # 5 cluster solution
+plot( clustering[,1:2], col=km_5$cluster,
+main = "K-Means 5 groups")
+points( km_5$centers, pch=4, cex=2)
+
+km_6 <- kmeans(clustering, 6, nstart = 100) # 6 cluster solution
+plot( clustering[,1:2], col=km_6$cluster,
+main = "K-Means 6 groups")
+points( km_6$centers[,1:2], pch=4, cex=2)
+
+km_7 <- kmeans(clustering, 7, nstart = 100) # 7 cluster solution
+plot( clustering[,1:2], col=km_7$cluster,
+main = "K-Means 7 groups")
+points( km_7$centers[,1:2], pch=4, cex=2)
+
+km_8 <- kmeans(clustering, 8, nstart = 100) # 8 cluster solution
+plot( clustering[,1:2], col=km_8$cluster,
+main = "K-Means 8 groups")
+points( km_8$centers[,1:2], pch=4, cex=2)
+
+d <- dist(clustering, method = "euclidean") # distance matrix
+```
+
+By X I marked the centers of the groups.
+
+K-means cannot handle non-globular clusters or clusters of different sizes and densities, although it can typically find pure subclusters if a large enough number of clusters is specified. K-means also has trouble clustering data that contains outliers. Outlier detection and removal can help significantly in such situations. Finally, K-means is restricted to data for which there is a notion of a center (centroid). Fortunately this data has none of these problems so K-means works very well.
+
+```{r hc, echo=FALSE}
+# Hierarchical Agglomerative single
+hc_single <- hclust(d, method="single")
+
+hc_single_5 <- cutree(hc_single, k=5) # cut tree into 5 clusters
+plot( clustering[,1:2], col=hc_single_5,
+main = "Hierarchical 5 groups method single")
+
+hc_single_6 <- cutree(hc_single, k=6) # cut tree into 6 clusters
+plot( clustering[,1:2], col=hc_single_6,
+main = "Hierarchical 6 groups method single")
+
+hc_single_7 <- cutree(hc_single, k=7) # cut tree into 7 clusters
+plot( clustering[,1:2], col=hc_single_7,
+main = "Hierarchical 7 groups method single")
+
+hc_single_8 <- cutree(hc_single, k=8) # cut tree into 8 clusters
+plot( clustering[,1:2], col=hc_single_8,
+main = "Hierarchical 8 groups method single")
+
+
+# Hierarchical Agglomerative complete
+hc_complete <- hclust(d, method="complete")
+
+hc_complete_5 <- cutree(hc_complete, k=5) # cut tree into 5 clusters
+plot( clustering[,1:2], col=hc_complete_5,
+main = "Hierarchical 5 groups method complete")
+
+hc_complete_6 <- cutree(hc_complete, k=6) # cut tree into 6 clusters
+plot( clustering[,1:2], col=hc_complete_6,
+main = "Hierarchical 6 groups method complete")
+
+hc_complete_7 <- cutree(hc_complete, k=7) # cut tree into 7 clusters
+plot( clustering[,1:2], col=hc_complete_7,
+main = "Hierarchical 7 groups method complete")
+
+hc_complete_8 <- cutree(hc_complete, k=8) # cut tree into 8 clusters
+plot( clustering[,1:2], col=hc_complete_8,
+main = "Hierarchical 8 groups method complete")
+
+
+# Hierarchical Agglomerative ward
+hc_ward <- hclust(d, method="ward.D")
+
+hc_ward_5 <- cutree(hc_ward, k=5) # cut tree into 5 clusters
+plot( clustering[,1:2], col=hc_ward_5,
+main = "Hierarchical 5 groups method ward")
+
+hc_ward_6 <- cutree(hc_ward, k=6) # cut tree into 6 clusters
+plot( clustering[,1:2], col=hc_ward_6,
+main = "Hierarchical 6 groups method ward")
+
+hc_ward_7 <- cutree(hc_ward, k=7) # cut tree into 7 clusters
+plot( clustering[,1:2], col=hc_ward_7,
+main = "Hierarchical 7 groups method ward")
+
+hc_ward_8 <- cutree(hc_ward, k=8) # cut tree into 8 clusters
+plot( clustering[,1:2], col=hc_ward_8,
+main = "Hierarchical 8 groups method ward")
+```
+
+For the *single* link or MIN version of hierarchical clustering, the proximity of two clusters is defined as the minimum of the distance (maximum of the similarity) between any two points in the two different clusters. Using graph terminology, if you start with all points as singleton clusters and add links between points one at a time, shortest links first, then these single links combine the points into clusters. The single link technique is good at handling non-elliptical shapes, but is sensitive to noise and outliers.. In this case it worked very proly because small outliers were far enough to land in semprete group.
+
+For the *complete* link or MAX version of hierarchical clustering, the proximity of two clusters is defined as the maximum of the distance (minimum of the similarity) between any two points in the two different clusters. Using graph terminology, if you start with all points as singleton clusters and add links between points one at a time, shortest links first, then a group of points is not a cluster until all the points in it are completely linked, i.e., form a clique. Complete link is less susceptible to noise and outliers, but it can break large clusters and it favors globular shapes.
+
+For *Ward*’s method, the proximity between two clusters is defined as the increase in the squared error that results when two clusters are merged. Thus, this method uses the same objective function as K-means clustering. While it may seem that this feature makes Ward’s method somewhat distinct from other hierarchical techniques, it can be shown mathematically that Ward’s method is very similar to the group average method when the proximity between two points is taken to be the square of the distance between them.
+
+### DBSCAN
+
+```{r DBSCAN, echo=FALSE}
+# DBSCAN
+library(dbscan)
+#good with outliers
+#not baesed on centers
+#pick nuber of cluusters by himself
+
+dbscan_list_clusters <- list()
+for (i in 0:5) {
+eps <- i*0.02 + 0.15
+dbs <- dbscan( d, eps)
+
+plot( clustering[,1:2], col=dbs$cluster,
+main = paste0("DBSCAN eps=", eps))
+#0 color are outliers
+outliers <- clustering[,1:2][which( dbs$cluster==0),]
+points( outliers, pch=4, cex=1)
+
+dbscan_list_clusters[[i+1]] <- dbs$cluster
+}
+```
+
+From library *dbscan*, 
+Density-based clustering locates regions of high density that are separated from one another by regions of low density. *DBSCAN* is a simple and effective density-based clustering algorithm that illustrates a number of important concepts that are important for any density-based clustering approach. It's strength lies in not being sensitive to outliers and it DBSCAN markes them as seprete group (I marked them with x). *eps* is hyperparameter.
+
+## Metrics
+
+I used 3 metric for comparison. It's important that metrics for different algorithms should be compered only in the same number of groups, because number of groups affect metric.
+
+### Connectivity
+
+It measures the compactness of the cluster partitions. The
+connectivity has a value between zero and ∞ and should be minimized.
+
+### Dunn Index
+
+The Dunn Index is the ratio of the smallest distance between observations not in the same cluster to the largest intra-cluster distance. It's said that it show worst-case scenario. The Dunn Index has a value between zero and ∞, and should be maximized.
+
+### The Silhouette Width
+
+The Silhouette Width is the average of each observation’s Silhouette value. The Silhouette value measures the degree of confidence in the clustering assignment of a particular observation, with well-clustered observations having values near 1 and poorly clustered observations having values near −1.
+
+```{r prep2, echo=FALSE, message=FALSE, warning=FALSE}
+hc_complete_list_clusters <- list( hc_complete_5, hc_complete_6, hc_complete_7, hc_complete_8)
+hc_single_list_clusters <- list( hc_single_5, hc_single_6, hc_single_7, hc_single_8)
+hc_ward_list_clusters <- list( hc_ward_5, hc_ward_6, hc_ward_7, hc_ward_8)
+km_list_clusters <- list( km_5$cluster, km_6$cluster, km_7$cluster, km_8$cluster)
+
+#metric
+
+library(ggplot2)
+library( clValid)
+
+df_col <- data.frame(
+groups = rep( 5:8, 4),
+algorithm = rep( c("hc_complete", "hc_single", "hc_ward", "kmeans"), each=4)
+)
+
+#connectivity
+Connectivity <- c(
+unlist( lapply( hc_complete_list_clusters, function(x){connectivity( distance = d, clusters = x)})),
+unlist( lapply( hc_single_list_clusters, function(x){connectivity( distance = d, clusters = x)})),
+unlist( lapply( hc_ward_list_clusters, function(x){connectivity( distance = d, clusters = x)})),
+unlist( lapply( km_list_clusters, function(x){connectivity( distance = d, clusters = x)}))
+)
+
+#dunn index
+Dunn_index <- c(
+unlist( lapply( hc_complete_list_clusters, function(x){dunn( distance = d, clusters = x)})),
+unlist( lapply( hc_single_list_clusters, function(x){dunn( distance = d, clusters = x)})),
+unlist( lapply( hc_ward_list_clusters, function(x){dunn( distance = d, clusters = x)})),
+unlist( lapply( km_list_clusters, function(x){dunn( distance = d, clusters = x)}))
+)
+
+#Silhouette Width
+silhouette_width <- function(x){summary( silhouette( x, dist = d))$avg.width}
+
+Silhouette_width <- c(
+unlist( lapply( hc_complete_list_clusters, silhouette_width)),
+unlist( lapply( hc_single_list_clusters, silhouette_width)),
+unlist( lapply( hc_ward_list_clusters, silhouette_width)),
+unlist( lapply( km_list_clusters, silhouette_width))
+)
+
+dbscan_metric_df <- data.frame(
+groups = unlist(lapply(dbscan_list_clusters, max)),
+algorithm = c( "DBSCAN eps=0.15", "DBSCAN eps=0.17", "DBSCAN eps=0.19", "DBSCAN eps=0.21", "DBSCAN eps=0.23", "DBSCAN eps=0.25"),
+Connectivity = unlist(lapply(dbscan_list_clusters, function(x){connectivity( distance = d, clusters = x)})),
+Dunn_index = unlist(lapply(dbscan_list_clusters, function(x){dunn( distance = d, clusters = x)})),
+Silhouette_width =unlist(lapply(dbscan_list_clusters, silhouette_width))
+)
+
+df_col <- cbind( df_col, Connectivity, Dunn_index, Silhouette_width)
+df_metric <- rbind( df_col, dbscan_metric_df)
+```
+
+```{r plot metric, echo=FALSE}
+#Connectivity
+ggplot( data = df_metric, aes( x = groups, y = Connectivity, color = algorithm))+
+geom_point()+
+geom_line()
+
+#dunn index
+ggplot( data = df_metric, aes( x = groups, y = Dunn_index, color = algorithm))+
+geom_point()+
+geom_line()
+
+#Silhouette Width
+ggplot( data = df_metric, aes( x = groups, y = Silhouette_width, color = algorithm))+
+geom_point()+
+geom_line()
+```
+
+### Comentary on metric and how they behaive
+
+The best *conecetivity* is achieved by hierarchical clustering with ward method for 5 clusters. I think it is because each point has many neaibougr in the same group.
+
+```{r plot1, echo=FALSE}
+hc_ward_5 <- cutree(hc_ward, k=5) # cut tree into 5 clusters
+plot( clustering[,1:2], col=hc_ward_5,
+main = "Hierarchical 5 groups method ward")
+```
+
+The best *dunn index* is achieved by DBSCAN with eps=1.9. As you can see the groups are very compacted and separated.
+
+```{r plo2, echo=FALSE}
+eps <- 0.19
+dbs <- dbscan( d, eps)
+plot( clustering[,1:2], col=dbs$cluster,
+main = paste0("DBSCAN eps=", eps))
+#0 color are outliers
+outliers <- clustering[,1:2][which( dbs$cluster==0),]
+points( outliers, pch=4, cex=1)
+```
+
+The best *Silhouette Width* is achieved by k means for 5 groups. The centers are I think in the best spot for low variance in groups.
+
+```{r plot3, echo=FALSE}
+km_5 <- kmeans(clustering, 5, nstart = 100) # 5 cluster solution
+plot( clustering[,1:2], col=km_5$cluster,
+main = "K-Means 5 groups")
+points( km_5$centers, pch=4, cex=2)
+```
+
+## Bibliography
+
+I use some text from:
+
+https://www-users.cs.umn.edu/~kumar001/dmbook/ch8.pdf
+
+and
+
+clValid library manual
+
+
+
+
+
+
+
+
+
+
+
