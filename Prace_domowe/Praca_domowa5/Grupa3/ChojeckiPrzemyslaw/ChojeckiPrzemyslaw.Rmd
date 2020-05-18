@@ -221,7 +221,12 @@ dane %>% mutate(label = factor(genie_klaster[,10])) %>%
   ggtitle("genie, k=10")
 ```
 
-Nie wydaje się, jakby dodatkowe dwie grupy poprawiły jakość podziału. Wygląda nawet, jakby klaster z numerem $3$ był błędnie oddzielony od dziewiątego. Dlatego ostatecznym wyborem jest `k = 8`.
+Nie wydaje się, jakby dodatkowe dwie grupy poprawiły jakość podziału. Wygląda nawet, jakby klaster z numerem $3$ był błędnie oddzielony od dziewiątego. Dlatego ostatecznym wyborem jest `k = 8`. \
+
+
+## Oświadczenie
+Oświadczam, że niniejsza praca stanowiąca podstawę do uznania osiągnięcia efektów uczenia się z przedmiotu Wstęp do Uczenia Maszynowego, została wykonana przeze mnie samodzielnie. \
+Przemysław Chojecki \
 
 
 
