@@ -1,0 +1,126 @@
+---
+title: "Praca domowa 4"
+author: "Michał Wdowski"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+## Wprowadzenie
+
+Tematem pracy domowej jest algorytm uczenia maszynowego SVN. Wypróbuję jego możlwiości na zbiorze Apartments z biblioteki DALEX, oraz na zbiorze [census_income_dataset](https://www.mldata.io/dataset-details/census_income/).
+
+## Apartments
+
+Zbiór zawiera informacje o mieszkaniach w Warszawie. Kolumną celu w klasyfikacji jest dzielnica, w której znajduje się dane mieszkanie
+```{r, include=FALSE}
+# ładowanie bibliotek
+library(DALEX)
+library(mlr)
+
+set.seed(2137420)
+```
+
+Wczytanie danych:
+```{r}
+# wczytanie danych
+data <- apartments
+summary(data)
+```
+
+Podział na zbiór treningowy i testowy
+```{r}
+# podział na zbiór treningowy i testowy
+ktore <- sample(1:nrow(data), 0.7*nrow(data))
+train <- data[ktore, ]
+test <- data[-ktore, ]
+```
+
+Modelowanie
+```{r}
+cv <- makeResampleDesc("CV", iter = 4)
+task <- makeClassifTask(data = train, target = "district")
+learner <- makeLearner("classif.ksvm")
+```
+
+```{r, results='hide', message=FALSE}
+# strojenie parametrów
+getParamSet(learner)
+params <- makeParamSet(
+    makeDiscreteParam("C", seq(from = 0.5, to = 10, by = 0.5)),
+    makeDiscreteParam("sigma", seq(from = 0.5, to = 10, by = 0.5))
+)
+
+ctrl_random <- makeTuneControlRandom(maxit = 100)
+res_random <- tuneParams(learner = learner, task = task, par.set = params, control = ctrl_random, measures = acc, resampling = cv)
+```
+Otrzymane przeze mnie w środowisku hiperparametry (te, które mogłem stroić) to $C = 1.5$ i $sigma = 0.5$.
+```{r}
+learner <- makeLearner("classif.ksvm", par.vals = list("C" = 1.5, "sigma" = 0.5))
+model <- train(learner, task)
+predictions <- predict(model, newdata = test[, -ncol(test)])
+
+# wydobycie wyników i porównanie z oczekiwanymi wynikami
+wyniki <- cbind(predictions$data, test[, ncol(test)])
+```
+Poprawność dla wszystkich:
+```{r}
+# poprawnosc dla wszystkich
+sum(wyniki[, 1] == wyniki[, 2]) / nrow(wyniki)
+```
+W danych jest duża różnica między mieszkaniami ze Śródmieścia a innymi dzielnicami:
+```{r}
+# poprawnosc tylko dla Srodmiescia
+sum(wyniki[wyniki$response == "Srodmiescie", 1] == wyniki[wyniki$response == "Srodmiescie", 2]) / nrow(wyniki[wyniki$response == "Srodmiescie", ])
+```
+Dla samego Śródmieścia model osiągnął świetny wynik.
+
+## Cenzus
+
+Zbiór zawiera dane ludzi ze spisu. Kolumną celu jest income\_level - czy osoba zyskuje więcej niż 50 tys. dolarów, czy mniej.
+
+Wczytanie danych:
+```{r}
+# wczytanie danych
+data <- read.csv("census_income_dataset.csv")
+summary(data)
+```
+
+Podział na zbiór treningowy i testowy
+```{r}
+# podział na zbiór treningowy i testowy
+ktore <- sample(1:nrow(data), 0.7*nrow(data))
+train <- data[ktore, ]
+test <- data[-ktore, ]
+```
+
+Modelowanie
+```{r}
+cv <- makeResampleDesc("CV", iter = 7)
+task <- makeClassifTask(data = train, target = "income_level")
+learner <- makeLearner("classif.ksvm")
+```
+
+Hiperparametry pozostawię takie jak w Apartments, bo obliczenia trwają zbyt długo.
+
+```{r}
+learner <- makeLearner("classif.ksvm", par.vals = list("C" = 1.5, "sigma" = 0.5))
+model <- train(learner, task)
+predictions <- predict(model, newdata = test[, -ncol(test)])
+
+# wydobycie wyników i porównanie z oczekiwanymi wynikami
+wyniki <- cbind(predictions$data, test[, ncol(test)])
+```
+Poprawność dla wszystkich:
+```{r}
+# poprawnosc dla wszystkich
+sum(wyniki[, 1] == wyniki[, 2]) / nrow(wyniki)
+```
+Możemy się przyjrzeć też macierzy konfuzji:
+```{r}
+table(wyniki[, 1], wyniki[, 2])
+```
