@@ -1,0 +1,422 @@
+---
+
+title: "SVM"
+
+author: "Mikołaj Malec"
+
+date: "4/28/2020"
+
+output: html_document
+
+---
+
+
+
+## Data *apartments* from DALEX
+
+
+
+```{r main, echo=TRUE, message=TRUE, warning=FALSE}
+set.seed(123)
+
+df_apartments <- DALEX::apartments
+
+#split
+
+n_train <- 1000
+
+n_split <- n_train * 9/10
+
+ind_sam <- sample( 1:dim( DALEX::apartments)[1], n_train)
+
+
+
+df_train <- df_apartments[ind_sam[1:n_split],]
+
+df_test <- df_apartments[ind_sam[(n_split+1):n_train],]
+
+## explore data
+
+# first rows
+
+head( df_apartments)
+
+# summary of columns
+
+summary( df_apartments)
+
+# dimensions of data frame and types of columns
+
+str( df_apartments)
+
+# there is no missing data
+
+sum( is.na( df_apartments))
+
+
+
+# distribution of target
+
+plot( df_train[6], las=2)
+
+```
+
+
+
+Because target is balanced, that means that accuracy is the best metric for this example.
+
+
+
+### Random search of hiperparameters for SVM
+
+
+
+Color represents a degree parameter.
+
+Click plot for interactivity.
+
+
+```{r apa train, echo=FALSE, message=FALSE, warning=FALSE}
+
+#metric
+
+accuracy <- function( tab){
+
+  sum( diag(tab)) / sum( tab)
+
+}
+
+
+
+
+
+## training
+
+library( e1071)
+
+
+
+#random search
+
+
+n <- 100
+
+C <- 10 ** runif( n, -3, 2)
+
+gamma <- 10 ** runif( n, -3, 0) #hogher gamma lead to too many iteracions
+
+degree <- sample( c(2,3,4), n, replace = TRUE)
+
+
+
+table_svm_apatments_list <- list()
+
+accuracy_vec <- rep( 0, n)
+
+
+
+for( i in 1:n){
+
+  model_svm_apatments <- svm( district~., data = df_train,
+
+                              kernel = "polynomial",
+
+                              degree = degree[i],
+
+                              cost = C[i],
+
+                              gamma = gamma[i])
+
+  pred_svm_apatments <- predict( model_svm_apatments, df_test[-6])
+
+  table_svm_apatments <- table( pred_svm_apatments, df_test[,6])
+
+  
+
+  table_svm_apatments_list[[i]] <- table_svm_apatments
+
+  accuracy_vec[i] <- accuracy( table_svm_apatments)
+
+}
+
+
+
+imax <- which.max( accuracy_vec)
+
+
+
+degree <- as.character( degree)
+
+
+
+out <- data.frame( C, gamma, degree, accuracy_vec)
+
+
+
+library( plotly)
+
+p <- plot_ly( data = out, x = ~C, y= ~gamma, 
+
+              color = ~degree, size = ~accuracy_vec, text = accuracy_vec,
+
+              hovertemplate = paste("C: %{x}",
+
+                                    "<br>gamma: %{y}",
+
+                                    "<br>Accuracy: %{text}"))
+
+p <- add_annotations( p,
+
+                 x = log10(out$C[imax]),
+
+                 y = log10(out$gamma[imax]),
+
+                 text = "Best accuracy")
+
+p <- layout(p, xaxis = list(type = "log"),
+
+            yaxis = list(type = "log"))
+
+p <- add_markers(p)
+
+p
+
+```
+
+
+
+Best accuracy = `r accuracy_vec[imax]` is for C = `r C[imax]`, gamma = `r gamma[imax]` and  degree = `r degree[imax]`
+
+
+
+Data has been randomly generated. Many districts aren"t diverse to be sliced. Exeption is Srodmiescie which is very distinguishable for others. It"s no worry that accuracy is so small. Confusion matrix for the best is:
+
+
+
+```{r table, echo=FALSE}
+
+library(knitr)
+
+knitr::kable(table_svm_apatments_list[[imax]])
+
+```
+
+
+
+## Data *weather* from nycflights13
+
+
+
+```{r main 2, echo=TRUE, message=TRUE, warning=FALSE}
+
+#delete columns with many missing
+
+DataExplorer::profile_missing( nycflights13::weather)
+
+df_weather <- nycflights13::weather[,c(-9,-11,-13)]
+
+#delete rows with some missing obesvations
+
+df_weather <- df_weather[ complete.cases(df_weather),]
+
+
+
+#no need for posic column and date columns
+
+df_weather$time_hour <- NULL
+
+df_weather$year <- NULL
+
+df_weather$month <- NULL
+
+df_weather$day <- NULL
+
+df_weather$hour <- NULL
+
+
+
+df_weather$origin <- as.factor( df_weather$origin)
+
+
+
+#split
+
+n_train <- 1000
+
+n_split <- n_train * 9/10
+
+ind_sam <- sample( 1:dim(nycflights13::weather)[1], n_train)
+
+
+
+df_train <- df_weather[ind_sam[1:n_split],]
+
+df_test <- df_weather[ind_sam[(n_split+1):n_train],]
+
+
+
+## explore data
+
+# first rows
+
+head( df_weather)
+
+# summary of columns
+
+summary( df_weather)
+
+# dimensions of data frame and types of columns
+
+str( df_weather)
+
+# there is no longer missing data
+
+sum( is.na( df_weather))
+
+
+
+# distribution of target
+
+knitr::kable( table(df_train["origin"]))
+
+```
+
+
+
+Because target is balanced, that means that accuracy is the best metric for this example.
+
+
+
+### Random search of hiperparameters for SVM
+
+
+
+Color represents a degree parameter.
+
+Click plot for interactivity.
+
+```{r weather train, echo=FALSE, message=FALSE, warning=FALSE}
+
+#metric
+
+accuracy <- function( tab){
+
+  sum( diag(tab)) / sum( tab)
+
+}
+
+
+
+
+
+#random search
+
+n <- 100
+
+C <- 10 ** runif( n, -3, 2)
+
+gamma <- 10 ** runif( n, -3, 0) #higher gamma lead to too many iterations
+
+degree <- sample( c(2,3,4), n, replace = TRUE)
+
+
+
+table_svm_weather_list <- list()
+
+accuracy_vec <- rep( 0, n)
+
+
+
+for( i in 1:n){
+
+  model_svm_weather <- svm( origin~., data = df_train,
+
+                              kernel = "polynomial",
+
+                              degree = degree[i],
+
+                              cost = C[i],
+
+                              gamma = gamma[i])
+
+  #origin =1
+
+  pred_svm_weather <- predict( model_svm_weather, df_test[-1])
+
+  table_svm_weather <- table( pred_svm_weather, unlist(df_test[,1]))
+
+  
+
+  table_svm_weather_list[[i]] <- table_svm_weather
+
+  accuracy_vec[i] <- accuracy( table_svm_weather)
+
+}
+
+imax <- which.max( accuracy_vec)
+
+
+
+degree <- as.character( degree)
+
+
+
+out <- data.frame( C, gamma, degree, accuracy_vec)
+
+
+
+library( plotly)
+
+p <- plot_ly( data = out, x = ~C, y= ~gamma, 
+
+              color = ~degree, size = ~accuracy_vec, text = accuracy_vec,
+
+              hovertemplate = paste("C: %{x}",
+
+                                    "<br>gamma: %{y}",
+
+                                    "<br>Accuracy: %{text}"))
+
+p <- add_annotations( p,
+
+                 x = log10(out$C[imax]),
+
+                 y = log10(out$gamma[imax]),
+
+                 text = "Best accuracy")
+
+p <- layout(p, xaxis = list(type = "log"),
+
+            yaxis = list(type = "log"))
+
+p <- add_markers(p)
+
+p
+
+```
+
+
+
+Best accuracy = `r accuracy_vec[imax]` is for C = `r C[imax]`, gamma = `r gamma[imax]` and  degree = `r degree[imax]`
+
+
+
+As an experiment I have chosen weather data knowing, that the results will be poor, especially when categories are very similar. My idea was to check is SVM any good in overlapping data. It isn't. But the second part of my little experiment is interesting. Hiperparameters behaved very differently than before. Before, top right corner had the best parameters. Now is opposite. Top right has occurence of the worst cases. Confusion matrix for the best is:
+
+
+
+```{r table 2, echo=FALSE}
+
+library(knitr)
+
+knitr::kable(table_svm_weather_list[[imax]])
+
+```
+
+
+
+```{r info}
+
+sessionInfo()
+
+```
