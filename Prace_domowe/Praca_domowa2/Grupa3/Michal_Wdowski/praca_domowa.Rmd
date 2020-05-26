@@ -34,25 +34,25 @@ Kodowanie zmiennych kategorycznych
 Te zmienne to:
 Categories - listy z kilkoma kategoriami
 
-```{r, cache=TRUE}
+```{r, cache=TRUE, results='hide'}
 table(data$categories)
 ```
 Ma ponad 8 tysięcy kategorii, ale na szczęscie jest main_cathegory, może to się do czegoś przyda.
 
 Pay_option_on_delivery
-```{r, cache=TRUE}
+```{r, cache=TRUE, results='hide'}
 table(data$pay_option_on_delivery)
 ```
 Same zera i jedynki.
 
 Pay_option_transfer
-```{r, cache=TRUE}
+```{r, cache=TRUE, results='hide'}
 table(data$pay_option_transfer)
 ```
 Same zera i jedynki.
 
 Seller
-```{r, cache=TRUE}
+```{r, cache=TRUE, results='hide'}
 table(data$seller)
 ```
 Ponad 50 tysięcy rekordów, ale może da się znależć kilka najbardziej dominujących.
@@ -77,7 +77,7 @@ table(data$it_is_brand_zone)
 ```
 Same zera i jedynki.
 
-```{r, cache=TRUE}
+```{r, cache=TRUE, results='hide'}
 table(data$it_location)
 ```
 Ponad 9 tysięcy lokalizacji (w tym takie jak "CAŁOWANIE" albo "cały kraj" zapisane na 10 różnych sposobów - małymi i wielkimi literami, z polskimi znakami i bez...)
@@ -116,17 +116,17 @@ data_onehot_encoded2 <- createDummyFeatures(data_dropped, target = "price", meth
 ```
 
 ```{r, cache=TRUE}
-data_onehot_encoded1
+head(data_onehot_encoded1)
 ```
 
 ```{r, cache=TRUE}
-data_onehot_encoded2
+head(data_onehot_encoded2)
 ```
 # Imputacja
 
 Używam metody pmm z pakietu mice:
 
-```{r, cache=TRUE}
+```{r, cache=TRUE, results='hide'}
 
 data2 <- data %>% select(price, it_seller_rating, it_quantity)
 
