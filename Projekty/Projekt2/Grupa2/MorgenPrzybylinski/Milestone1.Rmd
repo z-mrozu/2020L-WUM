@@ -1,0 +1,136 @@
+---
+title: "Milestone 1"
+author: "Paweł Morgen, Dawid Przybyliński"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+source("plot_corrgraph.R")
+source("load.R")
+```
+
+## Metadane datasetu
+
+Zbiór zawiera wyniki eksperymentu przeprowadzonego na grupie 30 osób z przedziału wikekowego 19-48 lat. Każda z osób wykonywała 6 czynności (chodzenie, chodzenie w górę po schodach, chodzenie w dół po schodach, siedzenie, stanie, leżenie). Zapisane zostały odczyty żyroskopu i akcelerometru ze smartfona umieszczonego przy pasie badanego. Domyślnie zbiór został podzielony na treningowy i testowy w proporcji 7 : 3, jednakże jako że narazie wykonujemy eksplorację danych, a następnym celem będzie klasteryzacja, połączyliśmy na początku te dwa zbiory. Warto też wspomnieć, że zbiór nie zawiera braków danych. 
+
+## Dane - pierwsze spojrzenie
+
+```{r first_look, echo = FALSE}
+print(sprintf("Number of features: %d", ncol(X)))
+```
+
+W datasecie jest porażające 561 numerycznych, znormalizowanych (z przedziału $[-1,1]$) zmiennych. Opisują one:
+
+ * wskazania akcelerometru oraz żyroskopu w 3 wymiarach, przefiltrowane, by wyciszyć szumy
+ * przeliczone przyspieszenie ludzkie oraz grawitacyjne 
+ * *zryw* (zmianę przyspieszenia w czasie, ang. *jerk*)
+ * przeliczoną *Fast Fourier Transform* .
+
+Dla niemal każdej z powyższych zostały policzone statystyki (średnia, odchylenie, min/max, energia, entropia, ...)
+
+## Powiązania 
+
+```{r cors}
+# Uwaga - korelacje!
+cor(X) -> cor_mat
+cor_toplot <- data.frame(Cor_value = as.vector(cor_mat))
+ggplot(cor_toplot, aes(x = Cor_value)) +
+  geom_histogram(binwidth = 0.05) +
+  labs(title = "Distribution of correlations among variables")
+
+f <- function(cutoff) (length(cor_mat[abs(cor_mat) > cutoff]) - ncol(X))
+cutoffs <- c(0.7, 0.8, 0.9, 0.95, 0.99, 0.999)
+knitr::kable(data.frame(
+  Count = sapply(cutoffs, f) / 2,
+  Percentile = round(sapply(cutoffs, f) / length(cor_mat), 4) * 100,
+  Cutoff = cutoffs))
+```
+
+Powyższa tabelka przedstawia, ile **par** zmiennych (`Count`) jest ze sobą skorelowana w stopniu wyższym niż `cutoff`. Jasno widać, że można sporo zyskać na czasie obliczeniowym, jeśli odrzucimy część zmiennych. 
+
+Wiedza na temat zmiennych pozwala nam dla celów eksploracji brać tylko zmienne traktujące o wartości średniej danego odczytu w danej osi w danej chwili.
+
+```{r corred_vals}
+mean_features_names <- grep(x = colnames(X), pattern = "^[^_]+_mean(_.*)?$", value = TRUE)
+X_mean <- X[,mean_features_names]
+cor_mat <- cor(X_mean)
+X_final <- X_mean[,c(sapply(1:(ncol(cor_mat)-1), function(i){
+  all(abs(cor_mat[i, (i+1):ncol(cor_mat)]) < 0.95)
+}), FALSE)]
+```
+Następujące zmienne mają wysoko skorelowane odpowiedniki:
+```{r, echo=FALSE}
+print(setdiff(colnames(X_mean), colnames(X_final)))
+```
+```{r plot_corrgraph}
+plot_corrgraph(X_final)
+
+```
+
+Należy się spodziewać, że dla końcowego wyniku znaczenie mieć będzie ok. 20 zmiennych.
+Przyjrzyjmy się kilku z nich:
+
+```{r chosen}
+X_final[,c("tBodyAccJerk_mean_Z", "tBodyGyroJerk_mean_Z", "fBodyGyro_mean_Z")] -> df
+mutate(df, Time = round(1:nrow(df) / 20)) %>%
+  group_by(Time) %>%
+  summarise(AccJerk = mean(tBodyAccJerk_mean_Z),
+            GyroJerk = mean(tBodyGyroJerk_mean_Z),
+            Gyro = mean(fBodyGyro_mean_Z)) %>%
+tidyr::pivot_longer(cols = 2:4, values_to = 'value', names_to = "name") %>%
+  ggplot(aes(x = Time, y = value, col = name)) +
+  geom_line()
+```
+
+## Związek danych ze zmienną celu
+
+Wraz z odczytem z żyroskopu i akcelerometru, dostępna jest cecha dotycząca wykonywanej w danej chwili czynności. Oznaczona była jako zmienna celu dla problemu klasyfikacji (dlatego dla uproszczenia będzie tu nazywana zmienną celu). Jako że ma ona 6 klas, może być wykorzystana jako przykład dobrze wykonanej późniejszej klasteryzacji. Z poniższego histogramu możemy wywnioskować, że cecha ta jest dosyć dobrze zbalansowana.
+
+```{r warning=FALSE}
+ggplot() +
+  aes(y) +
+  geom_histogram(stat="count") +
+  labs(title = "Distribution of the target feature") +
+  xlab("activity") +
+  theme(axis.text.x = element_text(angle = 10))
+
+```
+
+Warto zauważyć, że długość wektora średniego przyspieszenia jest podobna zarówno dla czynności w których ciało ma małą wartość prędkości (stanie, siedzenie, leżenie), jak i dużą (chodzenie). Wynika to z tego że zarówno mniejsze jak i większe ruchy są wykonywane z podobnym przyspieszeniem. Z tego powodu poniższe boxploty są do siebie zbliżone.
+
+```{r}
+mutate(X_final, tBodyAcc_mean 
+       = sqrt(X_final$tBodyAcc_mean_X^2 + X_final$tBodyAcc_mean_Y^2 + X_final$tBodyAcc_mean_Z^2)) %>%
+  mutate(y=y) %>%
+  ggplot() +
+    geom_boxplot(aes(x=y, y=tBodyAcc_mean)) +
+    labs(title = "Average body acceleration") +
+    xlab("activity") +
+    ylab("acceleration absolute value") +
+    theme(axis.text.x = element_text(angle = 10))
+```
+
+Zwrócmy zatem uwagę na analogiczne odczyty dotyczące zrywu. Tutaj da się już zauważyć, iż w przypadku siedzenia lub leżenia mediana znalazła się niżej niż dla innych czynności, co daje nadzieję że wykorzystane w następych etapach algorytmy klasteryzacji dadzą wynik zbliżony do tego opisanego zmienną celu.
+
+```{r}
+mutate(X_mean, tBodyAccJerk_mean 
+       = sqrt(X_mean$tBodyAccJerk_mean_X^2 + X_mean$tBodyAccJerk_mean_Y^2 + X_mean$tBodyAccJerk_mean_Z^2)) %>%
+  mutate(y=y) %>%
+  ggplot() +
+  geom_boxplot(aes(x=y, y=tBodyAccJerk_mean)) +
+  xlab("activity") +
+  ylab("jerk value") +
+  theme(axis.text.x = element_text(angle = 10))
+```
+
+Co z pozostałymi zmiennymi? Okazuje się że największą co do modułu korelację ze zmienną celu ma tBodyGyro_arCoeff_X_2, ale jest ona zaledwie na poziomie -0.099.
+
+```{r}
+ggplot() +
+  geom_histogram(aes(x = cor(X, as.integer(y))), binwidth = 0.005) +
+  labs(title = "Feature correlation with target variable") +
+  xlab("correlation")
+```

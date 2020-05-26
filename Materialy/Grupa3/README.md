@@ -1,10 +1,13 @@
-Szymon Maksymiuk is inviting you to a scheduled Zoom meeting.
+Stanislaw Pawlak is inviting you to a scheduled Zoom meeting.
 
-Topic: WUM LAB8
-Time: Apr 21, 2020 08:00 AM Warsaw
+Topic: WUM lab 12  
+Time: May 26, 2020 08:15 AM Warsaw
 
 Join Zoom Meeting
-https://zoom.us/j/95626034008?pwd=WnBHUDNwRnlkRlhtdHE2VG92WTU4Zz09
+https://us04web.zoom.us/j/71079930583?pwd=VEpRWlFSMVVEVXFXRUJocXRUdUFBUT09
 
-Meeting ID: 956 2603 4008
-Password: 9WRib2
+Meeting ID: 710 7993 0583
+Password: 6JSm0q
+
+
+
