@@ -1,0 +1,1 @@
+- [ ] Czy w tytule znajduje się numer grupy?
