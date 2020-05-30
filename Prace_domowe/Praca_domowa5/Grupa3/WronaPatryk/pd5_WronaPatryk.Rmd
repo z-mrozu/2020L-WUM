@@ -16,6 +16,7 @@ library(dplyr)
 library(clValid)
 library(ggplot2)
 library(RColorBrewer)
+library(igraph)
 
 set.seed(666)
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
@@ -148,7 +149,7 @@ source('./spectral_clustering.R')
 My function input and output description can be read in *spectral_clustering.R* script. It takes the number of clusters k and the number of nearest neighbors M. Let's have a glance at our dataset: 
 
 ```{r}
-plot(x = df$V1, y = df$V2, xlab = "V1", ylab = "V2",
+plot(asp=1, x = df$V1, y = df$V2, xlab = "V1", ylab = "V2",
      main = "The original dataset without labels")
 ```
 
@@ -161,7 +162,7 @@ Deducing from the above plot, the clusters have comparable number of data points
 ```{r}
 spectral <- spectral_clustering(as.matrix(clustering), k = 4, M = 50)
 
-plot(x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
+plot(asp=1, x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
      main = "spectral clustering with 4 clusters")
 ```
 
@@ -171,7 +172,7 @@ plot(x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
 ```{r}
 spectral <- spectral_clustering(as.matrix(clustering), k = 5, M = 50)
 
-plot(x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
+plot(asp=1, x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
      main = "spectral clustering with 5 clusters")
 
 # Conclusion & plots
@@ -183,7 +184,7 @@ plot(x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
 ```{r}
 spectral <- spectral_clustering(as.matrix(clustering), k = 6, M = 50)
 
-plot(x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
+plot(asp=1, x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
      main = "spectral clustering with 6 clusters")
 
 # Conclusion & plots
@@ -195,7 +196,7 @@ plot(x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
 ```{r}
 spectral <- spectral_clustering(as.matrix(clustering), k = 7, M = 50)
 
-plot(x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
+plot(asp=1, x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
      main = "spectral clustering with 7 clusters")
 
 # Conclusion & plots
@@ -207,7 +208,7 @@ plot(x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
 ```{r}
 spectral <- spectral_clustering(as.matrix(clustering), k = 8, M = 50)
 
-plot(x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
+plot(asp=1, x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
      main = "spectral clustering with 8 clusters")
 
 # Conclusion & plots
@@ -231,7 +232,7 @@ Now I will show the clustering with hclust using 2 clusters - just for curiosity
 Let's remind how the dataset looked like:
 
 ```{r}
-plot(x = df$V1, y = df$V2, xlab = "V1", ylab = "V2",
+plot(asp=1, x = df$V1, y = df$V2, xlab = "V1", ylab = "V2",
      main = "The original dataset without labels")
 ```
 
@@ -239,7 +240,7 @@ plot(x = df$V1, y = df$V2, xlab = "V1", ylab = "V2",
 
 ```{r}
 hclust.labels <- hclust(dist(clustering), method = "average")
-plot(x = df$V1, y = df$V2, col = cutree(hclust.labels ,k = 2), xlab = "V1", ylab = "V2",
+plot(asp=1, x = df$V1, y = df$V2, col = cutree(hclust.labels ,k = 2), xlab = "V1", ylab = "V2",
      main = "hclust average with 2 clusters")
 ```
 
@@ -278,7 +279,8 @@ data <- rbind(data_km, data_hc, data_sc)
 Plotting the results:
 
 ```{r}
-ggplot(data = data, aes(x = V1, y = V2)) + geom_point(aes(colour = factor(cluster))) + facet_wrap(~ method) + theme(legend.position = "none")
+ggplot(data = data, aes(x = V1, y = V2)) + geom_point(aes(colour = factor(cluster))) + facet_wrap(~ method) + 
+  coord_fixed(ratio = 1, expand = TRUE, clip = "on") + theme(legend.position = "none")
 ```
 
 Having looked at the plot I can see that in some areas spectral clustering was better, while in the other areas the hierarchical clustering had better patterns than the other 2 clustering algorithms.
@@ -317,9 +319,16 @@ data <- rbind(data_km, data_hc, data_sc)
 Plotting the results:
 
 ```{r}
-ggplot(data = data, aes(x = V1, y = V2)) + geom_point(aes(colour = factor(cluster))) + facet_wrap(~ method) + theme(legend.position = "none")
+ggplot(data = data, aes(x = V1, y = V2)) + geom_point(aes(colour = factor(cluster))) + 
+  facet_wrap(~ method, scales = "fixed", shrink = FALSE) + 
+  coord_fixed(ratio = 1, expand = TRUE, clip = "on") + 
+  theme(legend.position = "none")
 ```
 
 Now I would say that hclust performed the best and kmeans the worst. Nevertheless, it is happy to see that my implementation of spectral clustering algorithm had slightly better results than simple kmeans algorithm - I remind that spectral clustering uses kmeans so it would be expected that it performs better. On the other hand, it has mush higher computational cost and some unstability probably due to the simplest possible connecting method in the graph.
 
 For this dataset, I would recommend **8 clusters** because of more compact clusters in the plots.
+
+# Oświadczenie
+
+Potwierdzam samodzielność powyższej pracy oraz niekorzystanie przeze mnie z niedozwolonych źródeł.
