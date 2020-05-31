@@ -1,0 +1,398 @@
+---
+title: "WUM, pd4: Support Vector Machine"
+author: "Jakub Kosterna"
+date: "26/04/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Wstęp
+
+Ok, kursik o SVM z *DataCamp* przerobiony, powinno pójść jak z płatka. Koncepcję ogarniam, cyk załadować biblioteki i funkcje - co może pójść nie tak?
+
+Na obrazku algorytm rzeczywiście wyglądał potężnie. Czas na dobrą zabawę!
+
+## Wczytanie zbiorów i zmienne celu
+
+Pierwszy - narzucony.
+
+```{r apartments_load, message = FALSE, warning = FALSE, cache = TRUE}
+# install.packages("DALEX") # if not installed
+library(DALEX)
+library(dplyr)
+
+set.seed(1711)
+knitr::kable(sample_n(apartments, 10), content = "Apartments' trainset")
+knitr::kable(sample_n(apartmentsTest, 5), content = "Apartments' testset")
+dim(apartments)
+dim(apartmentsTest)
+```
+
+Ciekawa sprawa! Narzucony zbiór treningowy ma 1000 obserwacji, zaś testowy - 9000. Niespotykana jak na razie dla mnie proporcja, ale niech tak będzie - ponoć dane są prawdziwe i reprezentatywne, więc 1000 chyba powinno wystarczyć na sensowny model. Jak w przypadku zmiennej celu?
+
+```{r apartments_target, cache = TRUE}
+colnames(apartments)
+knitr::kable(table(apartments$district))
+```
+
+No chyba dzielnica - mamy 10 warszawskich dystryktów po ~100 mieszkań. Choć generalnie fajny i ciekawy zbiorek - na podstawie pozostałych danych można by chyba każdą z sześciu kolumn predykować i nie byłoby to głupie w żadnym wypadku!
+
+Drugi, mój? Kurczę, uwielbiam testy psychologiczne! A jeden z moich ulubionych, to  *16personalities*. Naukowcy opracowali od lat uznawany bardzo mądry podział na 16 typów charakteru, które od lat uznawane są na całym świecie. Test jest o tyle fajny, że ma także szacunek i poparcie u biologów (ponoć różnice można zaobserwować nawet fizycznie w mózgu!) i sam wykonując go raz na parę lat - zawsze otrzymuję ten sam rezultat (*ESFJ - doradca*). Dataset można znaleźć w tym momencie w pierwszym wierszu stronki __https://openpsychometrics.org/_rawdata/__. 16 MB-owy plik już pobrałem.
+
+```{r 16personalities_load, cache = TRUE}
+personalities <- read.csv("data.csv", sep = '\t')
+dim(personalities)
+knitr::kable(sample_n(personalities, 6))
+colnames(personalities)
+```
+
+Zabawna sprawa, bo mamy aż 169 kolumn, ale nie ma samego mięska - wyniku testu, którym powinien być podział na 16 osobowości albo cztery kolumny reprezentujące binarne pododpowiedzi. Zamiast tego mamy w cholerę literek i cyferek reprezentujących odpowiedzi na kolejne pytania, a także informacje o wieku, płci, czasie wykonywania testu, państwie i sposobie, w jaki użytkownik doszedł na stronę (czy to z Googla, czy z Facebooka...).
+
+Postawię więc kontrowersyjną tezę - **płeć jest związana z osobowością**, albo przynajmniej z przemyślanie zaproponowanymi pytaniami w tym teście. Na podstawie odpowiedzi spróbuję przewidzieć płeć dzięki SVM.
+
+## Czyszczenie i podział na zbiory testowy i treningowy
+
+*apartments* i *apartmentsTest* zostały już przygotowane, a także są kompletne i w dobrej formie. Do określenia dzielnicy może nam się przydać każda zmienna.
+
+Co w kwestii *16personalities*?
+
+```{r 16personalities_sex, cache = TRUE}
+knitr::kable(table(personalities$gender))
+```
+
+O proszę! Istnieją jednak więcej niż dwie płcie, a mianowicie co wykazują dane - cztery.
+
+Ja jednak zdecyduję się na bycie niepoprawnym politycznie i nie będę brał pod uwagę wyników osób, które nie podały płci (0) oraz tych, które określiły ją jako *others* (3). Nie jest to badanie seksualności, a znając życie dużo osób zaznaczając opcję trzecią robiły sobie jaja (nie dosłownie!) lub zaznaczały odpowiedzi po omacku.
+
+```{r 16personalities_remove, cache = TRUE}
+personalities <- personalities[personalities$gender >= 1 & personalities$gender <= 2,]
+```
+
+Tak czy inaczej musimy mieć na uwadze, że głównymi odbiorcami tego testu były kobiety - a wiem to z bardzo wygodnego pliku *codebook.html*, który również załączam. Dla prostoty i wygody w dalszej części pracy (a także aby uniknąć kontrowersji z pozycjonowaniem mężczyzn przed kobietami), zamienię jeszcze numerki na odpowiadające im płcie.
+
+```{r 16personalities_sex_identification, cache = TRUE}
+personalities$gender[personalities$gender == 2] <- 'Woman'
+personalities$gender[personalities$gender == 1] <- 'Man'
+sample(personalities$gender, 10)
+```
+
+Podzielmy jeszcze zbiór *16personalities* na sety treningowy i testowy.
+
+Wybieram bardzo małą część oryginalnej *16personalities* na trening ze względu na ograniczony czas.
+
+```{r personalities_train_test_split, cache = TRUE}
+personalities[, "train"] <- ifelse(runif(nrow(personalities)) < 0.1, 1, 0)
+
+personalitiesTrain <- personalities[personalities$train == 1, ]
+# assign test rows to data frame testset
+personalitiesTest <- personalities[personalities$train == 0, ]
+
+# remove "train" column from train and test dataset
+personalitiesTrain <- personalitiesTrain[, -170]
+personalitiesTest <- personalitiesTest[, -170]
+```
+
+I teraz wielka niespodzianka! Mamy pewne braki danych. I to szokujące - dla trainsetu mającego 46 748 obserwacji, całe 7!! Pozbędźmy się im, może bardzo nie zaburzy to wyniku. Dla testsetu za to wszystko kompletne. Chora sprawa, chociaż mam nauczkę na całe życie.
+
+```{r remove_na_rows, cache = TRUE}
+dim(personalitiesTrain)
+dim(na.omit(personalitiesTrain))
+dim(personalitiesTest)
+dim(na.omit(personalitiesTest))
+personalitiesTest <- na.omit(personalitiesTest)
+```
+
+Bingo!!
+
+... zanim jednak jeszcze przejdziemy do naszego modelowania, odpowiedzmy na pytanie czy zalinkowany artykuł słusznie zwraca uwagę na skalowanie danych - i rzeczywiście tak jest. Możemy o tym przeczytać w ósmym rozdziale pt. *Normalization*. Jest tam wspomniane, że nieliniowe funkcje wykonane na danech nieznormalizowanych mogą przynieść naprawdę średnie rezultaty i jest to konieczne.
+
+## Normalizacja
+
+Jak od nas wymagają, tak też zróbmy.
+
+```{r apartments_scale, cache = TRUE}
+apartments$m2.price <- scale(apartments$m2.price)
+apartments$construction.year <- scale(apartments$construction.year)
+apartments$surface <- scale(apartments$surface)
+apartments$floor <- scale(apartments$floor)
+apartments$no.rooms <- scale(apartments$no.rooms)
+
+apartmentsTest$m2.price <- scale(apartmentsTest$m2.price)
+apartmentsTest$construction.year <- scale(apartmentsTest$construction.year)
+apartmentsTest$surface <- scale(apartmentsTest$surface)
+apartmentsTest$floor <- scale(apartmentsTest$floor)
+apartmentsTest$no.rooms <- scale(apartmentsTest$no.rooms)
+knitr::kable(head(apartments), caption = "scaled apartments")
+```
+
+W przypadku *personalities* będę bał po prostu pod uwagę same pytania - każda odpowiedź to liczba w skali 1-5, więc nie jest wymagane skalowanie.
+
+```{r personalities_selection, cache = TRUE}
+personalitiesTrain <- personalitiesTrain[c(1:163, 165)]
+personalitiesTest <- personalitiesTest[c(1:163, 165)]
+```
+
+## Prymitywne modele
+
+W dalszej części będę korzystał z *R*-owego pakietu *e1071*.
+
+### Liniowe
+
+```{r linear_apartments, warning = FALSE, cache = TRUE}
+library(e1071)
+
+start_time <- Sys.time()
+svm_apar_prim <- svm(district ~ ., 
+                data = apartments, 
+                type = "C-classification", 
+                kernel = "linear", 
+                scale = FALSE)
+stop_time <- Sys.time()
+apar_prim_time <- stop_time - start_time
+apar_prim_time
+
+#test accuracy
+pred_apar_prim <- predict(svm_apar_prim, apartmentsTest)
+mean_apar_prim <- mean(apartmentsTest$district == pred_apar_prim)
+mean_apar_prim
+```
+
+Oo proszę! Nawet taka kijowa forma **SVM** dała nam całkiem dobre *accuracy* - strzelając na oślep trafilibyśmy tylko 10% mieszkań, a biorąc pod uwagę małą liczbę przydatnych features, 30% to chyba bardzo dużo.
+
+Dla *16personalities* mamy klasyfikację binarną - możemy więc wyliczyć także i kilka innych poznanych przydatnych miar.
+
+```{r metrics, cache = TRUE}
+get_confusion_matrix <- function(test, pred){
+  return (table(Truth = test, Prediction = pred))
+}
+
+confusion_matrix_values <- function(confusion_matrix){
+  TP <- confusion_matrix[2,2]
+  TN <- confusion_matrix[1,1]
+  FP <- confusion_matrix[1,2]
+  FN <- confusion_matrix[2,1]
+  return (c(TP, TN, FP, FN))
+}
+
+accuracy <- function(confusion_matrix){
+  conf_matrix <- confusion_matrix_values(confusion_matrix)
+  return((conf_matrix[1] + conf_matrix[2]) / (conf_matrix[1] + conf_matrix[2] + conf_matrix[3] + conf_matrix[4]))
+}
+
+precision <- function(confusion_matrix){
+  conf_matrix <- confusion_matrix_values(confusion_matrix)
+  return(conf_matrix[1]/ (conf_matrix[1] + conf_matrix[3]))
+}
+
+recall <- function(confusion_matrix){
+  conf_matrix <- confusion_matrix_values(confusion_matrix)
+  return(conf_matrix[1] / (conf_matrix[1] + conf_matrix[4]))
+}
+
+f1 <- function(confusion_matrix){
+  conf_matrix <- confusion_matrix_values(confusion_matrix)
+  rec <- recall(confusion_matrix)
+  prec <- precision(confusion_matrix)
+  return(2 * (rec * prec) / (rec + prec))
+}
+```
+
+Zbudujmy i wyćwiczmy analogiczny jak wcześniej model i zobaczmy co z niego wyjdzie.
+
+```{r personalities_linear, cache = TRUE}
+start_time <- Sys.time()
+svm_pers_prim <- svm(gender ~ .,
+                data = personalitiesTrain, 
+                type = "C-classification", 
+                kernel = "linear", 
+                scale = FALSE)
+stop_time <- Sys.time()
+pers_prim_time <- stop_time - start_time
+pers_prim_time
+
+start_time <- Sys.time()
+pred_pers_prim <- predict(svm_pers_prim, personalitiesTest)
+stop_time <- Sys.time()
+pers_prim_pred_time <- stop_time - start_time
+pers_prim_pred_time
+
+mean_pers_prim <- mean(personalitiesTest$gender == as.vector(pred_pers_prim))
+mean_pers_prim
+```
+
+EDIT: pierwotnie wierszy w datasecie treningowym było prawie 40 000. Powyższy algorytm dla 169 zmiennych na obserwację liczył się jednak tak długo, że odpuściłem :P
+
+79%! Na pewno więcej kobitek brało udział, ale wciąż wynik szokujący - jak na tak prymitywny model. Ile dokładnie dziewczy wykonało test?
+
+```{r percent_of_women, cache = TRUE}
+mean(personalitiesTest$gender == "Woman")
+```
+
+79% > 60%, to 100%-owy fakt.
+
+```{r personalities_metrices, cache = TRUE}
+conf <- get_confusion_matrix(personalitiesTest$gender, as.vector(pred_pers_prim))
+conf
+print(paste0("accuracy: ", accuracy(conf)))
+print(paste0("precision: ", precision(conf)))
+print(paste0("recall: ", recall(conf)))
+print(paste0("f1: ", f1(conf)))
+```
+
+Wyjątkowo satysfakcjonujące - absolutnie każda miara osiągnęła blisko 80%.
+
+### Wielomianowe
+
+```{r polynomial_apartments, warning = FALSE, cache = TRUE}
+start_time <- Sys.time()
+svm_apar_poly <- svm(district ~ ., 
+                data = apartments, 
+                type = "C-classification", 
+                kernel = "polynomial", 
+                scale = FALSE)
+stop_time <- Sys.time()
+apar_poly_time <- stop_time - start_time
+apar_poly_time
+
+#test accuracy
+pred_apar_poly <- predict(svm_apar_poly, apartmentsTest)
+mean_apar_poly <- mean(apartmentsTest$district == pred_apar_poly)
+mean_apar_poly
+```
+
+Nieco lepszy czas niż dla modelu liniowego, rezultat jednak bardzo zbliżony.
+
+```{r personalities_polynomial, cache = TRUE}
+start_time <- Sys.time()
+svm_pers_poly <- svm(gender ~ .,
+                data = personalitiesTrain, 
+                type = "C-classification", 
+                kernel = "polynomial", 
+                scale = FALSE)
+stop_time <- Sys.time()
+pers_poly_time <- stop_time - start_time
+pers_poly_time
+
+start_time <- Sys.time()
+pred_pers_poly <- predict(svm_pers_poly, personalitiesTest)
+stop_time <- Sys.time()
+pers_poly_pred_time <- stop_time - start_time
+pers_poly_pred_time
+
+mean_pers_poly <- mean(personalitiesTest$gender == as.vector(pred_pers_poly))
+mean_pers_poly
+```
+
+Przy podobnie długim czasie modelowania, otrzymaliśmy nieco gorszy wynik.
+
+```{r personalities_metrices_poly, cache = TRUE}
+conf <- get_confusion_matrix(personalitiesTest$gender, as.vector(pred_pers_poly))
+conf
+print(paste0("accuracy: ", accuracy(conf)))
+print(paste0("precision: ", precision(conf)))
+print(paste0("recall: ", recall(conf)))
+print(paste0("f1: ", f1(conf)))
+```
+
+... i także ogólne wyniki podobne, lecz nieco gorsze.
+
+## Zoptymalizowane
+
+```{r tuned_apartments, cache = TRUE, eval = FALSE}
+start_time <- Sys.time()
+tune_out <- 
+    tune.svm(x = apartments[, -6], y = apartments[, 6], 
+             type = "C-classification", 
+             kernel = "polynomial", degree = 3, cost = 10^(-2:2), 
+             gamma = 10^(-1:1), coef0 = 10^(-1:1))
+stop_time <- Sys.time()
+apar_tuning_time <- stop_time - start_time
+apar_tuning_time
+
+tune_out
+```
+
+```{r tuned_apartments_results, cache = TRUE}
+apar_tuning_first_time <- "Time difference of 8.487711 hours" # wpisuje recznie, bo drugi raz powyzszego nie bede uruchamial...
+```
+
+No ładnie! 8,5 godziny liczenia! Czy było warto?
+
+```{r tuned_learning, cache = TRUE}
+start_time <- Sys.time()
+svm_apar_tuned <- svm(district ~ .,
+                data = apartmentsTest, 
+                type = "C-classification", 
+                kernel = "polynomial",
+                degree = 3,
+                gamma = 0.1,
+                coef0 = 1,
+                cost = 0.1,
+                scale = FALSE)
+stop_time <- Sys.time()
+apar_poly_tuned <- stop_time - start_time
+apar_poly_tuned
+
+start_time <- Sys.time()
+pred_apar_tuned <- predict(svm_apar_tuned, apartmentsTest)
+stop_time <- Sys.time()
+apar_tuned_pred_time <- stop_time - start_time
+apar_tuned_pred_time
+
+mean_apar_tuned <- mean(apartmentsTest$district == as.vector(pred_apar_tuned))
+mean_apar_tuned
+```
+
+35% - nawet nieźle. Czy było warto czekać 8,5 godziny? Hmm, no nie jestem przekonany.
+
+Przeprowadźmy jeszcze tuning dla *16personalities*.
+
+```{r tuned_personalities, cache = TRUE}
+start_time <- Sys.time()
+tune_out_pers <- 
+    tune.svm(x = personalitiesTrain[, -164], y = as.factor(personalitiesTrain[, 164]), 
+             type = "C-classification", 
+             kernel = "polynomial", degree = 3, cost = 10^(-1:1), 
+             gamma = 10^(-1:1), coef0 = 10^(-1:1))
+stop_time <- Sys.time()
+apar_tuning_time <- stop_time - start_time
+apar_tuning_time
+
+tune_out_pers
+```
+
+Tym razem nieco szybciej.
+
+```{r tuned_learning_pers, cache = TRUE}
+start_time <- Sys.time()
+svm_pers_tuned <- svm(gender ~ .,
+                data = personalitiesTrain, 
+                type = "C-classification", 
+                kernel = "polynomial",
+                degree = 3,
+                gamma = 0.1,
+                coef0 = 1,
+                cost = 0.1,
+                scale = FALSE)
+stop_time <- Sys.time()
+pers_poly_tuned <- stop_time - start_time
+pers_poly_tuned
+
+start_time <- Sys.time()
+pred_pers_tuned <- predict(svm_pers_tuned, personalitiesTest)
+stop_time <- Sys.time()
+pers_tuned_pred_time <- stop_time - start_time
+pers_tuned_pred_time
+
+mean_pers_tuned <- mean(personalitiesTest$gender == as.vector(pred_pers_tuned))
+mean_pers_tuned
+```
+
+No i lipa - na nic był tuning parametrów, kiedy dał taki sam efekt, jak standardowe parametry dla kernela wielomianowego. Ale generalnie szok - liniowe SVM dało lepszy wynik dla *16personalities*?
+
+Tak czy inaczej dla 60% kobiet dobre dopasowanie 78% osób, a zarówno *precision*, *recall* i *f1* powyżej 80% to naprawdę satysfakconujący wynik. Chyba udało mi się dowieść tezy - **odpowiedzi na 16 personalities są mocno związane z płcią**.
+
+Okazuje się także, że **kilkugodzinny tuning parametrów *SVM* nie zawsze da upragnione widoczne efekty** - co prawda tak jak dla *apartments* zyskaliśmy wartościowe dodatkowe kilka punktów procentowych *accuracy*, mimo 3,5 godzin czekania na *16personalities* wyniku nie udało nam się poprawić.

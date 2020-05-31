@@ -9,4 +9,5 @@ Wstęp do metod klasteryzujących.
 - metryki oceny klasteryzacji
 
 19:00 **Omówienie PD 5**
+
 19:15 **Konsultacje**

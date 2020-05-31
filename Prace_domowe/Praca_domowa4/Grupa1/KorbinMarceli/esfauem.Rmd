@@ -1,0 +1,143 @@
+---
+title: "Praca domowa nr 4"
+author: "Marceli Korbin"
+date: "27 kwietnia 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+```
+
+## Wstęp
+
+Dla dwóch zbiorów danych stroimy parametry algorytmu SVM.
+
+## Przygotowanie
+
+```{r pressure}
+library(e1071)
+library(DALEX)
+library(dplyr)
+library(mlr)
+# potrzebne biblioteki
+heart <- read.csv("heart.csv")
+data(apartments, package="DALEX")
+# zbiory danych apartments i heart
+
+trainc1 <- sample(1:nrow(apartments), 0.7*nrow(apartments))
+train1 <- apartments[trainc1,]
+test1 <- apartments[-trainc1,]
+trainc2 <- sample(1:nrow(heart), 0.7*nrow(heart))
+train2 <- heart[trainc2,]
+test2 <- heart[-trainc2,]
+# podział danych na zbiory treningowe i testowe
+```
+
+### Zbiór "apartments"
+
+Na tym zbiorze (ze zmienną celu m2.price) zastosujemy algorytm regresyjny, którego skuteczność zmierzymy miarą RMSE. Budujemy dwa modele, żeby zobaczyć przy okazji wpływ skalowania na wyniki (model1 - bez skalowania, model01 - ze skalowaniem).
+
+Na początku sprawdzamy RMSE dla algorytmu trenowanego z parametrami kernel="radial", cost=100, degree=3 i gamma=1/6.
+
+```{r svm11}
+task1 <- makeRegrTask(data=train1, target="m2.price")
+learner <- makeLearner("regr.svm",
+                       par.vals=list(kernel="radial", cost=100, scale=F))
+learnerS <- makeLearner("regr.svm",
+                        par.vals=list(kernel="radial", cost=100, scale=T))
+model1 <- train(learner, task1)
+model01 <- train(learnerS, task1)
+pred1 <- predict(model1, newdata=test1)
+pred01 <- predict(model01, newdata=test1)
+measureRMSE(pred1$data$response, pred1$data$truth)
+measureRMSE(pred01$data$response, pred01$data$truth)
+```
+
+Widzimy, że dla wyskalowanych danych (drugi model) uzyskujemy lepszą miarę. Teraz przygotowujemy parametry do strojenia. Wybierzemy losowo 30 razy wartości z przedziałów wybranych poprzez funkcję makeParamSet.
+
+```{r svm12}
+cv <- makeResampleDesc("CV", iter=6)
+parSet <- makeParamSet(
+  makeIntegerParam("cost", lower=10, upper=300),
+  makeDiscreteParam("kernel", values=c("polynomial", "radial", "sigmoid")),
+  makeIntegerParam("degree", lower=2, upper=10),
+  makeNumericParam("gamma", lower=1, upper=10, trafo=function(x) 1/x)
+)
+# stroimy parametry
+ctrlR <- makeTuneControlRandom(maxit = 30)
+resR <- tuneParams(learnerS, task=task1, resampling=cv,
+                   par.set=parSet, control=ctrlR, measures=rmse,
+                   show.info=F)
+resR$x
+```
+
+Wyżej zostały wypisane parametry wskazane jako optymalne względem miary RMSE. Jak ostatecznie wypada model po ich przyłożeniu?
+
+```{r svm13}
+learnerS <- setHyperPars(learnerS,
+                         kernel=resR$x$kernel, cost=resR$x$cost, degree=resR$x$degree, gamma=resR$x$gamma)
+modelR <- train(learnerS, task1)
+pred10 <- predict(modelR, newdata=test1)
+measureRMSE(pred10$data$response, pred10$data$truth)
+```
+
+Strojenie parametrów przyniosło pozytywne skutki.
+
+### Zbiór "heart"
+
+Zbiór "heart" pojawił się w jednym z tematów projektu pierwszego. Tym razem użyjemy algorytmu klasyfikacyjnego ze zmienną celu "num". Podobnie jak poprzednio, sprawdzimy wpływ normalizacji na ocenę, ale zamiast RMSE zastosujemy accuracy i F1 ze względu na inny typ zmiennej celu.
+
+Parametry początkowe takie jak poprzednio, ale gamma tym razem wynosi 1/14 (domyślnie zresztą przyjmuje wartość 1/liczba wymiarów).
+
+```{r svm21}
+task2 <- makeClassifTask(data=train2, target="num")
+renrael <- makeLearner("classif.svm",
+                       par.vals=list(kernel="radial", cost=100, scale=F),
+                       predict.type="response")
+renraelS <- makeLearner("classif.svm",
+                        par.vals=list(kernel="radial", cost=100, scale=T),
+                        predict.type="response")
+# ("renrael" to "learner" od tyłu)
+model2 <- train(renrael, task2)
+model02 <- train(renraelS, task2)
+pred2 <- predict(model2, newdata=test2)
+pred02 <- predict(model02, newdata=test2)
+measureACC(pred2$data$response, pred2$data$truth)
+measureACC(pred02$data$response, pred02$data$truth)
+```
+
+Tak wygląda accuracy, a jak F1?
+
+```{r svm22}
+measureF1(pred2$data$response, pred2$data$truth, "1")
+measureF1(pred02$data$response, pred02$data$truth, "1")
+```
+
+Parametry nastroimy z tymi samymi wartościami resampling i control, co poprzednio - tylko rozszerzymy zakres szukania gammy w par.set.
+
+```{r svm23}
+parSet2 <- makeParamSet(
+  makeIntegerParam("cost", lower=10, upper=300),
+  makeDiscreteParam("kernel", values=c("polynomial", "radial", "sigmoid")),
+  makeIntegerParam("degree", lower=2, upper=10),
+  makeNumericParam("gamma", lower=1, upper=20, trafo=function(x) 1/x)
+)
+resS <- tuneParams(renraelS, task=task2, resampling=cv,
+                   par.set=parSet2, control=ctrlR, measures=list(acc, f1),
+                   show.info=F)
+resS$x
+```
+
+Nakładamy zaproponowane parametry:
+
+```{r svm24}
+renraelS <- setHyperPars(renraelS,
+                         kernel=resS$x$kernel, cost=resS$x$cost, degree=resS$x$degree, gamma=resS$x$gamma)
+modelS <- train(renraelS, task2)
+pred20 <- predict(modelS, newdata=test2)
+measureACC(pred20$data$response, pred20$data$truth)
+measureF1(pred20$data$response, pred20$data$truth, "1")
+```
+
+Ostatecznie lepsze, choć w mniejszym stopniu niż model dla "apartments".
