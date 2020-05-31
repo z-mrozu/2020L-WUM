@@ -1,0 +1,147 @@
+---
+title: "Praca Domowa 6"
+author: "Aleksander Podsiad"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    code_folding: show
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+library(rgl)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::knit_hooks$set(webgl = hook_webgl)
+```
+
+```{r}
+library(tidyverse)
+library(cluster)
+library(factoextra)
+library(genie)
+library(ggplot2)
+library(NbClust)
+library(clValid)
+```
+
+## Przygotowanie danych
+
+### Wczytywanie danych
+
+```{r}
+clustering_R3 <- read_csv("clustering_R3.csv")
+```
+
+### Normalizacja danych
+
+```{r}
+clustering_R3s <- as.data.frame(scale(clustering_R3))
+```
+
+### Wykres
+
+```{r,  webgl=TRUE}
+plot3d(clustering_R3s$X1, clustering_R3s$X2, clustering_R3s$X3, 
+       type="p", xlab = "x", ylab="y", zlab = "z", size=3, aspect = FALSE)
+```
+
+* Wykres jest interaktywny. Proszę przeciągnąć myszką po modelu 3D. 
+* Scroll pozwala na przybliżanie i oddalanie obiektu.
+
+### Macierz odległości
+
+Przydatna w metodach hierarchicznych.
+
+```{r}
+d <- dist(clustering_R3s)
+```
+
+## Wyznaczanie liczby klastrów 
+
+Wyznaczam liczbę klastrów za pomocą funkcji NbClust stosującej 30 różnych metryk oceny jakości klastrów i wybierającej najlepszą liczbę skupień na podstawie wyboru największej liczby z nich.
+
+```{r}
+nclust <- NbClust(data = clustering_R3s, method = "complete")
+nclust$Best.nc
+```
+
+Najlepszą liczbą klastów jest zatem **4**.
+
+## Klastrowanie
+
+### Metoda aglomeracyjna
+
+Algorytm "complete" jako dystans między klastrami przyjmuje maksymalną odległość między dwoma punktami z tych klastrów.
+
+```{r}
+set.seed(1234)
+clusters1 <- as.factor(cutree(hclust(d, method = "complete"), 4))
+clustering_s1 <- cbind(clustering_R3s, clusters1)
+```
+
+### Wykres
+
+```{r, webgl=TRUE}
+plot3d(clustering_s1$X1, clustering_s1$X2, clustering_s1$X3, 
+       col = clustering_s1$clusters1, 
+       type="p", xlab = "x", ylab="y", zlab = "z",
+       size=3, aspect = FALSE)
+```
+
+
+### Algorytm genie
+
+Metoda ta jest zmodyfikowaną wersją klastrowania hierarchicznego.
+
+```{r}
+set.seed(1234)
+clusters2 <- as.factor(cutree(hclust2(d), 4))
+clustering_s2 <- cbind(clustering_R3s, clusters2)
+```
+
+### Wykres
+
+```{r, webgl=TRUE}
+plot3d(clustering_s2$X1, clustering_s2$X2, clustering_s2$X3,
+       col = clustering_s2$clusters2, 
+       type="p", xlab = "x", ylab="y", zlab = "z",
+       size=3, aspect = FALSE)
+```
+
+## Porównanie metod
+
+Do porównania jakości klastrowania używam trzech metryk/indeksów:
+
+ * silhouette - miara tego jak obiekt w klastrze jest "bliski" do innych obiektów z tego klastra w porównaniu do obiektów z innych klastrów. Przyjmuje wartości od -1 do 1 i powinna być jak największa.
+ * dunn - indeks Dunna jest stosunkiem najmniejszej odległości pomiędzy obserwacjami nie w tym samym klastrze do największej odległości wewnątrz klastra. Indeks Dunna ma wartość od zera do nieskończoności i powinien być maksymalizowany. 
+ * connectivity - łączność wskazuje na stopień powiązania klastrów, określony przez k-najbliższych sąsiadów. Łączność przyjmuje wartości od zera do nieskończoności i powinna być zminimalizowana. 
+
+```{r}
+compl_res_sil <- mean(silhouette(as.numeric(clustering_s1$clusters1), dist = d)[,3])
+compl_res_dunn <- dunn(distance = d, clusters = as.numeric(clustering_s1$clusters1))
+compl_res_con <- connectivity(distance = d, clusters = as.numeric(clustering_s1$clusters1))
+```
+
+```{r}
+gen_res_sil <- mean(silhouette(as.numeric(clustering_s2$clusters2), dist = d)[,3])
+gen_res_dunn <- dunn(distance = d, clusters = as.numeric(clustering_s2$clusters2))
+gen_res_con <- connectivity(distance = d, clusters = as.numeric(clustering_s2$clusters2))
+```
+
+```{r}
+set1 <- c("silhouette" = compl_res_sil, "dunn" = compl_res_dunn, "connectivity" = compl_res_con)
+set2 <- c("silhouette" = gen_res_sil, "dunn" = gen_res_dunn, "connectivity" = gen_res_con)
+results <- bind_rows(set1, set2)
+results <- bind_cols("method" = c("complete aglomerative", "genie method"), results)
+knitr::kable(results)
+```
+
+
+## Podsumowanie
+
+Algorytm genie daje dużo lepsze wyniki w indeksie Dunna oraz w łączności kalstrów. Miara silhouette jest tutaj tylko trochę lepsza względem zwykłej metody aglomeracyjnej.
+Jednak decydującym czynnikiem, który przekonał mnie do uznania wyższości tej metody nad zwykłą aglomeracyjną, jest aspekt estetyczno-wizualny. Z punktu widzenia człowieka podział ten ma po prostu większy sens. Skłania mnie to również do refleksji nad skutecznością miary silhouette i utwierdza w przekonaniu, że należy porównywać metody używając więcej niż jednej miary sukcesu.
