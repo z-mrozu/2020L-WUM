@@ -1,0 +1,134 @@
+---
+title: "WUM PD 4"
+author: "Piotr Piątyszek"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE)
+opts_chunk$set(fig.width = 10)
+opts_chunk$set(fig.height = 8)
+opts_chunk$set(warning  = FALSE)
+opts_chunk$set(message  = FALSE)
+opts_chunk$set(cache = TRUE)
+```
+
+# Apartments
+
+## Read data
+```{r read}
+library(dplyr)
+library(caret)
+library(DALEX)
+library(doParallel)
+data.train <- DALEX::apartments
+data.test <- DALEX::apartmentsTest
+data.train %>% head(n=10) %>% kable
+```
+
+## Prepare
+```{r prepare, dependson="read"}
+models <- list()
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 5, # 5 fold cv
+  repeats = 3, # repeated 3 times
+  allowParallel=T
+)
+```
+
+## Radial kernel
+```{r model_radial, dependson="prepare"}
+# Make full grid from normal distributions
+tuneGridRadial <- data.frame(C = abs(rnorm(100, sd=4)), sigma = abs(rnorm(100, sd=0.1)))
+cl <- makePSOCKcluster(3)
+registerDoParallel(cl)
+models$radial <- train(
+  m2.price ~ .,
+  data = data.train,
+  method = 'svmRadial',
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = tuneGridRadial
+)
+stopCluster(cl)
+
+top <- models$radial$results %>% arrange(RMSE) %>% mutate(label = paste0("#", row_number(), " ", round(RMSE))) %>% slice(0:5)
+ggplot(models$radial$results, aes(x=C, y=sigma, color=RMSE)) + 
+  geom_point(size=3) +
+  scale_color_gradient2(limits=c(100,300), na.value="grey", high="blue", low="red", midpoint=200) +
+  geom_text(data=top, aes(x=C, y=sigma, label=label), nudge_y=0.005, color="red")
+```
+
+
+## Polynomial kernel
+```{r model_poly, dependson="prepare"}
+tuneGrid <- data.frame(C = abs(rnorm(20, sd=4)), degree=sample(2:4, 20, replace=TRUE), scale=runif(20, 0, 0.3))
+cl <- makePSOCKcluster(10)
+registerDoParallel(cl)
+models$poly <- train(
+  m2.price ~ .,
+  data = data.train,
+  method = 'svmPoly',
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = tuneGrid
+)
+stopCluster(cl)
+
+top <- models$poly$results %>% arrange(RMSE) %>% mutate(label = paste0("#", row_number(), " ", round(RMSE))) %>% slice(0:5)
+ggplot(models$poly$results, aes(x=C, y=scale, color=RMSE, shape=factor(degree))) +
+  geom_point(size=3) +
+  scale_color_gradient2(limits=c(100,300), na.value="grey", high="blue", low="red", midpoint=200) +
+  geom_text(data=top, aes(x=C, y=scale, label=label), nudge_y=0.005, color="red")
+```
+
+## Check importance of scaling
+```{r scaling, dependson="model_radial"}
+cl <- makePSOCKcluster(3)
+registerDoParallel(cl)
+models$radial_raw <- train(
+  m2.price ~ .,
+  data = data.train,
+  method = 'svmRadial',
+  trControl = ctrl,
+  preProcess = c(),
+ tuneGrid = tuneGridRadial
+)
+stopCluster(cl)
+
+scale_rmse <- data.frame(scaled=models$radial$results$RMSE, raw=models$radial_raw$results$RMSE)
+
+ggplot(scale_rmse, aes(x=raw, y=scaled)) +
+  geom_point() +
+  geom_smooth()
+```
+
+# Wine quality
+```{r loadwine}
+wine.train <- read.csv('wine.csv', sep=";")
+```
+
+## Radial kernel
+```{r wine_radial, dependson="prepare"}
+# Make full grid from normal distributions
+tuneGridRadial <- data.frame(C = abs(rnorm(20, sd=4)), sigma = abs(rnorm(20, sd=0.1)))
+cl <- makePSOCKcluster(10)
+registerDoParallel(cl)
+models$wine_radial <- train(
+  quality ~ .,
+  data = wine.train,
+  method = 'svmRadial',
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = tuneGridRadial
+)
+stopCluster(cl)
+
+top <- models$wine_radial$results %>% arrange(RMSE) %>% mutate(label = paste0("#", row_number(), " ", round(RMSE))) %>% slice(0:5)
+ggplot(models$wine_radial$results, aes(x=C, y=sigma, color=RMSE)) + 
+  geom_point(size=3) +
+  scale_color_gradient2(limits=c(0.5,1), na.value="grey", high="blue", low="red", midpoint=0.75) +
+  geom_text(data=top, aes(x=C, y=sigma, label=label), nudge_y=0.005, color="red")
+```

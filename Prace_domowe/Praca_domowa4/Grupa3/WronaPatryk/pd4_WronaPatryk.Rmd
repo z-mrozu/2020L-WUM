@@ -17,7 +17,7 @@ library(DALEX)
 library(VIM)
 library(dplyr)
 set.seed(44)
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, cache = TRUE)
 ```
 
 
@@ -69,6 +69,47 @@ testset <- apartments[-indexes,]
 ```
 
 ## Modele - bez skalowania
+
+Najpierw rozważmy **modele o hiperparametrach domyślnych**, które potem porównamy z modelami strojonymi:
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmRadial"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+```{r}
+set.seed(44)
+# Fit svmPoly:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmPoly"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+```{r}
+set.seed(44)
+# Fit svmLinear:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmLinear"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+
+Modele ze strojonymi hiperparametrami po losowej siatce:
 
 ```{r}
 
@@ -145,6 +186,46 @@ trainset[,1:5] <- trainset[,1:5] %>% scale(center = F, scale = T)
 testset[,1:5] <- testset[,1:5] %>% scale(center = F, scale = T)
 ```
 
+Najpierw rozważmy **modele o hiperparametrach domyślnych**, które potem porównamy z modelami strojonymi:
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmRadial"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+```{r}
+set.seed(44)
+# Fit svmPoly:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmPoly"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+```{r}
+set.seed(44)
+# Fit svmLinear:
+model <- train(
+  district ~ . ,
+  data = trainset, 
+  method = "svmLinear"
+)
+pred <- predict(model, newdata = testset)
+confusionMatrix(pred , testset$district)
+```
+
+
+Modele ze strojonymi hiperparametrami po losowej siatce:
 
 ```{r}
 set.seed(44)
@@ -211,25 +292,43 @@ confusionMatrix(pred , testset$district)
 
 Podsumujmy uzyskane **Accuracy** z uwzględnieniem skalowania oraz różnych jąder.
 
-Bez skalowania:
+### Bez skalowania
+
+Bez skalowania, hiperparametry **domyślne**:
+
+- *svmRadial*: 0.3046
+- *svmPoly*: 0.2893
+- *svmLinear*: **0.335**
+
+
+Bez skalowania, hiperparametry **strojone**:
 
 - *svmRadial*: 0.3096
 - *svmPoly*: 0.2944
 - *svmLinear*: **0.3401**
 
-Ze skalowaniem:
+### Ze skalowaniem
+
+Ze skalowaniem, hiperparametry **domyślne**:
+
+- *svmRadial*: 0.2944
+- *svmPoly*: 0.2893
+- *svmLinear*: 0.3299 
+
+
+Ze skalowaniem, hiperparametry **strojone**:
 
 - *svmRadial*: **0.3401**
 - *svmPoly*: 0.3147
 - *svmLinear*: 0.335 
 
-Jak widzimy skalowanie znacznie pomogło jądru gaussowskiemu i wielomianowemu, jednakże jądro liniowe osiągnęło gorszy wynik.
+Strojenie modeli przyniosło dobre aczkolwiek niewielkie rezultaty; dzięki niemu modele miały lepsze Accuracy.
+
+Jak również widzimy, skalowanie znacznie pomogło jądru gaussowskiemu i wielomianowemu, jednakże jądro liniowe osiągnęło gorszy wynik.
 
 Nasze modele, zgodnie z oczekiwaniami, **bezbłędnie klasyfikowały apartamenty w Śródmieściu**. Niestety klasyfikacja innych dzielnic była obarczona częstymi błędami.
 
 Jest 10 dzielnic i stąd mogło wynikać Accuracy około **0.3**. Warto zauważyć, że klasyfikator losowy osiągnąłby Accuracy w okolicach **0.1**, a umiący rozróżnić tylko Śródmieście oscylowałby gdzieś w Accuracy = **0.2**. Z tego powodu powższe klasyfikatory nauczyły się w pewnym sensie rozróżniać dzielnice. Faktycznie, jeśli zerknąć na wcześniejsze wykresy punktowe w ggplot2, można dostrzec, że niektóre 'pasma' punktów są zajęte przez poszczególne dzielnice. Jednakże, te pasma nachodzą na siebie dla różnych dzielnic, stąd trudności z klasyfikacją.
-
-
 
 
 
@@ -288,6 +387,46 @@ testset2 <- aux[-indexes,]
 ```
 
 ## Modele - bez skalowania
+
+Najpierw rozważmy **modele o hiperparametrach domyślnych**, które potem porównamy z modelami strojonymi:
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmRadial"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmPoly"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmLinear"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+Modele ze strojonymi hiperparametrami po losowej siatce:
 
 ```{r}
 set.seed(44)
@@ -357,6 +496,47 @@ trainset2[,1:8] <- trainset2[,1:8] %>% scale(center = F, scale = T)
 testset2[,1:8] <- testset2[,1:8] %>% scale(center = F, scale = T)
 ```
 
+Najpierw rozważmy **modele o hiperparametrach domyślnych**, które potem porównamy z modelami strojonymi:
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmRadial"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmPoly"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+```{r}
+set.seed(44)
+# Fit svmRadial:
+model <- train(
+  Outcome ~ . ,
+  data = trainset2, 
+  method = "svmLinear"
+)
+pred <- predict(model, newdata = testset2)
+confusionMatrix(pred , testset2$Outcome)
+```
+
+
+Modele ze strojonymi hiperparametrami po losowej siatce:
+
 
 ```{r}
 set.seed(44)
@@ -421,19 +601,35 @@ confusionMatrix(pred , testset2$Outcome)
 
 Podsumujmy uzyskane **Accuracy/Sensitivity/Specificity** z uwzględnieniem skalowania oraz różnych jąder.
 
-Bez skalowania:
+### Bez skalowania
+
+Bez skalowania, hiperparametry **domyślne**:
+
+- *svmRadial*: 0.7516/0.8700/0.5283 # Acc i Sens większe niż po strojeniu
+- *svmPoly*: **0.7516/0.9100/0.4528**
+- *svmLinear*: 0.7974/0.86/0.5094
+
+Bez skalowania, hiperparametry **strojone**:
 
 - *svmRadial*: 0.7451/0.8500/0.5472
 - *svmPoly*: **0.7974/0.9300/0.5472**
 - *svmLinear*: 0.7974/0.9300/0.5472
 
-Ze skalowaniem:
+### Ze skalowaniem
+
+Ze skalowaniem, hiperparametry **domyślne**:
+
+- *svmRadial*: 0.7582/0.8700/0.5472 # Acc i Sens większe niż po strojeniu
+- *svmPoly*: **0.7516/0.9000/0.4717**
+- *svmLinear*: 0.7386/0.8600/0.5094
+
+Ze skalowaniem, hiperparametry **strojone**:
 
 - *svmRadial*: 0.7451/0.8500/0.5472
 - *svmPoly*: **0.8039/0.9300/0.5660**
 - *svmLinear*: 0.7974/0.9300/0.5472
 
-
+Strojenie modeli przyniosło dobre rezultaty również dla tego zbioru danych; dzięki niemu modele miały lepsze Accuracy. **Tylko jądro Gaussowskie po strojeniu wykazywało gorszy performance.**
 
 Widzimy, że skalowanie nie zaszkodziło, a pomogło jedynie w przypadku SVM z jądrem wielomianowym.
 
@@ -442,5 +638,5 @@ Mimo wszystko, ze względu na niezbalansowanie danych, klasyfikator losowy miał
 
 # Uwagi/wnioski
 
-W obydwu zbiorach wyniki strojenia hiperparametrów były oczywiście losowe. Czasami mogłoby się zdażyć tak, że przy większej ilości losowań najlepszy zestaw hiperparametrów okazałby się gorszy niż ten wyznaczony z mniejszą ilością losowań. Jeśli chciałoby się mieć nad tym procesem lepszą kontrolę, powinno się rozważyć szukanie po zadanej z góry siatce hiperparametrów. Jak wiemy z [artykułu - Figure 6](http://pyml.sourceforge.net/doc/howto.pdf) patrząc na siatkę hiperparametrów jako heatmapę możemy stwierdzić, że ta siatka jest regularna. Pewne zakresy hiperparametrów, które są najlepsze mogą nigdy nie być wylosowane poprzez 'random search', natomiast szukanie po ustalonej siatce jest w tym przypadku bardziej wskazane.
+Domyślne hiperparametry zazwyczaj osiągały gorsze rezultaty niż hiperparametry po strojeniu. W obydwu zbiorach wyniki strojenia hiperparametrów były oczywiście losowe. Czasami mogłoby się zdażyć tak, że przy większej ilości losowań najlepszy zestaw hiperparametrów okazałby się gorszy niż ten wyznaczony z mniejszą ilością losowań. Jeśli chciałoby się mieć nad tym procesem lepszą kontrolę, powinno się rozważyć szukanie po zadanej z góry siatce hiperparametrów. Jak wiemy z [artykułu - Figure 6](http://pyml.sourceforge.net/doc/howto.pdf) patrząc na siatkę hiperparametrów jako heatmapę możemy stwierdzić, że ta siatka jest regularna. **Pewne zakresy hiperparametrów, które są najlepsze mogą nigdy nie być wylosowane poprzez 'random search'**, natomiast szukanie po ustalonej siatce jest w tym przypadku bardziej wskazane. Możliwe, że ten jeden przypadek dla zbioru *diabetes* z jądrem Gaussowsim wylosował gorsze hiperparametry, a domyślnie używa tych dających lepsze osiągi, które można dostrzec w artykule.
 

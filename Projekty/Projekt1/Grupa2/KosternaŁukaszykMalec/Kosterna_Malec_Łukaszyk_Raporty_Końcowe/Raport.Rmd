@@ -1,0 +1,247 @@
+---
+title: "Raport"
+author: "Jakub Kosterna, Marcin Łukaszyk, Mikołaj Malec"
+date: "15/04/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Ogólnie
+
+**German credit data** to bardzo ładny zbiór danych pod naukę uczenia maszynowego. Jest on względnie nieduży, gdyż zawiera 1000-czną próbkę osób ubiegających się o kredyt, jednak jest przy tym wydaje się reprezentatywny (dane zdają się dobrze odzwierciedlać populację) i zawiera dużo informacji na temat każdego klienta.
+
+W ciągu ostatnich tygodni pierwszorzędnie dobrze zapoznaliśmy się z daną ramką danych, następnie przygotowaliśmy ją pod odpalania algorytmów machine learning, żeby na końcu wybrać ten jeden fajny model i go przetestować.
+
+# 2. Czyszczenie
+
+Pierwotna wersja data frame nie była najweselsza na świecie - zamiast ludzkich liczb czy jasnych wartości typu faktor, mieliśmy do czynienia z chaosem w postaci **dziwnych oznaczeń** takich jak widać na załączonym obrazku:
+
+![](grafika/01WstepnaTabela.png)
+
+Z pomocą przyszła **dokumentacja**, która rozwiała wszelkie możliwości. W celu dalszej pracy z naszymi danymi, podmieniliśmy skrótowe identyfikatory na ciągi znaków przyjazne użytkownikowi.
+
+![](grafika/02PierwszeCzyszczenie.png)
+
+Końcowy efekt zaprezentował się następująco:
+
+![](grafika/03TabelaPoPierwszymCzyszczeniu.png)
+
+Wielkim szczęściem okazał się za to fakt, że nasza ramka danych **nie zawierała braków ani niepokojących outlierów**.
+
+\newpage
+
+# 3. Eksploracja
+
+... dla tak przyjemnych i życiowych danych była czystą przyjemnością.
+
+Bardzo pomocny okazało się narzędzie **DataExplorer**, które pokazało wiele ciekawych zależności w tabeli automatycznie.
+
+Elegancki ogląd naszych danych otrzymaliśmy dzięki zaoferowanemu przez funkcję drzewko typów.
+
+![](grafika/R1DrzewoTypow.png)
+
+**Wykresy kolumnowe gęstości występowania danych** utwierdziły nas w przekonaniu, że z naszą ramką danych wszystko w porządalu.
+
+![](grafika/R2GestoscWystepowaniaDanych.png)
+
+Ładny ogląd balansu wartości dały nam **barcharty zmiennych numerycznych**.
+
+![](grafika/R3Barcharty1.png)
+
+![](grafika/R4Barcharty2.png)
+
+Bardzo przydatna okazała się także wizualizacja **QQplot** - dzięki niej dostaliśmy przystępny obraz wartości liczbowych w naszej dataframe oraz ich rozkład.
+
+![](grafika/R5QQplot.png)
+
+Także i **macierz korelacji** tym bardziej zbliżyła nas do pełnego pojęcia pełnego *german credit data* i wiele wartości pokryło się z naszą intuicją.
+
+![](grafika/R6MacierzKorelacji.png)
+
+Na koniez przyjrzeliśmy się jeszcze **wykresowi analizy głównych składowych**.
+
+![](grafika/R7AnalizaGlownychSkladowych.png)
+
+Oprócz tego postanowiliśmy sami przyjrzeć się wybranym cechom.
+
+Okazało się między innymi, że stereotypy można wyrzucić do kosza - mężczyźni o wiele częściej biorą kredyt ze względu na potrzebę funduszy na gospodarstwo domowe i nie widać znaczącej przewagi w stosunku do kobiet jeśli idzie o chęć postawienia pieniędzy na auto.
+
+Bez zaskoczeń o wiele częściej na dom stawiają mężczyźni po ślubie niż ci samotni czy rozwodnicy. Co ciekawe ci sami ani razu nie wzięli pożyczki na wyposażenie / meble [przynajmniej na te 1000 osobników], zaś rozwodnicy i separatyści… przeciwnie do pozostałych grup nie myślą tu wręcz wcale o dodatkowej mamonie na biznes.
+
+![](grafika/04PurpuseByMaritialStatus.png)
+
+Wychodzi również na to, że generalnie większym zaufaniem firma daży osoby starsze:
+
+![](grafika/05CustomerTypeByAge.png)
+
+Wyciągnęliśmy także wnioski na podstawie płci, wieku i stanu cywilnego.
+
+![](grafika/06CustomerTypeBySexMartialStatus.png)
+
+Dane mówią, że:
+
+1. Najmniej ufamy rozwiedzionym facetom - zwłaszcza tym po 30, im zwykle nie dajemy.
+2. Najbezpieczniejsi za to są też faceci po 30… ale single.
+3. Żonaci to też dobre ziomki.
+4. Kobiety są gorsze od mężczyzn, ale tylko przed 40. Potem raczej spokój, za wyjątkiem 70-tki psującej obraz.
+
+Jak można się było spodziewać, pożyczka chętniej jest także udzielana na krótszy okres czasu.
+
+![](grafika/07CustomerTypeByDuration.png)
+
+\newpage
+
+# 4. Kodowanie
+
+W ramach drugiego kamienia milowego dokonaliśmy szczegółowej analizy pod względem sensownego encodingu i **każdej kolumnie przyjrzeliśmy się pod lupą**.
+
+Spośród 21 kolumn, aż 14 okazało się być tekstowymi.
+
+Do czynienia mieliśmy z problemami:
+
+1. Prostych zmiennych binarnych
+2. Kolumn nominalnych
+3. Cech uporządkowanych
+
+![](grafika/08ZarobkiStazPracyWSkalach.png)
+
+4. Zmiennych mieszanych - zawierających w sobie po parę ciekawych informacji
+
+![](grafika/09Kodowanie.png)
+
+Końcowy efekt wyszedł encodingu wyszedł następujący:
+
+![](grafika/10KoncowyWynik.png)
+
+Tutaj kolory odpowiadające miarom:
+
+# 5. Poszukiwanie najlepszego modelu - dyskusja
+
+W celu wybrania tego jednego właściwego modelu, wpierw postanowiliśmy podzielić się popularnymi znanymi już przez nas metodami i indywidualne zajęcie się nimi.
+
+**Rozpatrzyliśmy i przetestowaliśmy dla różnych hiperparametrów cztery algorytmy uczenia maszynowego**:
+
+1. Drzewo klasyfikacyjne i lasy losowe
+
+2. Regresja liniowa
+
+3. K-najbliższych sąsiadów
+
+4. Naiwny klasyfikator bayesowski
+
+... przy czym dla pierwszych trzech przygotowaliśmy dłuższe skrypty i raporty w formacie .Rmd - można je znaleźć pod [kolejno] *KM3Drzewa.Rmd*, *KM3Regresja.Rmd* i *KM3knn.Rmd*.
+
+Efekty testowania mniej godne zraportowania znajdują się także w pojedynczych skryptach: *lm.r*, *nb.r* i *knn.r*.
+
+Ku porównaniu efektów modeli postanowiliśmy porównywać cztery chyba najbardziej podstawowe w tej kwestii, ale i przy tym dające ogrom informacji miary: **accuracy**, **precision**, **recall** i **f1**.
+
+![](grafika/11MiaryOcenaKlasyfikatora.png)
+
+## 5.1. Drzewo klasyfikacyjny i las losowy
+
+Uruchomienie algorytmu z pakietu *rpart* dało mało satysfakcjonujący wynik w myśli o logice biznesowej.
+
+![](grafika/12DrzewkoPrymitywne.png)
+
+W celu znalezienia najlepszych hiperparametrów, porównywaliśmy między innymi miary dla kolejnych maksymalnie narzuconych głębokości drzewa.
+
+![](grafika/13SzukanieDobregoHyperparametruDrzewko.png)
+
+Tutaj:
+
+* żółty - *accuracy*
+* niebieski - *precision*
+* zielony - *recall*
+* czerwony - *f1*
+
+Biorąc pod uwagę ideę naszego problemu, zdecydowaliśmy się na to z głębokością 6.
+
+Prezentuje się ono tak:
+
+![](grafika/14DrzewoNajlepsze.png)
+
+Zajęliśmy się także **lasami losowymi** i koniec końców porównaliśmy otrzymane miary.
+
+W efekcie otrzymaliśmy taką oto tabelkę:
+
+![](grafika/15PorownanieMiar.png)
+
+
+Ze względu na koncepcję naszego zadania, stwierdziliśmy, że **sumarycznie najlepiej wypada drzewo losowe o głębokości 6**.
+
+## 5.2. k najbliższych sąsiadów
+
+... napisaliśmy oczywiście ze wskazaną wcześniejszą **normalizacją**.
+
+![](grafika/K1Normalizacja.png)
+
+Również i tutaj przeszukaliśmy różne hyperparameters w celu znalezienia tego najlepszego.
+
+Najbardziej satysfakcjonujący wydał się **efekt dla k = 26**.
+
+![](grafika/K2NajlepszeK.png)
+
+Finalnie otrzymaliśmy *acccuracy* na poziomie 70%, a *confusion matrix* zaprezentował się tak:
+
+![](grafika/K3ConfusionMatrix.png)
+
+## 5.3. Regresja liniowa
+
+Tutaj z pomocą przyszła nam funkcja *glm()*. Po dopasowaniu dobry obraz dała nam także metoda *summary*, ładnie podsumowująca co automatyczne narzędzie utworzyło.
+
+![](grafika/Reg1GlmFit.png)
+
+Tak zaimplementowana regresja liniowa nie daje binarnego dopasowania tak / nie, lecz prawdopodobieństwa na owe dwa stany. Postanowiliśmy najprościej - i chyba na tym poziomie najlepiej - przyjąc, że **jeśli p-stwo na "tak" >50% - klient został uznany za zdolnego finansowo**. Jeśli nie - przeciwnie.
+
+![](grafika/Reg2Accuracy.png)
+
+Macierz pomyłek i wcześniej zaplanowane badane miary zaprezentowały się następująco:
+
+![](grafika/Reg3ConfusionMatrix.png)
+
+![](grafika/Reg4Miary.png)
+
+W celu uzyskania potencjalnie lepszych wyników postanowiliśmy także pozbyć się tych kolumn, które według *summary()* najmniej wpływaną na model.
+
+![](grafika/Reg5Miary2.png)
+
+Miary nie okazały się być jednak lepsze.
+
+Bardziej satysfakcjonujący wynik dało za to usunięcie zmiennych:
+
+* *age*
+* *is_foreign_worker*
+* *present_employment*
+* *property*
+* *checking_account_status*
+* *is_single*
+
+Tutaj już radość została osiągnięta.
+
+![](grafika/Reg6Miary3.png)
+
+Ostatecznie postanowiliśmy jeszcze wziąć tylko pięć kolumn o największym znaczeniu według *summary()*.
+
+![](grafika/Reg7Miary4.png)
+
+... taki model okazał się jednak bardzo zły, gdyż wszystkie obserwacje zostały zaklasyfikowane jako prawdziwe.
+
+**Podsumowując** najlepszy okazał się model pierwszy - chyba, że najważniejsze znaczenie miałoby mieć *recall* - wtedy przy nieco gorszym *precision* i *accuracy* wygrywa model nieuwzględniający wspomnianych wcześniej sześciu parametrów.
+
+# 6. Wybór najlepszego algorytmu uczenia maszynowego i implementacja
+
+**BAYES??**
+
+**TODO**
+
+# 7. Zakończenie
+
+To by było na tyle.
+
+Mamy nadzieję, że się podobało; ja myślę, że fajna robota (dopowiedź: Kuba).
+```{r session_info}
+sessionInfo()
+```

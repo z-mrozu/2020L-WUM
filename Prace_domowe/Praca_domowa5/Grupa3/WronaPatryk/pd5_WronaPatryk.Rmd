@@ -1,0 +1,334 @@
+---
+title: "WUM - Praca domowa 5"
+author: "Patryk Wrona"
+date: "03.05.2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true 
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(clValid)
+library(ggplot2)
+library(RColorBrewer)
+library(igraph)
+
+set.seed(666)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+
+```
+
+# Goal & used methods
+
+I will work on a 2 dimensional numeric dataset with aim to divide the observations into 'convenient' number of clusters. The main goal is not to label the observations but to get insight into data - determining also the most appropriate number of clusters.
+
+Used clustering algorithms with respective methods(in parentheses) of determining the best number of clusters:
+
+- kmeans (tot.withinss)
+- hclust agglomerative clustering (Dunn's index)
+- spectral clustering (visual method)
+
+# Loading data & Exploratory Data Analysis
+
+```{r}
+clustering <- read.csv("../../clustering.csv", header = FALSE)
+
+```
+
+Let's see the dimensions of the dataset:
+
+```{r}
+dim(clustering)
+```
+
+This dataset has 2 variables/columns and 400 observations/rows.
+
+```{r}
+str(clustering)
+```
+
+Both variables are numeric. In this case, I will calculate their respective means and variance:
+
+```{r}
+# MEANS
+colMeans(clustering)
+```
+
+The means of our variables are distinct; we will have to scale them in order to achieve better performance. 
+
+```{r}
+# THE VARIANCE:
+apply(clustering, 2, sd)**2
+```
+
+
+The variance among the variables is high, thus both variables are crucial in our clustering and we must keep them in our analysis.
+
+```{r}
+summary(clustering)
+```
+
+The maximal and minimal values of each variable are comparable - the difference seems to be negligeable. Although the difference in means is not considerable, I will scale both variables for better performance:
+
+```{r}
+df <- clustering # saving the original dataset
+clustering <- scale(clustering, scale = T, center = T)
+```
+
+
+# kmeans
+
+Now I will calculate total within sum of squares error in function of number of clusters passed to kmeans() function. I set the number of random interations to 20.
+
+```{r}
+# Initializing total within sum of squares error:
+wss <- 0
+
+# For 1 to 15 cluster centers
+for (i in 1:15) {
+  km <- kmeans(clustering, centers = i, nstart = 20)
+  # Saving total within sum of squares to wss variable
+  wss[i] <- km$tot.withinss
+}
+```
+
+and plot the results:
+
+```{r}
+# Plotting total within sum of squares vs. number of clusters
+plot(1:15, wss, type = "b", 
+     xlab = "Number of clusters", 
+     ylab = "Total Within groups sum of squares")
+```
+
+From the plot we can deduce that the number of clusters by looking at the elbow position. The perfect number of clusters is between 4 and 8. I'll choose 8 to create the plot in 'conclusion' section.
+
+# hclust
+
+I will use agglomerative clustering **hclust()** using the **average** method as input. Determining the best number of clusters is achieved by **maximizing** the Dunn's index.
+
+Dunn's index is defined as the quotient: minimum intercluster distance / maximum cluster diameter.
+
+```{r}
+# Initializing the Dunn's index:
+dunn <- 0
+
+# For 2 to 15 cluster centers - 1 cluster results in Inf Dunn's index
+for (i in 2:15){
+  hclust.av <- hclust(d = dist(clustering), method = "average")
+  hclust.labels <- cutree(hclust.av, k = i)
+  dunn[i] <- dunn(clusters = hclust.labels, Data = df, method = "euclidean")
+}
+
+```
+
+and plot the results:
+
+```{r}
+# Plotting total within sum of squares vs. number of clusters
+plot(1:15, dunn, type = "b", 
+     xlab = "Number of clusters", 
+     ylab = "Dunn's index")
+```
+
+According to Dunn's index 2 clusters are classified as the best. Nevertheless, I assume that this number should be higher than 2 so in **conclusions section** I will show the labeling of hclust using **2, 5 and 8 clusters**. Effectively, 2 clusters have the highest Dunn's index while 5 and 8 were already indicated by kmeans and in the above plot they are indicated by *relatively high Dunn's index*.
+
+# spectral clustering
+
+I implemented my own version of spectral clustering. It bases on k-nearest neighbors, graph laplacian, voronoi diagram and kmeans - all steps can be seen in the script *spectral_clustering.R* . 
+
+```{r, echo = FALSE, include = FALSE}
+source('./spectral_clustering.R')
+```
+
+My function input and output description can be read in *spectral_clustering.R* script. It takes the number of clusters k and the number of nearest neighbors M. Let's have a glance at our dataset: 
+
+```{r}
+plot(asp=1, x = df$V1, y = df$V2, xlab = "V1", ylab = "V2",
+     main = "The original dataset without labels")
+```
+
+It seems like there can be dinstinguished up to 8 clusters - higher number of clusters would be an exaggeration. I will try using from 4 up to 8 clusters and compare the results.
+
+Deducing from the above plot, the clusters have comparable number of data points within them - about [number of oservations/number of clusters] - that is 400/8 = 50. I will use 50 nearest neighbors (M parameter) and invest the results. Now I'll use unscaled dataset in my plots.
+
+### 4 clusters
+
+```{r}
+spectral <- spectral_clustering(as.matrix(clustering), k = 4, M = 50)
+
+plot(asp=1, x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
+     main = "spectral clustering with 4 clusters")
+```
+
+### 5 clusters
+
+
+```{r}
+spectral <- spectral_clustering(as.matrix(clustering), k = 5, M = 50)
+
+plot(asp=1, x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
+     main = "spectral clustering with 5 clusters")
+
+# Conclusion & plots
+```
+
+### 6 clusters
+
+
+```{r}
+spectral <- spectral_clustering(as.matrix(clustering), k = 6, M = 50)
+
+plot(asp=1, x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
+     main = "spectral clustering with 6 clusters")
+
+# Conclusion & plots
+```
+
+### 7 clusters
+
+
+```{r}
+spectral <- spectral_clustering(as.matrix(clustering), k = 7, M = 50)
+
+plot(asp=1, x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
+     main = "spectral clustering with 7 clusters")
+
+# Conclusion & plots
+```
+
+### 8 clusters
+
+
+```{r}
+spectral <- spectral_clustering(as.matrix(clustering), k = 8, M = 50)
+
+plot(asp=1, x = df$V1, y = df$V2, col = spectral, xlab = "V1", ylab = "V2",
+     main = "spectral clustering with 8 clusters")
+
+# Conclusion & plots
+```
+
+The clustering with 8 clusters is visually the best - almost all clusters are compact and separated.
+
+An important factor to spectral clustering is **how connecting a graph** (used in this algorithm) **is actually implemented**. The results may vary depending on implementation but I am satisfied with the above result.
+
+
+# Conclusion & plots
+
+In conclusion, methods of infering *the most convenient* number of clusters indicated the below results:
+
+- kmeans -> 4-8 clusters
+- hclust -> 2 or 5-8 clusters
+- spectral clustering -> 8 clusters, but 4-7 also envisageable
+
+Now I will show the clustering with hclust using 2 clusters - just for curiosity.
+
+Let's remind how the dataset looked like:
+
+```{r}
+plot(asp=1, x = df$V1, y = df$V2, xlab = "V1", ylab = "V2",
+     main = "The original dataset without labels")
+```
+
+
+
+```{r}
+hclust.labels <- hclust(dist(clustering), method = "average")
+plot(asp=1, x = df$V1, y = df$V2, col = cutree(hclust.labels ,k = 2), xlab = "V1", ylab = "V2",
+     main = "hclust average with 2 clusters")
+```
+
+I must admit that I expected the above result - the distance between *the cluster in the top left corner* and *the rest of dataset* is the highest among all *compact clusters*.
+
+
+Now, I will **compare the clustering algorithms fixing the number of clusters to 8** - this number was favoured among all methods. It will be a good idea to compare 3 excellent clusterizations to deduce the best algorithm and its result.
+
+```{r}
+# clustering: 
+km <- kmeans(clustering, centers = 8, nstart = 20)$cluster
+hc <- cutree(hclust(dist(clustering), method = "average") ,k = 8)
+sc <- spectral_clustering(as.matrix(clustering), k = 8, M = 50)
+```
+
+```{r}
+# labeling clusters:
+km <- km %>% as.data.frame() %>% mutate(method = "kmeans")
+hc <- hc %>% as.data.frame() %>% mutate(method = "hclust")
+sc <- sc %>% as.data.frame() %>% mutate(method = "spectral")
+
+colnames(km) <- c("cluster", "method")
+colnames(hc) <- c("cluster", "method")
+colnames(sc) <- c("cluster", "method")
+```
+
+
+```{r}
+data_km <- cbind(df, km)
+data_hc <- cbind(df, hc)
+data_sc <- cbind(df, sc)
+
+data <- rbind(data_km, data_hc, data_sc)
+```
+
+Plotting the results:
+
+```{r}
+ggplot(data = data, aes(x = V1, y = V2)) + geom_point(aes(colour = factor(cluster))) + facet_wrap(~ method) + 
+  coord_fixed(ratio = 1, expand = TRUE, clip = "on") + theme(legend.position = "none")
+```
+
+Having looked at the plot I can see that in some areas spectral clustering was better, while in the other areas the hierarchical clustering had better patterns than the other 2 clustering algorithms.
+
+I could use total within sum of squares or Dunn's index but I will leave it as it is, for the difference is really small. The method of connecting graph in spectral clustering algorithm could still be ameliorated.
+
+Additionally, I will **show the clustering algorithms fixing the number of clusters to 5**
+
+```{r}
+# clustering: 
+km <- kmeans(clustering, centers = 5, nstart = 20)$cluster
+hc <- cutree(hclust(dist(clustering), method = "average") ,k = 5)
+sc <- spectral_clustering(as.matrix(clustering), k = 5, M = 50)
+```
+
+```{r}
+# labeling clusters:
+km <- km %>% as.data.frame() %>% mutate(method = "kmeans")
+hc <- hc %>% as.data.frame() %>% mutate(method = "hclust")
+sc <- sc %>% as.data.frame() %>% mutate(method = "spectral")
+
+colnames(km) <- c("cluster", "method")
+colnames(hc) <- c("cluster", "method")
+colnames(sc) <- c("cluster", "method")
+```
+
+
+```{r}
+data_km <- cbind(df, km)
+data_hc <- cbind(df, hc)
+data_sc <- cbind(df, sc)
+
+data <- rbind(data_km, data_hc, data_sc)
+```
+
+Plotting the results:
+
+```{r}
+ggplot(data = data, aes(x = V1, y = V2)) + geom_point(aes(colour = factor(cluster))) + 
+  facet_wrap(~ method, scales = "fixed", shrink = FALSE) + 
+  coord_fixed(ratio = 1, expand = TRUE, clip = "on") + 
+  theme(legend.position = "none")
+```
+
+Now I would say that hclust performed the best and kmeans the worst. Nevertheless, it is happy to see that my implementation of spectral clustering algorithm had slightly better results than simple kmeans algorithm - I remind that spectral clustering uses kmeans so it would be expected that it performs better. On the other hand, it has mush higher computational cost and some unstability probably due to the simplest possible connecting method in the graph.
+
+For this dataset, I would recommend **8 clusters** because of more compact clusters in the plots.
+
+# Oświadczenie
+
+Potwierdzam samodzielność powyższej pracy oraz niekorzystanie przeze mnie z niedozwolonych źródeł.
