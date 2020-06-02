@@ -1,4 +1,5 @@
-### Link do spotkania: https://us04web.zoom.us/j/73846521385?pwd=dlE4TW4rYVNNM1QvTGZQbXFFVzEvQT09
+### Link do spotkania: 
+https://us04web.zoom.us/j/73846521385?pwd=dlE4TW4rYVNNM1QvTGZQbXFFVzEvQT09
 ### Meeting ID: 738 4652 1385
 ### Password: 3VMVJF
 
@@ -9,4 +10,9 @@ Wstęp do metod klasteryzujących.
 - DBSCAN
 - Gaussian Mixture Models
 
-19:00 **Konsultacje**
+### 
+19:00 **Ankieta**
+
+https://forms.gle/EziHBsj8X3uD6Aew5
+
+19:10 **Konsultacje**
