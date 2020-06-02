@@ -18,7 +18,7 @@ Z mojego doświadczenia sprawiają najmniej problemów.
 * Inicjatywa własna zawsze mile widziana. Będzie nam również miło, jeśli poświęcicie chwilę na dobór ładnego/ciekawego/mającego inne walory obrazka. Jest to jednak oczywiście fakultatywne.
 
 ## Zadanie dodatkowe
-Nieostrożny prowadzący zbierał pomiary z czterech źródeł. Niestety pomylił się i pomieszał je ze sobą, kombinując liniowo te cztery sygnały. Czy pomożecie biednemu prowadzącemu odzyskać oryginalne pomiary? Plik z pomieszanymi pomiarami to 'signals.tsv'.  
+Nieostrożny prowadzący zbierał pomiary z czterech źródeł. Niestety pomylił się i pomieszał je ze sobą, kombinując liniowo te cztery sygnały. Czy pomożecie biednemu prowadzącemu odzyskać oryginalne pomiary? Plik z pomieszanymi pomiarami to `signals.tsv`.  
 Rada: pomocne może być zastosowanie algorytmu Independent Component Analysis.
 
 Uprzedzając pytania jak prowadzący mógł kombinować liniowo sygnały i tego nie zauważyć:
