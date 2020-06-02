@@ -1,0 +1,141 @@
+---
+title: "Praca domowa nr 6"
+author: "Marceli Korbin"
+date: "2 czerwca 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dbscan)
+library(ClusterR)
+library(plotly)
+library(fpc)
+library(FNN)
+library(clusterSim)
+library(factoextra)
+```
+
+## Wstęp
+
+Na zbiorze danych _clustering\_R3.csv_ przetestujemy jeszcze inne dwie metody klasteryzacji. W zbiorze znajdują się trzy kolumny liczb, które można przedstawić punktami na układzie współrzędnych.
+
+```{r dane_orygianlne}
+dane_oryg <- read.csv("../../clustering_R3.csv")
+head(dane_oryg)
+tail(dane_oryg)
+plot_ly(x=dane_oryg$X1, y=dane_oryg$X2, z=dane_oryg$X3, type="scatter3d", mode="markers", size=1)
+plot(dane_oryg)
+```
+
+Wymiary są bardzo różnego zasięgu, więc przed pracą należałoby je przeskalować.
+
+```{r dane_do_pracy}
+dane <- dane_oryg
+for (x in 1:3)
+  dane[,x] <- scale(dane[,x])
+head(dane)
+tail(dane)
+```
+
+### Funkcja do wykresów
+
+Do przedstawienia wyników klasteryzacji definiuję sobie funkcję:
+
+```{r graphfun}
+wykres <- function(da, q) {
+  kolory <- unique(q)
+  rbow <- rainbow(length(kolory))
+  if (0 %in% kolory){
+    q[q==0] <- max(kolory)+1
+    rbow <- c(rainbow(length(kolory)-1), "#000000FF")
+  }
+  fig <- plot_ly(x=da$X1, y=da$X2, z=da$X3,
+                 color=q, colors=rbow,
+                 type="scatter3d", mode="markers",
+                 size=1)
+  fig
+}
+```
+
+## DBSCAN
+
+W przeciwieństwie do metod z pracy domowej nr 5 oraz tej, która jeszcze się pojawi, DBSCAN samowolnie wyznacza liczbę klastrów do podzielenia danych. Problemem może jednak być prawidłowy dobór parametrów _ε_ i _minPts_. Udało mi się te wartości samodzielnie dobrać w taki sposób, żeby podział na klastry wyglądał możliwie "naturalnie", ale najpierw przedstawię sposób estymacji proponowany przez, ekhem, [fachowców](https://www.vitavonni.de/research/acm.html#item3068335).
+
+Parametr _minPts_ powinien być większy od liczby wymiarów o co najmniej 1, zatem w tym wypadku minimum wynosi 4.
+
+Epsilon należy wyznaczyć bardziej doświadczalnie. Proponowaną metodą jest przedstawienie na wykresie odległości każdego punktu od k-tego najbliższego sąsiada, posortowanych od największej do najmniejszej, gdzie _k_ = _minPts_-1. Optymalna wartość epsilona zostaje wyznaczona w miejscu "zgięcia łokcia".
+
+Do obliczenia k najbliższych sąsiadów (co jest tutaj czymś innym, niż dobrze nam znany model ML) używam pakietu _FNN_.
+
+```{r epsilon_est}
+knn_3 <- get.knn(dane, k=3)
+plot(1:1000, sort(knn_3[[2]][,3], decreasing=T), xlab="3NN", ylab="dystans")
+```
+
+Tym razem pozwolę sobie przyjąć miejsce zgięcia na oko, bez obliczeń obecnych poprzednim razem. Tym samym biorę _ε_ = 0,25.
+
+Niżej wynik klasteryzacji, obliczony na skalowanych danych, ale nałożony już na oryginalne. Czarne punkty nie zostały przyporządkowane do żadnego skupienia:
+
+```{r dbscan1}
+dbs <- dbscan(dane, 0.25, 4)
+clu0 <- dbs$cluster
+wykres(dane_oryg, clu0)
+```
+
+Parametry, które udało mi się ręcznie ustalić jako te optymalne, to tymczasem _ε_ = 0,4 i _minPts_ = 3.
+
+```{r dbscan2}
+dbs2 <- dbscan(dane, 0.4, 3)
+clu1 <- dbs2$cluster
+wykres(dane_oryg, clu1)
+```
+
+## GMM
+
+Tutaj najpierw wybieram liczbę klastrów. Tak jak dwa tygodnie temu, zastosuję _fviz\_nbclust_ z pakietu _factoextra_.
+
+```{r kmeans}
+fviz_nbclust(dane, kmeans, method="silhouette")
+```
+
+Wskazaną liczbą klastrów jest 2. GMM nie przyporządkowuje od razu punktów do klastrów, a jedynie wyznacza prawdopodobieństwo, z jakim punkty należą do każdego z nich. Wciąż, można na podstawie tego szybko uzyskać optymalny podział.
+
+```{r gmm}
+gmm <- GMM(dane, gaussian_comps=2)
+clu2 <- apply(gmm$Log_likelihood, 1, which.max)
+wykres(dane_oryg, clu2)
+```
+
+## Porównanie wyników
+
+Do porównania jakości klasteryzacji zastosuję współczynnik Silhouette i indeks Daviesa–Bouldina. W skrócie, współczynnik Silhouette daje informację, na ile podobne obserwacje są do swoich klastrów w porównaniu do innych. Miara przyjmuje wartości od -1 do 1, gdzie im wyższa wartość, tym mocniejsze przywiązanie obserwacji do jej skupienia. Indeks Daviesa-Bouldina natomiast ocenia klasteryzację na podstawie wartości i cech wywodzących się ze zbioru danych.
+
+Jako reprezentację wyników DBSCAN wykorzystam podział dokonany z ręcznymi parametrami (0,4 i 3).
+
+### Współczynniki Silhouette
+
+```{r silhouette}
+staty1 <- cluster.stats(dist(dane), clu1)
+staty2 <- cluster.stats(dist(dane), clu2)
+# współczynniki dla klastrów i średni współczynnik dla całego podziału
+staty1$clus.avg.silwidths
+staty1$avg.silwidth
+staty2$clus.avg.silwidths
+staty2$avg.silwidth
+```
+
+### Indeksy Daviesa-Bouldina
+
+```{r dbindex}
+db1 <- index.DB(dane, clu1)
+db2 <- index.DB(dane, clu2)
+db1$DB
+db2$DB
+```
+
+Wyniki są dosyć nieoczywiste. Metoda GMM daje średnio lepszy współczynnik Silhouette, ale o dużo więcej wyższy indeks Daviesa-Bouldina osiągnęła metoda DBSCAN. Co więcej, biorąc pod uwagę mniejsze zautomatyzowanie DBSCAN, czyli że użytkownik sam wybiera parametry i może nią osiągnąć bardziej "pożądane" wyniki, to tę metodę wolałbym wyróżnić.
+
+## Oświadczenie
+
+_Oświadczam, że niniejsza praca stanowiąca podstawę do uznania osiągnięcia efektów uczenia się z przedmiotu **Wstęp do uczenia maszynowego** została wykonana przeze mnie samodzielnie._
