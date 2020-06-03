@@ -1,0 +1,95 @@
+---
+title: "Praca Domowa 1"
+author: "Michał Wdowski"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+[Dane](https://www.mldata.io/dataset-details/bank_marketing/) zawierają informacje o klientach pewnego kredytodawcy.
+```{r}
+# wczytanie i wyświetlenie
+data <- read.csv("bank_marketing_dataset.csv")
+head(data)
+```
+Zobaczmy jak na pierwszy rzut oka prezentują się wartości w kolumnach.
+```{r}
+summary(data)
+# factory się ładnie załadowały, ładne dane, thank you kanye, very cool
+```
+Wartości typu factor dobrze załadowały się od razu, nie trzeba ich konwertować.
+
+Przyjrzyjmy się rozkładom:
+```{r}
+# teraz się samo będzie działo
+library(DataExplorer)
+library(ggplot2)
+plot_density(data)
+# Age - raczej ludzie po 30 zaczynają bardziej, po 60 nagły spadek
+# Balance - raczej ci co mają mniej pieniędzy
+# Campaign - rozkład wykładniczy (?) - ludzie raczej kontaktują się mało razy
+# Day - i tu jest ciekawie. Z jakiegoś powodu są górki i dołki. Może to dni wypłaty/przed wypłatą? Może to się pokrywa z dniami tygodnia też
+# Duration - czas trwania ostatniego kontaktu? W każdym razie jest to zwykle coś koło 200, potem gwałtownie coraz krócej
+# Pday - czas od kiedy ostatnia kampania była - raczej jest -1, czyli że nie było wcześniej
+    # potem jest kilka górek, wyglądają jak 3 miesiące, 6 miesięcy i rok od osatniej
+# Previous - ile było kampanii wcześniej - znowu raczej mało, potem gwałtowny spadek, wykładniczy (?)
+```
+* Age - raczej ludzie po 30 zaczynają bardziej, po 60 nagły spadek
+* Balance - raczej ci co mają mniej pieniędzy
+* Campaign - rozkład wykłądniczy (?) - ludzie raczej kontaktują się mało razy
+* Day - i tu jest ciekawie. Z jakiegoś powodu są górki i dołki. Może to dni wypłaty/przed wypłatą? Może to się pokrywa z dniami tygodnia też
+* Duration - czas trwania ostatniego kontaktu? W każdym razie jest to zwykle coś koło 200, potem gwałtownie coraz krócej
+* Pday - czas od kiedy ostatnia kampania była - raczej jest -1, czyli że nie było wcześniej, potem jest kilka górek, wyglądają jak 3 miesiące, 6 miesięcy i rok od osatniej
+* Previous - ile było kampanii wcześniej - znowu raczej mało, potem gwałtowny spadek, wykładniczy (?)
+
+Zróbmy podsumowanie dla danych dyskretnych:
+```{r}
+# samo się dzieje pt.2
+# btw musiałem zrobić większe ncol, bo inaczej się robiły dwie strony
+    # pokazywało jeden wykres, bo pozostałe 9 było gdzie indziej
+plot_bar(data)
+# Job - raczej ludzie z "lepszych" prac, bardziej biurowych
+# Marital - raczej w małżeństwie
+# Education - raczej średnie wykształcenie
+# Default - prawie nikt nie zwleka ze spłatą kredytu
+# Housing - ~60% ma dom
+# Loan - tak z 80-90% nie ma kredytu
+# Contact - zdecydowanie kontakt przez komórkę, sporo nieznanych
+# Month - raczej miesiące (przed)wakacyjne, potem listopad (bo święta?)
+# Poutcome - wyniki wczesniejszych kampanii - raczej unknown (to chyba że nie było wcześniej kampanii), a ~połowa pozostałych to porażka
+# Y - wyniki czy się udało czy nie - tak trochę ponad 10% się udaje
+```
+* Job - raczej ludzie z "lepszych" prac, bardziej biurowych
+* Marital - raczej w małżeństwie
+* Education - raczej średnie wykształcenie
+* Default - prawie nikt nie zwleka ze spłatą kredytu
+* Housing - ~60% ma dom
+* Loan - tak z 80-90% nie ma kredytu
+* Contact - zdecydowanie kontakt przez komórkę, sporo nieznanych
+* Month - raczej miesiące (przed)wakacyjne, potem listopad (bo święta?)
+* Poutcome - wyniki wczesniejszych kampanii - raczej unknown (to chyba że nie było wcześniej kampanii), a ~połowa pozostałych to porażka
+* Y - wyniki czy się udało czy nie - tak trochę ponad 10% się udaje
+
+Na koniec została tabela z korelacjami:
+```{r}
+plot_correlation(data)
+# z jakiegoś powodu contact-unknown dośc dobrze koreluje z month-may i month-june
+# month-may koreluje z housing-yes (czyli burżuje landlords złodzieje jeżdzą na wakacje sobie pewnie)
+# y koreluje z duration - czyli jak kontakt (rozmowa?) jest długi, to sie dogadują i biorą kredyt
+# poutcome-success koreluje z y-yes - czyli jak kiedyś wzięli u nas kredyt, to jak wrócą, to do nas
+# wykształcenie wyższe i praca w management korelują mocno
+# job-retired koreluje z wiekiem - ma sens, starzy ludzie idą na emeryturę
+# podobnie z wiekiem koreluje stan cywilny, bycie studentem
+```
+* z jakiegoś powodu contact-unknown dośc dobrze koreluje z month-may i month-june
+* month-may koreluje z housing-yes (czyli burżuje landlords złodzieje jeżdzą na wakacje sobie pewnie)
+* y koreluje z duration - czyli jak kontakt (rozmowa?) jest długi, to sie dogadują i biorą kredyt
+* poutcome-success koreluje z y-yes - czyli jak kiedyś wzięli u nas kredyt, to jak wrócą, to do nas
+* wykształcenie wyższe i praca w management korelują mocno
+* job-retired koreluje z wiekiem - ma sens, starzy ludzie idą na emeryturę
+* podobnie z wiekiem koreluje stan cywilny, bycie studentem
+
+Co do create_report to bardzo fajne, ale jak się robi dużo kolumn, to mało widać. Lepiej by było, gdyby dało się zapisać te wykresy gdzieś oddzielnie, i wtedy dało by się to analizować wygodniej. 

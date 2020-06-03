@@ -1,0 +1,125 @@
+---
+title: "Raport - milestone 3"
+author: "Piotr Sieńko, Jacek Wiśniewski, Konrad Welkier"
+date: "20 04 2020"
+output: html_document
+---
+
+## Przygotowanie danych
+
+Najważniejsze punkty:
+
+*  wczytujemy zbiór, który jest już wstępnie przetworzony (po imputacji danych)
+*  tworzymy jedną zmienną celu - kolumnę Cancer, która mówi czy w jednym z badań pacjent otrzymał wynik pozytywny
+*  zmienne kategoryczne zostają zamienione na faktory, natomiast pozostałe podlegają normalizacji
+*  zbiór zostaje podzielony na część treningową i testową w proporcji 70:30
+*  liczba pacjentów z wynikami pozytywnymi została podwojona
+
+```{r, message = FALSE, warning=FALSE}
+library(patchwork)
+library(mlr)
+library(DALEXtra)
+library(tuneRanger)
+data <- read.csv("Filled_data.csv")
+data[is.na(data)] <- -1
+
+# Jedna zmienna celu
+data$Cancer <- ifelse((data$Biopsy == 1 | data$Citology == 1 | data$Schiller == 1 | data$Hinselmann == 1), 1, 0)
+
+# Usuwanie zbędnych danych
+data <- data[,-c(25:28)]
+
+# Zamiana zmiennych kategorycznych na faktory
+for (i in c(2, 4, 5, 8, 10, 12:18, 21:24)) {
+  data[,i] <- as.factor(data[,i])
+}
+data[,"Cancer"] <- as.factor(data[,"Cancer"])
+
+# Normalizacja
+data[, c(1,3,6,7,9,11)] <- normalizeFeatures(data[, c(1,3,6,7,9,11)])
+
+# Dzielenie na testowy i treningowy
+n <- sample(1:nrow(data), 0.7* nrow(data))
+data_train <- data[n,]
+data_test <- data[-n,]
+
+# Zdublowanie wyników pozytywnych
+data_positive <- data_train[data_train$Cancer == 1, ]
+data_train_extra <- rbind(data_train, data_positive)
+data_train_extra <- data_train_extra[sample(nrow(data_train_extra), replace = FALSE),]
+
+```
+
+## Model Ranger
+
+
+```{r, message = FALSE, warning=FALSE}
+result = NULL
+for (i in 1: 5){ 
+classif_task_4 <- makeClassifTask(data = data_train_extra, target = "Cancer", positive = 1)
+classif_lrn_4 <- makeLearner("classif.ranger", par.vals = list( "num.trees" = 2500), predict.type = "prob")
+
+res_ranger <- tuneRanger(classif_task_4, measure = list(gmean), num.threads = 6, num.trees = 2500)
+
+
+pred_ranger <- predict(res_ranger$model, newdata = data_test)
+
+performance_ranger <- performance(pred_ranger, measures = list(gmean, auc, tpr, tnr))
+result <- rbind(result, performance_ranger)
+}
+
+knitr::kable(result)
+```
+
+## Model Gradient Boosting Machine
+
+```{r, message = FALSE, warning=FALSE, cache=TRUE}
+task <- makeClassifTask(data = data_train_extra, target = "Cancer", positive = 1)
+lrn <- makeLearner("classif.gbm", par.vals = list(distribution = "bernoulli", "n.trees" = 10000,
+                                                  "interaction.depth" = 2, "n.minobsinnode" = 10, "shrinkage" = 0.01), predict.type = "prob")
+
+
+gbm_ps = makeParamSet(
+  makeIntegerParam("interaction.depth", lower = 1, upper = 10),
+  makeIntegerParam("n.minobsinnode", lower = 1, upper = 10),
+  makeNumericParam("shrinkage", lower = -10, upper = -1, trafo = function(x) 2^x)
+)
+
+cv <- makeResampleDesc("CV", iter = 5, stratify = TRUE)
+ctrl_random <- makeTuneControlRandom(maxit = 5)
+res_random <- tuneParams(lrn, task = task, resampling = cv,
+                         par.set = gbm_ps, control = ctrl_random, list(auc, gmean, tpr))
+
+
+model_random <- train(res_random$learner, task)
+
+gbm_cv <- resample(lrn, task, cv, measures = list(tpr, tnr, f1, auc, gmean))
+
+
+pred_gbm <- predict(model_random, newdata = data_test)
+
+performance_gbm <- performance(pred_gbm, measures = list(tpr, tnr, f1, auc, gmean))
+
+knitr::kable(performance_gbm)
+```
+
+## Porównanie
+
+```{r, message = FALSE, warning=FALSE, fig.width=15, fig.height=10}
+explainer_gbm <- explain_mlr(model_random, data = data_test, y = as.numeric(data_test$Cancer), label = "gbm")
+explainer_ranger <- explain_mlr(res_ranger$model, data = data_test, y = as.numeric(data_test$Cancer), label = "ranger")
+
+vi_gbm <- variable_importance(explainer_gbm, loss_function = loss_root_mean_square)
+vi_ranger <- variable_importance(explainer_ranger, loss_function = loss_root_mean_square)
+plot(vi_gbm, vi_ranger)
+
+pdp_gbm  <- variable_effect(explainer_gbm, variable =  "Age", type = "partial_dependency")
+pdp_ranger  <- variable_effect(explainer_ranger, variable =  "Age", type = "partial_dependency")
+plot(pdp_gbm, pdp_ranger)
+
+bd_gbm <- predict_parts(explainer_gbm, new_observation = data_test[1,])
+bd_ranger <- predict_parts(explainer_ranger, new_observation = data_test[1,])
+
+plot(bd_gbm) | plot(bd_ranger)
+
+```

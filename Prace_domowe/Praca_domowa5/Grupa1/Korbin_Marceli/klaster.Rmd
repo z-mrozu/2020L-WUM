@@ -1,0 +1,92 @@
+---
+title: "Praca domowa nr 5"
+author: "Marceli Korbin"
+date: "18 maja 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(factoextra)
+```
+
+## Wstęp
+
+Na zbiorze danych _clustering.csv_ przetestujemy dwie metody klasteryzacji. W zbiorze znajdują się dwie kolumny liczb z zakresu od około -100 do około 100, które można przedstawić punktami na układzie współrzędnych.
+
+```{r data}
+dane <- read.csv("../../clustering.csv", header=F)
+colnames(dane) <- c("x", "y")
+head(dane)
+```
+
+```{r plot0}
+plot(dane)
+```
+
+## Metoda pierwsza: k-średnie
+
+Oczywiście na początku niekoniecznie wiadomo, na ile klastrów należy podzielić te punkty. Przed każdą z metod wykorzystam zatem funkcję _fviz\_nbclust_ z pakietu _factoextra_, która poprzez wykresy wskaże odpowiednią liczbę skupień.
+
+Do tej części wykorzystuję metodę "silhouette".
+
+```{r silhouette}
+fviz_nbclust(dane, kmeans, method="silhouette")
+```
+
+Już na samym wykresie wyraźnie wskazane jest 9 klastrów. Do algorytmu biorę funkcję _kmeans_ z pakietu _stats_.
+
+```{r clust1}
+klastry1 <- kmeans(dane, 9)
+# punkty skupień:
+klastry1$centers
+# rozmiary skupień:
+klastry1$size
+```
+
+Wyżej wypisałem centralne punkty klastrów i rozmiary wytworzonych grup. Reprezentacja graficzna z rombami w środkach skupień:
+
+```{r plot1}
+plot(dane, col=rainbow(9)[klastry1$cluster])
+points(klastry1$centers, pch=23, col="magenta", bg="yellow")
+```
+
+## Metoda druga: hierarchiczna
+
+Przed klasteryzacją wyznaczę liczbę klastrów metodą łokcia.
+
+```{r elbow}
+fviz_nbclust(dane, hcut, method="wss")
+```
+
+Jako optymalną liczbę klastrów należy wybrać tę, dla której na wykresie powyżej zaszło największe zgięcie. Mogło ono mieć miejsce dla _k_ z zakresu od 2 do 5, ale nie potrafię tego jednoznacznie określić na oko. Wyznaczam to zatem bardziej matematycznie.
+
+Dla każdego punktu _k_ sprawdzam różnicę między metryką (opisaną na osi y wykresu wyżej) dla _k_ a tą dla _k_+1. Powiększam następnie metrykę dla _k_ o tę różnicę i sprawdzam, ile procent metryki dla _k_-1 stanowi obliczona liczba. Im bliżej 100%, tym mniejsze zgięcie. Wartość powyżej 100% oznacza zgięcie w przeciwną stronę niż poszukiwana. Mniejszy odsetek oznacza z kolei, że poprzednia metryka była bardzo wysoka i między nią a metryką dla punktu _k_ nastąpił duży zjazd.
+
+```{r elbow2}
+elbow <- fviz_nbclust(dane, hcut, method="wss")
+for (k in 2:9) {
+  print(paste(k, ": ", sep=""), quote=F)
+  print((elbow$data$y[k]*2-elbow$data$y[k+1])/elbow$data$y[k-1])
+}
+```
+
+Najniższy procent wyszedł dla _k_=3 i to tę wartość ustalamy jako liczbę klastrów. Tym razem używam _hcut_, z _factoextra_.
+
+```{r clust2}
+klastry2 <- hcut(dane, 3)
+# rozmiary skupień:
+klastry2$size
+```
+
+W tym wypadku informacja o punktach środkowych klastrów jest niedostępna. Reprezentacja graficzna:
+
+```{r plot2}
+plot(dane, col=rainbow(3)[klastry2$cluster])
+```
+
+Z obu stylów klastrowania preferuję metodę k-średnich. Druga łączyła w grupy punkty dalsze od siebie...
+
+## Oświadczenie
+
+_Oświadczam, że niniejsza praca stanowiąca podstawę do uznania osiągnięcia efektów uczenia się z przedmiotu **Wstęp do uczenia maszynowego** została wykonana przeze mnie samodzielnie._

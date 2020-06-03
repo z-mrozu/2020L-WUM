@@ -1,0 +1,128 @@
+---
+title: "Praca Domowa 3"
+author: "Aleksander Podsiad"
+output: 
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    code_folding: show
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+
+```{r}
+library(dplyr)
+library(rpart)
+library(mlr)
+library(gbm)
+library(ranger)
+data <- read.csv("australia.csv")
+```
+
+
+# Tworzenie klasyfikatorów
+
+```{r, results=FALSE}
+task <- makeClassifTask(id = "australia",
+                        data = data, 
+                        target = "RainTomorrow")
+```
+
+## Drzewo decyzyjne
+
+```{r}
+tree_learner <- makeLearner('classif.rpart',
+                             par.vals = list(cp = 0.05),
+                             predict.type = 'prob')
+```
+
+Ustawiony hiperparametr to `cp = 0.05`.
+
+## Gradient boosting
+
+```{r}
+gbm_learner <- makeLearner('classif.gbm',
+                           par.vals = list(n.trees = 150),
+                           predict.type = 'prob')
+```
+
+Ustawiony hiperparametr to `n.trees = 150`.
+
+## Las losowy
+
+```{r}
+ranger_learner <- makeLearner("classif.ranger", 
+                              par.vals = list(mtry = 3),
+                              predict.type = "prob")
+```
+
+Ustawiony hiperparametr to `mtry = 3`.
+
+# Podział zbiorów i mierzenie skuteczności
+
+```{r}
+cv <- makeResampleDesc("CV", iters = 7)
+```
+
+## Drzewo decyzyjne
+
+```{r}
+tree_resample <- resample(tree_learner, task, cv, 
+                          measures = list(auc, acc, ppv), 
+                          models = TRUE)
+```
+
+Miary skuteczności:
+
+```{r}
+knitr::kable(tree_resample$aggr)
+```
+
+
+## Gradient boosting
+
+```{r, results=FALSE}
+gbm_resample <- resample(gbm_learner, task, cv, 
+                         measures = list(auc, acc, ppv),
+                         models = TRUE)
+```
+
+Miary skuteczności:
+
+```{r}
+knitr::kable(gbm_resample$aggr)
+```
+
+## Las losowy
+
+```{r}
+ranger_resample <- resample(ranger_learner, task, cv, 
+                            measures = list(auc, acc, ppv), 
+                            models = TRUE)
+```
+
+Miary skuteczności:
+
+```{r}
+knitr::kable(ranger_resample$aggr)
+```
+
+# Wybór najlepszego klasyfikatora
+
+```{r}
+summary <- bind_rows(tree_resample$aggr, gbm_resample$aggr, ranger_resample$aggr)
+test <- c("rpart", "gbm", "ranger")
+test <- as.data.frame(test)
+summary <- bind_cols(test, summary)
+knitr::kable(summary)
+```
+
+Najlepsze wyniki otrzymujemy stosując najbardziej zaawansowany model, czyli `ranger`. Ma on jednak tylko nieznaczną przewagę nad `gbm`, mimo że jego czas wykonania jest o wiele dłuższy. Oczywiście proste drzewo decyzyjne daje najmniej skuteczną predykcję. Co ciekawe miary `acc` i `ppv` nie pokazują większych rozbieżności, jednak miara `auc` uwydatnia, o ile mniej skuteczny jest model CART od pozostałych. 

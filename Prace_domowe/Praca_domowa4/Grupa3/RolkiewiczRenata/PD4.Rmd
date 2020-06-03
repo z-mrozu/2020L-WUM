@@ -1,0 +1,353 @@
+
+---
+title: "PD4"
+author: "Renata Rólkiewicz"
+date: "28 04 2020"
+output:
+  html_document:
+    df_print: kable
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: true 
+---
+
+<style>
+
+  div.blue pre.r { background-color:#E6F3FF; }
+</style>
+
+<div class = "blue">
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(mlr)
+library(dplyr)
+library(kableExtra)
+library(DALEX)
+library(mlbench)
+
+```
+
+# Wstęp
+
+---
+
+Celem zadania jest dopasowanie modelu regresji **SVM (Support Vector Machine)** dla dwóch zbiorów:
+
+- `apartments` (DALEX)
+- `BostonHousing` (mlbench)
+
+Do naszego zadania będziemy wykorzystywać `regr.svm` z pakietu `mlr`.\
+\
+Przyjżyjmy się hiperparametrom dostępnym dla wspomnianego modelu:
+
+```{r}
+learner = makeLearner("regr.svm")
+learner$par.set
+```
+
+Spośród tych parametrów będziemy stroić następujące:
+
+- **kernel** - jądro, dostępne są 4 warianty - *linear, polynomial, radial, sigmoid*, domyślnie `kernel=radial`
+- **cost** - koszt naruszenia "ograniczeń", domyślnie `cost=1`
+- **degree** - stopień wielomianu dla jądra `polynomial`, domyślnie `degree=3`
+- **gamma** - parametr potrzebny dla wszystkich typów jądra oprócz `linear`
+
+```{r}
+cv <- makeResampleDesc("CV", iter = 5)
+msr <- list(rmse, mae, rsq)
+
+tune_ps = makeParamSet(
+  makeDiscreteParam("kernel", values=c("linear", "polynomial", "radial", "sigmoid")),
+  makeNumericParam("cost", lower = 1, upper = 20),
+  makeIntegerParam("degree", lower = 1, upper = 15),
+  makeNumericParam("gamma", lower = 0, upper = 10)
+  )
+
+tune_ps
+```
+
+Dla każdego ze zbiorów danych wykonamy następujące obliczenia:
+
+- Sprawdzenie (dla domyślnych parametrów) jak na modelowanie wpływa skalowanie danych ( `regr.svm` domyślnie je skaluje)
+- Strojenie hiperparametrów za pomocą random search
+
+Dla obu eksperymentów będziemy korzystać z kroswalidacji i używać następujących miar:
+
+- **MAE** - średni błąd bezwzględny
+- **RMSE** - pierwiastek błędu średniokwadratowego
+- **RSQ** - współczynnik determinacji R2
+
+# Apartments
+
+---
+
+Zbiór danych `apartments` zawiera informacje o mieszkaniach w Warszawie. Składa się ze 1000 rekordów i 6 zmiennych:
+
+- **m2.price** - cena za metr kwadratowy, będzie to target modelu regresyjnego
+- construction.year - rok budowy
+- surface - powierzchnia
+- floor - piętro
+- no.rooms - liczba pokoi
+- district - dzielnica, *Bemowo, Bielany, Mokotow, Ochota, Praga, Srodmiescie, Ursus, Ursynow, Wola, Zoliborz*
+
+```{r}
+data1 <- apartments
+str(data1)
+```
+
+```{r}
+kable(head(data1, n=10)) %>% kable_styling("striped")
+```
+
+Podział na zbiór treningowy i testowy (odpowiednio 80% i 20%) oraz zdefiniowanie RegrTask:
+
+```{r}
+# Podział na zbiór testowy i treningowy
+set.seed(23)
+n <- nrow(data1)
+train_set1 = sample(n, 0.8 * n)
+test_set1 = setdiff(seq_len(n), train_set1)
+data1_train <- data1[train_set1,]
+data1_test <- data1[test_set1,]
+
+# Zdefiniowanie Taska
+task1 = makeRegrTask(id = "apartments",  data = data1_test, target = "m2.price")
+```
+
+## Sprawdzenie wpływu skalowania
+
+---
+
+```{r}
+# Model surowy + skalowanie (domyślnie ustawione scale=TRUE)
+learner1_raw <- makeLearner("regr.svm")
+
+res1_raw <- resample(learner1_raw, task1, cv, measures = msr)
+performance1_raw_r <- res1_raw$aggr
+
+model1_raw <- train(learner1_raw, task1)
+pred1_raw <- predict(model1_raw, newdata = data1_test)
+performance1_raw <- performance(pred1_raw, msr)
+
+# Model surowy + bez skalowania
+learner1_raw_wn <- makeLearner("regr.svm", par.vals = list(scale=FALSE))
+
+res1_raw_wn <- resample(learner1_raw_wn, task1, cv, measures = msr)
+performance1_raw_r_wn <- res1_raw_wn$aggr
+
+model1_raw_wn <- train(learner1_raw_wn, task1)
+pred1_raw_wn <- predict(model1_raw_wn, newdata = data1_test)
+performance1_raw_wn <- performance(pred1_raw_wn, msr)
+
+# Zestawienie wyników
+results1_raw <- as.data.frame(rbind(performance1_raw_r, performance1_raw, performance1_raw_r_wn, performance1_raw_wn))
+rownames(results1_raw)<-c("Średnia z kroswalidacji (skalowanie)", "Predykcja (skalowanie)",
+                          "Średnia z kroswalidacji (bez skalowania)", "Predykcja (bez skalowania)")
+colnames(results1_raw)<-c("RMSE", "MAE", "RSQ")
+
+kable(results1_raw) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+Możemy zaobserwować, że skalowanie ma ogromny (oczywiście pozytywny) wpływ na jakość modelu. Miary RMSE i MAE są kilkukrotnie mniejsze dla wersji ze skalowaniem. Ponadto widzimy zaskakująco dużą różnię we współczynniku determinacji (około 0.9). Przypomnijmy, że współczynnik ten przyjmuje wartości od 0 do 1, gdzie 1 oznacza model "idealny".
+
+## Strojenie hiperparametrów
+
+---
+
+```{r}
+learner1 = makeLearner("regr.svm")
+random <- makeTuneControlRandom(maxit = 100)
+tune1 <- tuneParams(learner1,
+                    task = task1,
+                    resampling = cv,
+                    par.set = tune_ps,
+                    control = random,
+                    measures = msr)
+```
+
+Wynikowe parametry strojenia:
+
+```{r, echo = FALSE}
+tune1$x
+```
+
+```{r}
+# Ustawiamy hipermarametry, które otrzymaliśmy przy strojeniu
+learner1 = setHyperPars(learner1,
+                        kernel = tune1$x$kernel,
+                        cost = tune1$x$cost,
+                        degree = tune1$x$degree,
+                        gamma = tune1$x$gamma
+)
+
+# Kroswalidacja
+res1 <- resample(learner1, task1, cv, measures = msr, models=TRUE)
+performance1_r <- res1$aggr
+
+# Trenowanie
+model1 <- train(learner1, task1)
+pred1 <- predict(model1, newdata = data1_test)
+performance1 <- performance(pred1, msr)
+
+# Zestawienie wyników
+results1 <- as.data.frame(rbind(performance1_r, performance1))
+rownames(results1)<-c("Średnia z kroswalidacji", "Predykcja")
+colnames(results1)<-c("RMSE", "MAE", "RSQ")
+
+kable(results1) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+Dzięki dostrojonym hiperparametrom uzyskaliśmy bardzo dobry model (współczynnik determinacji na poziomie ponad 0.9 zarówno dla kroswalidacji jak i końcowej predykcji na zbiorze testowym).
+
+# BostonHousing
+
+---
+
+Zbiór `BostonHousing` zawiera dane o 506 mieszkańcach Bostonu zebrane w 1970 roku. Więcej informacji o zbiorze znajduje się na stronie https://rdrr.io/cran/mlbench/man/BostonHousing.html \
+Pośród 14 zmiennych naszym targetem będzie **medv** - mediana wartości zajmowanych domów (w tysiącach dolarów).
+
+```{r}
+data(BostonHousing, package = "mlbench")
+data2 <- BostonHousing
+str(data2)
+```
+
+```{r}
+kable(head(data1, n=10)) %>% kable_styling("striped")
+```
+
+Podział na zbiór testowy i treningowy (ponownie 80% i 20%) oraz zdefinowanie RegrTask:
+
+```{r}
+# Podział na zbiór testowy i treningowy
+m <- nrow(data2)
+train_set2 = sample(m, 0.8 * m)
+test_set2 = setdiff(seq_len(m), train_set2)
+data2_train <- data2[train_set2,]
+data2_test <- data2[test_set2,]
+
+# Zdefiniowanie Taska
+task2= makeRegrTask(id = "boston",  data = data2_test, target = "medv")
+```
+
+## Sprawdzenie wpływu skalowania
+
+---
+
+```{r}
+# Model surowy + skalowanie (domyślnie ustawione scale=TRUE)
+learner2_raw <- makeLearner("regr.svm")
+
+res2_raw <- resample(learner2_raw, task2, cv, measures = msr)
+performance2_raw_r <- res2_raw$aggr
+
+model2_raw <- train(learner2_raw, task2)
+pred2_raw <- predict(model2_raw, newdata = data2_test)
+performance2_raw <- performance(pred2_raw, msr)
+
+# Model surowy + bez skalowania
+learner2_raw_wn <- makeLearner("regr.svm", par.vals = list(scale=FALSE))
+
+res2_raw_wn <- resample(learner2_raw_wn, task2, cv, measures = msr)
+performance2_raw_r_wn <- res2_raw_wn$aggr
+
+model2_raw_wn <- train(learner2_raw_wn, task2)
+pred2_raw_wn <- predict(model2_raw_wn, newdata = data2_test)
+performance2_raw_wn <- performance(pred2_raw_wn, msr)
+
+# Zestawienie wyników
+results2_raw <- as.data.frame(rbind(performance2_raw_r, performance2_raw, performance2_raw_r_wn, performance2_raw_wn))
+rownames(results2_raw)<-c("Średnia z kroswalidacji (skalowanie)", "Predykcja (skalowanie)",
+                          "Średnia z kroswalidacji (bez skalowania)","Predykcja (bez skalowania)")
+colnames(results2_raw)<-c("RMSE", "MAE", "RSQ")
+
+kable(results2_raw) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+Tak samo jak w przypadku zbioru `apartments` obserwujemy znaczące różnice pomiędzdy wynikami dla modelu ze skalowaniem i bez niego. RMSE i MAE kilkukrotnie niższe dla wersji ze skalowaniem oraz różnica w RSQ na poziomie 0.8.
+
+## Strojenie hiperparametrów
+
+---
+
+```{r}
+learner2 = makeLearner("regr.svm")
+random <- makeTuneControlRandom(maxit = 100)
+tune2 <- tuneParams(learner2,
+                    task = task2,
+                    resampling = cv,
+                    par.set = tune_ps,
+                    control = random,
+                    measures = msr)
+```
+
+Wynikowe parametry strojenia:
+
+```{r, echo = FALSE}
+tune2$x
+```
+
+```{r}
+# Ustawiamy hipermarametry, które otrzymaliśmy przy strojeniu
+learner2 = setHyperPars(learner2,
+                        kernel = tune2$x$kernel,
+                        cost = tune2$x$cost,
+                        degree = tune2$x$degree,
+                        gamma = tune2$x$gamma
+                        )
+
+# Kroswalidacja
+res2 <- resample(learner2, task2, cv, measures = msr, models=TRUE)
+performance2_r <- res2$aggr
+
+# Trenowanie
+model2 <- train(learner2, task2)
+pred2 <- predict(model2, newdata = data2_test)
+performance2 <- performance(pred2, msr)
+
+# Zestawienie wyników
+results2 <- as.data.frame(rbind(performance2_r, performance2))
+rownames(results2)<-c("Średnia z kroswalidacji", "Predykcja")
+colnames(results2)<-c("RMSE", "MAE", "RSQ")
+
+kable(results2) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+Udało nam się uzyskać bardzo dobry model regresji. Dość spore różnice w wartościach miar dla kroswalidacji i predykcji mogą wynikać z tego, że zbiór jest dość mały - zawiera 506 obserwacji.
+
+
+# Wnioski
+
+---
+
+- Zestawienie dla `apartments`:
+
+```{r, echo = FALSE}
+final_results1 <- as.data.frame(rbind(performance1_raw_wn, performance1_raw, performance1))
+rownames(final_results1)<-c("Domyślny bez skalowania", "Domyślny", "Ze strojeniem")
+colnames(final_results1)<-c("RMSE", "MAE", "RSQ")
+
+kable(final_results1) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+\
+
+- Zestawienie dla `BostonHousing`:
+
+```{r, echo = FALSE}
+final_results2 <- as.data.frame(rbind(performance2_raw_wn, performance2_raw, performance2))
+rownames(final_results2)<-c("Domyślny bez skalowania", "Domyślny", "Ze strojeniem")
+colnames(final_results2)<-c("RMSE", "MAE", "RSQ")
+
+kable(final_results2) %>% kable_styling("striped", full_width=FALSE, position = "left")
+```
+
+Przeprowwadzone eksperymenty jednoznacznie pokazują pozytywny wpływ na modelowanie zarówno skalowania jak i strojenia hiperparametrów. Różnice skrajnych wersji (model domyślny bez skalowania i model ze strojeniem i skalowaniem) są diametralne dla obu zbiorów: \
+
+- RMSE i MAE - nawet **10 krotnie** mniejsze
+- RSQ - poprawa od 0 do 0.99
+
+</div>

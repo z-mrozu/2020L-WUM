@@ -1,0 +1,233 @@
+---
+title: "Praca Domowa 5"
+author: "Przemysław Chojecki"
+date: "16 05 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, eval = TRUE)
+
+library(ggplot2)
+library(genie)
+library(cluster)
+source("spectral.R")
+```
+
+## Cel pracy
+
+W niniejszej pracy zajmę się grupowaniem zbioru punktow z pliku `clustering.csv` przedstawiajacy sie nastepujaco: \
+
+```{r}
+dane <- read.csv(file.path(getwd(), "..", "..", "clustering.csv"), header=FALSE)
+head(dane, 2)
+
+ggplot(dane, aes(x=V1, y=V2)) +
+  geom_point()
+```
+
+
+W zbiorze tym na pierwsze rzut oka można mieć problem ze znalezieniem granic między grupami. Można nawet mieć problem ze stwierdzeniem, na ile tak zwanych klastrów powinno tu się ten zbiór podzielić. \
+
+
+### wykorzystywane narzędzia
+
+W celu pogrupowania punktów wykorzystam $3$ algorytmy stworzone do tego celu. Jednym z nich jest moja własna implementacja algorytmu spektralnego, a pozostałe dwa to `genie`, którego autorami są Marek Gagolewski, Maciej Bartoszuk, Anna Cena; oraz algorytm `pam` z pakietu `cluster`. \
+Przy wyborze optymalnej liczby klastrów skorzystałem z metody silhouette, oraz tak zwanej metody łokcia. \
+
+
+
+## metoda silhouette
+Jest to metoda, która, ogolnie rzecz biorąc, ocenia jak bardzo punkty pasują do klastrów w których się znajdują. Im więc jest wyższy, tym bardziej dopasowany jest podział do zbioru. \
+
+
+### metoda silhouette dla algorytmu `PAM`
+```{r}
+silhouette_score <- numeric(15)
+pam_klaster <- matrix(nrow=400, ncol=15)
+
+for(k in 2:15){
+  tmp <- pam(dane, k)$clustering
+  Sil <- silhouette(x = pam(dane, k)$clustering, dist = dist(dane))
+  silhouette_score[k] <- (Sil[,3] %>% sum())/dim(Sil)[1]
+  
+  pam_klaster[,k] <- tmp
+}
+```
+
+```{r}
+silhouette_score <- silhouette_score[-1] %>% data.frame()
+colnames(silhouette_score) <- "score"
+mutate(silhouette_score, k = row_number()+1) %>% 
+  ggplot(aes(x=k, y=score)) +
+  geom_line() +
+  scale_x_continuous(breaks = 2:15) +
+  geom_vline(xintercept = 8, linetype="dashed", color = "red") +
+  scale_y_continuous(breaks = c(0.46, 0.50, 0.54, 0.57))
+```
+
+Z wykresu więc wynika jednoznacznie, że najlepiej dopasowane do swego klastra punkty są przy zastosowaniu `k = 8`. Spójrzmy więc: \
+
+```{r}
+dane %>% mutate(label = factor(pam_klaster[,8])) %>% 
+  ggplot(aes(x=V1, y=V2, color=label)) +
+  geom_point() +
+  ggtitle("pam, k=8")
+```
+
+Wygląda to bardzo intuicyjnie. \
+
+
+
+### metoda silhouette dla algorytmu spekrtalnego
+Specyfiką algorytmu spektralnego jest to, że jest on modyfikacją algorytmu $k$-średnich i wywołuje on go na sam koniec swojego działania. Ze względu na losowość algorytmu $k$-średnich aby obiektywnie zdecydować się na liczbę klastrów zamiast $1$ raz, obliczenia wykonane zostaną $200$ razy i policzona zostanie z nich średnia: \
+
+```{r}
+silhouette_score_avg <- numeric(15)
+silhouette_score_max <- numeric(15)
+SC_klaster <- matrix(nrow=400, ncol=15)
+
+for(k in 2:15){
+  SC <- spectral_clustering_some_kmeans_k_lowest_eigen_value(dane, k=k, M=7, l=200)
+
+  if(all(attr(SC, "ilosc")==200)){
+    Sil <- silhouette(x = SC, dist = dist(dane))
+    silhouette_score_avg[k] <- silhouette_score_avg[k] + ((Sil[,3] %>% sum())/dim(Sil)[1]) * attr(SC, "ilosc")
+
+    silhouette_score_max[k] <- ((Sil[,3] %>% sum())/dim(Sil)[1])
+    SC_klaster[,k] <- SC
+  }
+  else{
+    maks <- -1
+    tmp <- NA
+    for(i in 1:dim(SC)[2]){
+      Sil <- silhouette(x = SC[,i], dist = dist(dane))
+      tmp <- ((Sil[,3] %>% sum())/dim(Sil)[1])
+
+      if(tmp>maks){
+        maks <- tmp
+        SC_klaster[,k] <- SC[,i]
+      }
+      silhouette_score_avg[k] <- silhouette_score_avg[k] + tmp * attr(SC, "ilosc")[i]
+    }
+    silhouette_score_max[k] <- maks
+  }
+
+  silhouette_score_avg[k] <- silhouette_score_avg[k]/200
+}
+```
+
+```{r}
+silhouette_score_avg <- silhouette_score_avg[-1] %>% data.frame()
+colnames(silhouette_score_avg) <- "score"
+mutate(silhouette_score_avg, k = row_number()+1) %>%
+  ggplot(aes(x=k, y=score)) +
+  geom_line() +
+  scale_x_continuous(breaks = 2:15)
+```
+
+Na podstawie tego wykresu ciężko jest stwierdzić sensowności którejkolwiek z wartości `k`. Na dodatek każdy z tych wyników jest znaczaco niższy od wyniku algorytmu `PAM`. Sprawdzmy więc może zamiast średniej, maksymalną wartość, jaką ten algorytm uzyskuje, być może to rozjaśni mam obraz: \
+
+
+
+
+```{r}
+silhouette_score_max <- silhouette_score_max[-1] %>% data.frame()
+colnames(silhouette_score_max) <- "score"
+mutate(silhouette_score_max, k = row_number()+1) %>%
+  ggplot(aes(x=k, y=score)) +
+  geom_line() +
+  scale_x_continuous(breaks = 2:15) +
+  scale_y_continuous(breaks = c(0.48, 0.52, 0.54, 0.56)) +
+  geom_vline(xintercept = 8, linetype="dashed", color = "red")
+```
+
+
+Na podstawie tego wykresu możemy śmiało stwierdzić, że algorytmowi spektralnemu najleprze wyniki zdarzają się na poziomach `k = 7` i `k = 8`, ale one na tyle rzadkie, żeby nie okazać się w średniej. Sprawdźmy, czym się różnią: \
+```{r}
+dane %>% mutate(label = factor(SC_klaster[,7])) %>% 
+  ggplot(aes(x=V1, y=V2, color=label)) +
+  geom_point() +
+  ggtitle("algorytm spektralny, k=7")
+```
+
+```{r}
+dane %>% mutate(label = factor(SC_klaster[,8])) %>% 
+  ggplot(aes(x=V1, y=V2, color=label)) +
+  geom_point() +
+  ggtitle("algorytm spektralny, k=8")
+```
+
+
+Wygląda więc na to, że oba są sensowne, choć na wykresie z `k = 7` niebieska grupa opatrzona numerem $5$ faktycznie wygląda, jakby inteligentną decyzją było podzielenie jej na $2$, co dzieje się przy `k = 8`. \
+
+
+
+
+## Metoda łokcia na genie
+Niektórzy twierdzą, iż metoda ta to tak naprawdę tylko próba sztucznego dopisania matematyki do wyboru "na oko". Trochę prawdy w tym jest, gdyż wykres metody łokcia, na podstawie którego podjemujemy decyzję, daje jedynie informację o tym, jak bardzo dodatkowy klaster zmniejsza odległości, ale nie bierze pod uwagę żadnej "kary" za zbyt dużą ilość grup. Taką więc "karę" musimy mu ustalić sami, na oko. \
+Moim zdaniem z wykresem metody łokcia jest jak z wykresami giełdowymi. Ciężko jest na ich podstawie podejmować decyje, ale jeśli znamy poprawne rozwiązanie (u nas - prawidłową liczbę klastrów), to zawsze można powiedzieć, że przecierz widać to na wykresie. \
+
+
+```{r}
+scores <- numeric(15)
+genie_klaster <- matrix(nrow=400, ncol=15)
+for(k in 2:15){
+  tmp <- cutree(hclust2(dist(dane)), k = k)
+  scores[k] <- suma_wewnatrz_klastra(dane, tmp)
+  genie_klaster[,k] <- tmp
+}
+```
+
+```{r}
+scores <- scores[-1]
+tmp <- data.frame(scores/1000000) %>% mutate(k = row_number()+1)
+colnames(tmp) <- c("scores_milions", "k")
+
+tmp %>% 
+  ggplot(aes(x=k, y=scores_milions)) +
+  geom_line() +
+  scale_x_continuous(breaks = 2:15) +
+  geom_vline(xintercept = 5, linetype="dashed", color = "red") +
+  geom_vline(xintercept = 8, linetype="dashed", color = "red") +
+  ylab("score w milionach")
+```
+
+Wykres sugeruje nam $2$ możliwości: znany przez nas już `k = 8`, ale równierz proponuje `k = 5`. Sprawdźmy więc wizualnie obie propozycje: \
+
+```{r}
+dane %>% mutate(label = factor(genie_klaster[,5])) %>% 
+  ggplot(aes(x=V1, y=V2, color=label)) +
+  geom_point() +
+  ggtitle("genie, k=5")
+```
+
+
+```{r}
+dane %>% mutate(label = factor(genie_klaster[,8])) %>% 
+  ggplot(aes(x=V1, y=V2, color=label)) +
+  geom_point() +
+  ggtitle("genie, k=8")
+```
+
+
+Faktycznie, podział na $5$ klastrów wygląda porządnie, jednak mimo wszystko chyba jednak leprzym jest ten na $8$. \
+Niektóży mogliby argumentować, że być może wykres metody łokcia sugeruje wybór `k = 10`. Sprawdźmy więc równierz jak i on wygląda: \
+
+```{r}
+dane %>% mutate(label = factor(genie_klaster[,10])) %>% 
+  ggplot(aes(x=V1, y=V2, color=label)) +
+  geom_point() +
+  ggtitle("genie, k=10")
+```
+
+Nie wydaje się, jakby dodatkowe dwie grupy poprawiły jakość podziału. Wygląda nawet, jakby klaster z numerem $3$ był błędnie oddzielony od dziewiątego. Dlatego ostatecznym wyborem jest `k = 8`. \
+
+
+## Oświadczenie
+Oświadczam, że niniejsza praca stanowiąca podstawę do uznania osiągnięcia efektów uczenia się z przedmiotu Wstęp do Uczenia Maszynowego, została wykonana przeze mnie samodzielnie. \
+Przemysław Chojecki \
+
+
+
+

@@ -1,0 +1,237 @@
+---
+title: 'Wstęp do Uczenia Maszynowego 2020: projekt I, kamień milowy III - Regresja'
+author: "Marcin Łukaszyk"
+date: "April 18, 2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(scidb)
+```
+
+## Wczytanie Danych
+
+```{r,warning=FALSE}
+
+Reg_train <- read.csv("Reg_train.csv")
+Reg_test <- read.csv("Reg_test.csv")
+Reg_train <- select(Reg_train,-X)
+Reg_test <- select(Reg_test,-X)
+
+knitr::kable(sample_n(Reg_test, 5))
+knitr::kable(sample_n(Reg_train, 5))
+
+```
+
+WSzystko jest wczytane poprawnie.
+
+## Stowrzenie modelu
+
+Naszym modelem będzię model z pakietu scidb.
+Nie musismy go tworzyć, od razu można "fit'ować" dane do modelu
+
+```{r}
+glm.fit <- glm(is_good_customer_type ~ duration + age + existing_credits + dependents + has_telephone + is_foreign_worker + has_problems_credit_history + purpose_domestic + purpose_retraining + purpose_radio_television + purpose_new_car + purpose_used_car + purpose_business + purpose_repairs + purpose_education + purpose_furniture_equipment + other_debtors_guarantor + other_debtors_co_applicant + other_installment_plans_bank + other_installment_plans_stores + housing_rent + housing_own + job_skilled_employee + job_unskilled_resident + job_highly_qualified_employee + savings + present_employment + property + checking_account_status + is_woman + is_single
+               ,data = Reg_train,family = binomial)
+```
+
+
+## Parametry modelu
+
+Poniżęj znajduje się podsumowanie naszego modelu.
+Pokazane są wszystkie jego parametry oraz znaczenie w działaniu naszego modelu.
+
+```{r}
+summary(glm.fit)
+```
+
+## Test modelu
+
+Podstawowym parametrem jest stosunek poprawnych odpowiedzi.
+Tzn jest to prosta średnia z 1 jeśli odpowiedź jest dobra i 0 w przeciwnym przypadku.
+
+```{r}
+glm.probs <- ifelse(predict(glm.fit,newdata = Reg_test,type = "response") > 0.5,1,0)
+mean(glm.probs == select(Reg_test,is_good_customer_type))
+```
+
+
+Jak widzimy model średnio dobrze przewiduje 70 % odpowiedzi.
+
+## Dokładne zmierzenie jakości modelu
+
+Funkcje pomocnicze które określą nam jakość modelu
+
+```{r metrics_functions}
+confusion_matrix_values <- function(confusion_matrix){
+  TP <- confusion_matrix[2,2]
+  TN <- confusion_matrix[1,1]
+  FP <- confusion_matrix[1,2]
+  FN <- confusion_matrix[2,1]
+  return (c(TP, TN, FP, FN))
+}
+
+accuracy <- function(confusion_matrix){
+  conf_matrix <- confusion_matrix_values(confusion_matrix)
+  return((conf_matrix[1] + conf_matrix[2]) / (conf_matrix[1] + conf_matrix[2] + conf_matrix[3] + conf_matrix[4]))
+}
+
+precision <- function(confusion_matrix){
+  conf_matrix <- confusion_matrix_values(confusion_matrix)
+  return(conf_matrix[1]/ (conf_matrix[1] + conf_matrix[3]))
+}
+
+recall <- function(confusion_matrix){
+  conf_matrix <- confusion_matrix_values(confusion_matrix)
+  return(conf_matrix[1] / (conf_matrix[1] + conf_matrix[4]))
+}
+
+f1 <- function(confusion_matrix){
+  conf_matrix <- confusion_matrix_values(confusion_matrix)
+  rec <- recall(confusion_matrix)
+  prec <- precision(confusion_matrix)
+  return(2 * (rec * prec) / (rec + prec))
+}
+```
+
+```{r}
+confusion_matrix_primitive <- table(
+  Truth = select(Reg_test,is_good_customer_type)[,1], 
+  Prediction = glm.probs
+  )
+knitr::kable(confusion_matrix_primitive)
+
+accuracy_primitive <- accuracy(confusion_matrix_primitive)
+precision_primitive <- precision(confusion_matrix_primitive)
+recall_primitive <- recall(confusion_matrix_primitive)
+f1_primitive <- f1(confusion_matrix_primitive)
+
+classification_report_primitive <- data.frame(accuracy_primitive, precision_primitive,
+                                              recall_primitive, f1_primitive)
+colnames(classification_report_primitive) <- c("accuracy", "precision",
+                                               "recall", "f1")
+knitr::kable(classification_report_primitive)
+```
+
+
+## Wyrzucenie Mało Znaczących Zmiennych
+
+Do zwiększenia dokladnośći modelu sprobujemy usunąć ze zmiennych te ktore, według funckji summary(), najmniej wplywaja na nasz model.
+
+```{r}
+glm.fit <- glm(is_good_customer_type ~age + dependents + is_foreign_worker + purpose_domestic + purpose_retraining + purpose_radio_television + purpose_business + purpose_repairs + purpose_education + purpose_furniture_equipment + other_debtors_guarantor + other_debtors_co_applicant + other_installment_plans_bank + other_installment_plans_stores + housing_rent + housing_own + job_skilled_employee + job_unskilled_resident + job_highly_qualified_employee + savings + present_employment + property + checking_account_status + is_woman + is_single
+               ,data = Reg_train,family = binomial)
+glm.probs <- ifelse(predict(glm.fit,newdata = Reg_test,type = "response") > 0.5,1,0)
+```
+
+```{r}
+confusion_matrix_primitive <- table(
+  Truth = select(Reg_test,is_good_customer_type)[,1], 
+  Prediction = glm.probs
+  )
+knitr::kable(confusion_matrix_primitive)
+
+accuracy_primitive <- accuracy(confusion_matrix_primitive)
+precision_primitive <- precision(confusion_matrix_primitive)
+recall_primitive <- recall(confusion_matrix_primitive)
+f1_primitive <- f1(confusion_matrix_primitive)
+
+classification_report_primitive <- data.frame(accuracy_primitive, precision_primitive,
+                                              recall_primitive, f1_primitive)
+colnames(classification_report_primitive) <- c("accuracy", "precision",
+                                               "recall", "f1")
+knitr::kable(classification_report_primitive)
+```
+
+Jak widać nie uzyskujemy lepszych rezultatów, a nasze wyniki są nawet lekko gorsze.
+Spróbujmy usunąć jeszcze kilka najmniej istotnych parametrów, na podstaiwe wskazań funckcji summary()
+
+```{r}
+summary(glm.fit)
+```
+
+Te zmienne to:
+
+- age
+
+- is_foreign_worker
+
+- present_employment
+
+- property 
+
+- checking_account_status
+
+- is_single
+
+
+```{r}
+glm.fit <- glm(is_good_customer_type ~ dependents + purpose_domestic + purpose_retraining + purpose_radio_television + purpose_business + purpose_repairs + purpose_education + purpose_furniture_equipment + other_debtors_guarantor + other_debtors_co_applicant + other_installment_plans_bank + other_installment_plans_stores + housing_rent + housing_own + job_skilled_employee + job_unskilled_resident + job_highly_qualified_employee + savings + is_woman
+               ,data = Reg_train,family = binomial)
+glm.probs <- ifelse(predict(glm.fit,newdata = Reg_test,type = "response") > 0.5,1,0)
+```
+
+
+```{r}
+confusion_matrix_primitive <- table(
+  Truth = select(Reg_test,is_good_customer_type)[,1], 
+  Prediction = glm.probs
+  )
+knitr::kable(confusion_matrix_primitive)
+
+accuracy_primitive <- accuracy(confusion_matrix_primitive)
+precision_primitive <- precision(confusion_matrix_primitive)
+recall_primitive <- recall(confusion_matrix_primitive)
+f1_primitive <- f1(confusion_matrix_primitive)
+
+classification_report_primitive <- data.frame(accuracy_primitive, precision_primitive,
+                                              recall_primitive, f1_primitive)
+colnames(classification_report_primitive) <- c("accuracy", "precision",
+                                               "recall", "f1")
+knitr::kable(classification_report_primitive)
+```
+
+Jak widać otrzymujemy lepsze wyniki niż poprzednio.
+Ostatnią metodą niech będzie stworzenie modelu z zmiennych mających największe znaczenie w naszym pierwszym modelu.
+Pięć zmiennych z największym znaczeniem to : 
+
+- purpose_radio_television : **0.90**
+
+- housing_rent : **0.71**
+
+- purpose_repairs : **0.69**
+
+- purpose_furniture_equipment : **0.59**
+
+- housing_own : **0.42**
+
+Stwórzmy teraz model na podstawie 
+
+```{r}
+glm.fit <- glm(is_good_customer_type ~ purpose_radio_television + purpose_repairs + purpose_furniture_equipment + housing_rent + housing_own 
+               ,data = Reg_train,family = binomial)
+glm.probs <- ifelse(predict(glm.fit,newdata = Reg_test,type = "response") > 0.5,1,0)
+```
+
+
+```{r}
+confusion_matrix_primitive <- table(
+  Truth = select(Reg_test,is_good_customer_type)[,1], 
+  Prediction = glm.probs
+  )
+knitr::kable(confusion_matrix_primitive)
+```
+
+Co ciekawe ten model nie przewidział żadngo 0 czyli złego klienta.
+Ten model uzyskuje celność **0.65** co jest podobnym wynikiem do reszty.
+Jednak z powodu nie przewidzenia złych klientów nie można obliczyć reszty statystyk.
+
+## Podumowanie
+
+Model uzyskuje podobne parapetry dla różnych zmiennych.
+Najgorzej wypadł model bez pięciu najmienj istotynych zmiennych.
+Może to być jednak spowodowane ilosćią danych jak i ich arbitralnym podziałem na zbiór testowy i treninigowy.
+
+
