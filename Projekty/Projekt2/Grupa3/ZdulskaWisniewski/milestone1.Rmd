@@ -1,0 +1,462 @@
+---
+title: "EDA"
+author: "Jakub Wiśniewski, Hanna Zdulska"
+date: "5/2/2020"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+# A study of Asian Religious and Biblical Texts
+
+In this dataset there is following books:    
+* Upanishads  -  are ancient Sanskrit texts of spiritual teaching and ideas of Hinduism. They are the part of the oldest scriptures of Hinduism, the Vedas, that deal with meditation, philosophy, and spiritual knowledge; other parts of the Vedas deal with mantras, benedictions, rituals, ceremonies, and sacrifices.   
+
+* Yoga Sutras -  collection of 196 Sanskrit sutras* (aphorisms) on the theory and practice of yoga. 
+
+* Buddha Sutras - were initially passed on orally by monks, but were later written down and composed as manuscripts in various Indo-Aryan languages which were then translated into other local languages as Buddhism spread
+
+* Tao Te Ching -  fundamental text for both philosophical and religious Taoism. It also strongly influenced other schools of Chinese philosophy and religion, including Legalism, Confucianism, and Buddhism, which was largely interpreted through the use of Taoist words and concepts when it was originally introduced to China.
+
+Old Testament : 
+
+ - Book of Wisdom - Solomon's speech concerning wisdom, wealth, power and prayer
+ 
+ - Book of Proverbs - Proverbs is not merely an anthology but a "collection of collections" relating to a pattern of life which lasted for more than a millennium. It is an example of the Biblical wisdom tradition, and raises questions of values, moral behaviour, the meaning of human life, and right conduct.
+ 
+ - Book of Ecclesiastes - is one of 24 books of the Tanakh (Hebrew Bible), where it is classified as one of the Ketuvim (Writings).
+ 
+ - Book of Ecclesiasticus -  commonly called the Wisdom of Sirach or simply Sirach. 
+ 
+ More on [wikipedia](https://en.wikipedia.org/wiki/Main_Page)
+
+**in Indian literary traditions refers to an aphorism or a collection of aphorisms in the form of a manual or, more broadly, a condensed manual or text. Sutras are a genre of ancient and medieval Indian texts found in Hinduism, Buddhism and Jainism.*
+
+
+## EDA
+
+### Looking at data
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE)
+library(dplyr)
+library(ggplot2)
+library(stringi)
+library(knitr)
+library(kableExtra)
+library(wordcloud)
+library(RColorBrewer)
+library(parallel)
+library(parallelMap)
+library(tidytext)
+library(textdata)
+library(rpivotTable)
+
+# Fixed path left for Hania to get mad (but dont plz) coz data is big big 
+path <- "AllBooks_baseline_DTM_Labelled.csv"
+data <- read.csv(path)
+
+```
+
+Quick look at the data size:
+```{r}
+cat('Number of features:', ncol(data))
+cat('Number of records:', nrow(data))
+cat('Number of words in total:', sum(data[-1]))
+```
+
+To give some perspective polish classic 'Pan Tadeusz' has 68 682 words in total.
+
+```{r}
+knitr::kable(
+  data[1:10, 1:10], caption = 'Dataset',
+  booktabs = TRUE
+) %>% 
+  kable_styling()
+
+```
+
+Looking at data we are certain that there is no sense in keeping chapters separated. We than used `stringi` package to extract names of books. We figured that we combine biblical texts into one as they have significantly less chapters than the rest. Than we truncated it to have only one book per row (word occurances were summed). We ended up with this dataframe:
+
+
+```{r}
+
+
+book_name <- stri_extract(data$X, regex =  "^[a-zA-Z]+")
+book_name <- ifelse(startsWith(book_name, "Bo"), "Bible",book_name)
+data$book_name <- book_name
+data <- data[,-1]
+book_names <- unique(data$book_name)
+
+df <- matrix(0, length(book_names), ncol = ncol(data)-1)
+for (i in seq_along(book_names)){
+  row <- colSums(data[data$book_name == book_names[i],1:(ncol(data)-1)])
+  df[i,] <- row
+}
+
+df <- as.data.frame(df)
+
+df <- cbind(book_names,df)
+colnames(df) <- c( "book_name", colnames(data[,1:(ncol(data)-1)]))
+m <- ncol(df)
+
+knitr::kable(
+  df[1:5, 1:10], caption = 'Dataset',
+  booktabs = TRUE
+) %>% 
+  kable_styling()
+
+```
+It is already better for visualization. 
+
+## Visualization
+
+### Most common words
+
+Most common words per book
+
+```{r}
+for (bn in book_names){
+tmp <- sort(df[df$book_name == bn, 2:m], decreasing = T)
+barplot(height = unlist(tmp[10:1]),
+        las =2 ,
+        horiz = TRUE,
+        main = paste("Most frequent words in", bn),
+        cex.names=0.7,
+        col = "lightblue")
+}
+```
+
+### Word coluds
+
+More interesting way to visualize words is word clouds
+
+TeoTeChing
+
+```{r}
+bn <- "TaoTeChing"
+tmp <- unlist(df[df$book_name == bn, -1])
+names(tmp) <- NULL
+df2 <- data.frame(word = colnames(df[,-1]), freq  = tmp)
+
+set.seed(1234)
+wordcloud(words = df2$word, freq = df2$freq, min.freq = 1,
+          max.words=100, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"), main = bn)
+
+
+```
+
+Bible
+
+```{r}
+bn <-  "Bible" 
+tmp <- unlist(df[df$book_name == bn, -1])
+names(tmp) <- NULL
+df2 <- data.frame(word = colnames(df[,-1]), freq  = tmp)
+
+set.seed(1234)
+wordcloud(words = df2$word, freq = df2$freq, min.freq = 1,
+          max.words=100, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"), main = bn)
+```
+
+Buddhism
+ 
+```{r}
+bn <-  "Buddhism" 
+tmp <- unlist(df[df$book_name == bn, -1])
+names(tmp) <- NULL
+df2 <- data.frame(word = colnames(df[,-1]), freq  = tmp)
+
+set.seed(1234)
+wordcloud(words = df2$word, freq = df2$freq, min.freq = 1,
+          max.words=50, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"), main = bn)
+
+```
+
+Upnishad
+
+```{r}
+bn <-  "Upanishad"
+tmp <- unlist(df[df$book_name == bn, -1])
+names(tmp) <- NULL
+df2 <- data.frame(word = colnames(df[,-1]), freq  = tmp)
+
+set.seed(1234)
+wordcloud(words = df2$word, freq = df2$freq, min.freq = 1,
+          max.words=80, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"), main = bn)
+
+```
+
+YogaSutra
+
+```{r}
+bn <-  "YogaSutra" 
+tmp <- unlist(df[df$book_name == bn, -1])
+names(tmp) <- NULL
+df2 <- data.frame(word = colnames(df[,-1]), freq  = tmp)
+
+set.seed(1234)
+wordcloud(words = df2$word, freq = df2$freq, min.freq = 1,
+          max.words=100, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"), main = bn)
+
+```
+
+### Dimentionality reduction
+
+How our chapters look categorized in books look treated with TSNE
+
+```{r}
+library(Rtsne)
+library(ggplot2)
+library(plotly)
+
+tsne <- Rtsne(data[,1:8266], dims = 2, preplexity = 30,  verbose=FALSE, max_iter = 500)
+data_to_plot <- as.data.frame(tsne$Y)
+
+data_to_plot$label <- book_name
+
+ggplot(data_to_plot, aes(x = V1, y = V2, color = label)) +
+  geom_point() + 
+  theme_bw() + 
+  scale_color_manual(values = brewer.pal(8, "Set1"))
+
+```
+
+And how they look in 3d
+```{r}
+tsne <- Rtsne(data[,1:8266], dims = 3, preplexity = 30,  verbose=FALSE, max_iter = 500)
+data_to_plot <- as.data.frame(tsne$Y)
+
+data_to_plot$label <- book_name
+
+plot_ly(data_to_plot, x = ~V1, y = ~V2, z = ~V3, color = ~label, size = 0.1)
+```
+
+### Word lengths
+
+word lengths
+```{r}
+d <- data.frame(word_len = NULL, book = NULL)
+
+for (bn in book_names){
+tmp_df <- df[df$book_name == bn,]
+word_list <- sapply(colnames(tmp_df)[2:ncol(tmp_df)], function(x) rep(nchar(x), tmp_df[x])  )
+word_list <- unlist(word_list) 
+names(word_list) <- NULL
+p <- data.frame(word_len = word_list, book = rep(bn, length(word_list)))
+d <- rbind(d, p)
+
+}
+
+ggplot(d, aes(x = word_len, fill = book)) + geom_density(adjust = 2, alpha = 0.5 ) + theme_minimal()
+```
+
+```{r}
+ggplot(d, aes(y = word_len, x= book,  fill = book)) + geom_boxplot() + theme_minimal()
+```
+
+### Abnormally long words
+
+```{r}
+w <- colnames(data)
+
+long <- parallelLapply(w, function(x){if(nchar(x)>15){x}else NULL})
+long <- unlist(long)
+
+d <- data[,long] %>% colSums() %>% as.data.frame() 
+d$names <- rownames(d)
+colnames(d)[1] <- "occurrances"
+
+d %>% arrange(desc(occurrances)) %>%  head(10) %>% kable() %>% 
+  kable_styling()
+
+```
+
+    *"These are the five clinging-aggregates: form as a clinging-aggregate, feeling as a clinging-aggregate, perception as a clinging-aggregate, fabrications as a clinging-aggregate, consciousness as a clinging-aggregate... These five clinging-aggregates are rooted in desire..."The Buddha:A certain monk: "Is it the case that clinging and the five clinging-aggregates are the same thing, or are they separate?"A certain monk:The Buddha: "Clinging is neither the same thing as the five clinging-aggregates, nor are they separate. Whatever desire & passion there is with regard to the five clinging-aggregates, that is the clinging there..."*
+
+    *"There are three kinds of feeling: pleasant feeling, painful feeling, & neither-pleasant-nor-painful feeling... Whatever is experienced physically or mentally as pleasant & gratifying is pleasant feeling. Whatever is experienced physically or mentally as painful & hurting is painful feeling. Whatever is experienced physically or mentally as neither gratifying nor hurting is neither-pleasant-nor-painful feeling... Pleasant feeling is pleasant in remaining and painful in changing. Painful feeling is painful in remaining and pleasant in changing. Neither-pleasant-nor-painful feeling is pleasant when conjoined with knowledge and painful when devoid of knowledge."*
+
+--Bhuddhism
+
+## Sentiment analysis
+
+###  Sentiment
+
+The NRC Emotion Lexicon is a list of English words and their associations with eight basic emotions (anger, fear, anticipation, trust, surprise, sadness, joy, and disgust) and two sentiments (negative and positive). The annotations were manually done by crowdsourcing.
+
+```{r cache=TRUE}
+get_words_out_of_bag <- function(df,n){
+  #' df - bag of words
+  #' n number of row to get words out
+  row <- df[n,] %>% select(which(df[n,] != 0))
+  cols <- colnames(row)
+  if(length(cols) == 1){return(list(NULL))}
+  words <- sapply(2:length(cols), function(i, row, cols){rep(cols[i], row[1,i])}, cols = cols, row=row, simplify = TRUE)
+  unlist(words)
+}
+
+get_words_in_books <- function(df, bookname){
+  slice <- df[df[,1] == bookname,]
+  all <- sapply(1:nrow(slice), get_words_out_of_bag, df=df, simplify = TRUE)
+  unlist(all)
+}
+```
+
+```{r cache = TRUE}
+parallelStartMulticore(detectCores())
+
+df <- read.csv('./AllBooks_baseline_DTM_Labelled.csv')
+books <- stri_extract(df$X, regex =  "^[a-zA-Z]+")
+df$X <- books
+
+starttime <- Sys.time()
+inside <- parallelLapply(unique(books), get_words_in_books, df=df)
+endtime <- Sys.time()
+endtime - starttime
+
+
+```
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, message = FALSE}
+select_sentiment <- function(word, sent_name){
+  #' fukncja zwraca liste posortowanych slow o danym sentymencie
+  #' @param word lista slow do analizy
+  #' @param sent_name nazwa sentymentu, ktory chcemy otrzymac
+  
+  require('tidytext')
+  require('textdata')
+  # wynieramy slowa ze slownika sentymentu
+  nrc_sent <- get_sentiments("nrc") %>% 
+    filter(sentiment == sent_name)
+  
+  #zliczamy w danych wystapienia tych slow
+  as.data.frame(word) %>%
+    inner_join(nrc_sent) %>%
+    count(word, sort = TRUE) %>%
+    mutate(sent = sent_name)
+}
+
+all_sentiment <- function(word, k = 100, all = FALSE, sent = c("trust", 
+                                                               "fear", 
+                                                               "negative", 
+                                                               "sadness",
+                                                               "anger", 
+                                                               "surprise",
+                                                               "positive", 
+                                                               "disgust",
+                                                               "anticipation", 
+                                                               "joy")){
+  #' zwraca k najbardziej emocjonalnych slow w zbiorze
+  #' @param word lista slow
+  #' @param k do head(k)
+  #' @param all jesli TRUE zwroci wszystkie slowa niezaleznie od k
+  #' @param sent zwroci tylko te sentymenty - domyslnie wszytkie
+  
+  require('dplyr')
+  # wektoryzwujemy funkcje wyznaczajaca sentyment wzgledem sentymentu
+  vek_s <- Vectorize(select_sentiment, vectorize.args = "sent_name", SIMPLIFY = FALSE)
+  # lista macierzy kazdego sentymentu
+  x <- vek_s(word, sent)
+  # laczymy w jedna ramke
+  y <- do.call(rbind, x)
+  # sortujemy 
+  y2 <- y %>% arrange(desc(n))
+  # obcinamy do k
+  if(!all) {
+    y2<- head(y2, k)
+  }
+  return(y2)
+}
+
+sentiment_table_mixed <- function(word, name, sent = c("trust", 
+                                                       "fear", 
+                                                       "negative", 
+                                                       "sadness",
+                                                       "anger", 
+                                                       "surprise",
+                                                       "positive", 
+                                                       "disgust",
+                                                       "anticipation", 
+                                                       "joy")) {
+  #' zwraca jednokolumnowa tabelke z procentowa zawartoscia kazdego sentymentu
+  #' @param word lista slow
+  #' @param name nazwa zbioru(przypisana potem kolumnie wyjsciowej)
+  
+  require("dplyr")
+  zliczone <- all_sentiment(word, all = TRUE, sent = sent)
+  tab <- zliczone %>%
+    group_by(sent) %>%
+    summarise(n = sum(n))%>%
+    mutate(procent = 100*n / sum(n))%>%
+    select(procent)
+  
+  colnames(tab) <- c(name)
+  return(tab)
+}
+
+booknames <- unique(books)
+names(inside) <- booknames
+
+df_sented_list <- parallelLapply(booknames, function(x, inside){sentiment_table_mixed(unlist(inside[x]), x)}, inside = inside)
+
+df_sented <- do.call("cbind",df_sented_list)
+
+
+df_sented <- cbind(df_sented, sent= c("trust", 
+                     "fear", 
+                     "negative", 
+                     "sadness",
+                     "anger", 
+                     "surprise",
+                     "positive", 
+                     "disgust",
+                     "anticipation", 
+                     "joy"))
+
+
+melted <- reshape::melt(df_sented)
+```
+
+```{r}
+rpivotTable(data = melted, cols = "sent", rows = "variable", rendererName = "Heatmap", aggregatorName = "Sum", vals = "value")
+```
+
+
+Let's see with books of Bible treated as one:
+
+```{r}
+df_sented_simp <- df_sented
+
+df_sented_simp$Bible = (df_sented$BookOfEccleasiasticus + 
+  df_sented$BookOfProverb + 
+  df_sented$BookOfEcclesiastes +
+  df_sented$BookOfWisdom) / 4
+
+df_sented_simp$BookOfProverb <- NULL
+df_sented_simp$BookOfEcclesiastes <- NULL
+df_sented_simp$BookOfEccleasiasticus <- NULL
+df_sented_simp$BookOfWisdom <- NULL
+
+
+melted <- reshape::melt(df_sented_simp)
+
+rpivotTable(data = melted, cols = "sent", rows = "variable", rendererName = "Heatmap", aggregatorName = "Sum", vals = "value")
+
+```
+
+
+
+
+
+
+
+
+
