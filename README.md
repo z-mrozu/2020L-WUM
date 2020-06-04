@@ -20,7 +20,7 @@
 | 26.05 |                                                                         | Konsultacje                      | Oddanie kamienia milowego 2. |
 | 2.06  | Redukcja wymiarów                                                       | Termin oddania PD6, początek PD7 | Konsultacje                  |
 | 9.06  |                                                                         | Konsultacje                      | Prezentacja projektu 2.      |
-| 16.06 | Analiza koszykowa                                                       | Termin oddania PD7               |                              |
+| 16.06 | Rano: Wstęp do sieci neuronowych / Wieczorem: Analiza koszykowa                                                     | Termin oddania PD7               |                              |
 
 ### Zasady oceniania laboratoriów:
 
