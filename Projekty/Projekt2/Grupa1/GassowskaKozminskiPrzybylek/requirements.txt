@@ -1,8 +1,13 @@
-numpy (1.18.3)
+numpy (1.18.4)
 pandas (1.0.3)
+scipy (1.4.1)
 matplotlib (3.2.1)
 seaborn (0.10.1)
 nltk (3.2.5) 
-textblob (0.15.3) 
+textblob (0.15.3)
+sklearn (0.0)
+flair (0.5)
 math
 collections
+warnings
+random
