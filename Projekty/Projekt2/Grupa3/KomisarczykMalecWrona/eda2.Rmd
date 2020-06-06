@@ -18,6 +18,7 @@ options(stringsAsFactors = FALSE)
 
 library(dplyr)
 library(ggplot2)
+library(plotly)
 
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 ```
@@ -53,12 +54,26 @@ sum(is.na(books))
 
 Zatem w danych nie ma braków ni stąd ni zowąd - zbiory danych są dobrze zdefiniowane.
 
-Sprawdźmy ile mamy ksiąg, a w nich rozdziałów:
+Sprawdźmy ile mamy ksiąg, a w nich rozdziałów.
+
+Posortowaliśmy liczbę rozdziałów w każdej księdze i wstawiliśmy do tabelki:
 
 ```{r}
-table(books$X)
-dim(books) #
+chapters <- books %>% group_by(X) %>% 
+  summarize(count = n()) %>% 
+  arrange(desc(count))
+
+chapters
 ```
+
+Widzimy, że indyjskie i japońskie księgi mają znacznie więcej rozdziałów/obserwacji niż księgi biblijne np. *Księga Madrości*(Book of Wisdom) lub *Księga Koheleta*(Books of Exxlesiastes).
+
+Sprawdzimy teraz rozmiar naszego zbioru danych:
+
+```{r}
+dim(books)
+```
+
 
 Mamy 8 ksiąg, 590 rozdziałów, a liczba unikalnych słówek(kolumn) to 8266, ponieważ nie liczymy pierwszej kolumny.
 
@@ -73,15 +88,14 @@ Poniżej przedstawiamy liczbę rozdziałów (obserwacji) dla każdej księgi tak
 - BookOfEccleasiasticus 50
 - BookOfWisdom 19
 
-Sprawdzimy czy księgi różnią się objętościowo:
+Sprawdzimy czy obserwacje różnią się objętościowo, czyli mają różną liczbę słów:
 
 ```{r}
 aux <- as.matrix(books[,2:ncol(books)])
 # sumuje słowa w każdym rozdziale:
 liczba_slow <- apply(aux, 1, sum)
-hist(liczba_slow, breaks = 100, main = "Liczba slow w ksiegach", 
-     xlab = "liczba slow",
-     ylab = "czsstotliwosc")
+boxplot(liczba_slow, main = "Liczba slow w danym rozdziale", 
+     xlab = "liczba slow", horizontal = TRUE)
 
 ```
 
@@ -110,9 +124,49 @@ head(books2, 10)
 tail(books2, 10)
 ```
 
-Na pierwszy rzut oka, w Buddhism nie ma za wiele przysłówków (adverb), a w BookOfWisdom jest ich procentowo więcej. 
+Na pierwszy rzut oka, w *Buddhism* nie ma za wiele przysłówków (adverb), a w *Book Of Wisdom* jest ich procentowo więcej. 
 
 Można również dostrzec, że w BookOfWisdom jest więcej słówek jako takich - te rozdziały są 'większe objętościowo'. Postaramy się wziąć to pod uwagę *w następnym kamieniu milowym*, a samo zliczanie słówek jest łatwe w porównaniu do zastosowanych w tym projekcie przekształceń danych.
+
+Sprawdzimy wariancję poszczególnych zmiennych i zwizualizujemy te 3 wymiary o największej wariancji.
+
+```{r}
+var(books2$noun)
+var(books2$verb)
+var(books2$adjective)
+var(books2$adverb)
+```
+
+Weźmemy zatem 3 pierwsze kolumny, czyli noun, verb i adjective.
+
+Przedstawimy je na wykresie 3D i zobaczymy czy obserwacje z tego samego klastra różnią się co do liczby części mowy.
+
+```{r}
+
+data0 <- books2 %>% select(X, noun, verb, adjective)
+data <- data0 %>% mutate(noun = log10(noun), verb = log10(verb), adjective = log10(verb))
+
+data$X <- as.factor(as.integer(as.factor(data$X)))
+
+plot_ly(x=data$noun, y=data$verb, z=data$adjective, type="scatter3d", mode="markers", color=data$X)
+
+```
+
+**Legenda:**
+
+- Buddhism = 1
+- TaoTeChing = 2
+- Upanishad = 3
+- YogaSutra = 4
+- BookOfProverb = 5
+- BookOfEcclesiastes = 6
+- BookOfEccleasiasticus = 7
+- BookOfWisdom = 8
+
+Powyższy wykres w zasadzie nic nadzwyczajnego nie pokazuje. Pierwsze 4 kolory reprezentują księgi azjatyckie, które mają więcej słów w rozdziałach. Natomiast kolejne 4 kolory to księgi bilbijne. Obserwacje prawdopodobnie można podzielić na wykresie na 2 klastry np. metodą *kmeans*. Informacja ta mogła być już wykorzystana na poziomie zliczania liczby słów w księgach. 
+
+*Zamienimy liczbę części mowy na ich procentowy udział w rozdziałach w ostatecznym modelowaniu.*
+
 
 
 # Emocje w poszczególnych księgach
@@ -130,6 +184,46 @@ tail(emotions, 20)
 
 Możemy zauważyć, że Księdze Buddyzmu emocje są wymieszane, natomiast w Księdze Mądrości dominuje emocja "happy", ale również "fear". W Księdze Mądrości pojawia się również 'disgust', której to emocji brakuje w Księdze Buddyzmu.
 
+Sprawdzimy wariancję poszczególnych zmiennych i zwizualizujemy te 3 wymiary o największej wariancji.
+
+```{r}
+var(emotions$surprise)
+var(emotions$sad)
+var(emotions$neutral)
+var(emotions$happy)
+var(emotions$anger)
+var(emotions$fear)
+var(emotions$disgust)
+
+```
+
+Do przykładowego wykresu 3D wybieramy emocje: **happy, anger oraz fear**
+
+```{r}
+
+data0 <- emotions %>% select(X, happy, anger, fear)
+data <- data0 %>% mutate(happy = log10(happy), anger = log10(anger), fear = log10(fear))
+
+data$X <- as.factor(as.integer(as.factor(data$X)))
+
+plot_ly(x=data$happy, y=data$anger, z=data$fear, type="scatter3d", mode="markers", color=data$X)
+
+```
+
+**Legenda:**
+
+- Buddhism = 1
+- TaoTeChing = 2
+- Upanishad = 3
+- YogaSutra = 4
+- BookOfProverb = 5
+- BookOfEcclesiastes = 6
+- BookOfEccleasiasticus = 7
+- BookOfWisdom = 8
+
+Tutaj również widzimy, że księgi 1-4 mają więcej emocji happy. Kilka rozdziałów z księga 5, czyli Book of Proverb ma bardzo dużo emocji anger jak na swoją objętość.Księga 2 (TaoTeChing) we wszystkich rozdziałach ma jakiś aspet strachu. 
+
+Podsumowując, jeśli chodzi o emocje to tutaj ciężej jest rozgraniczyć obserwacje na te większe objętościowo i mniejsze. Z tego powodu mamy nadzieję, że w ostatecznym modelowaniu, *po zamianie liczby emocji na ich udział procentowy*, rozpatrywanie emocji pomoże nam dokonać lepszej klasteryzacji.
 
 # Wnioski
 
