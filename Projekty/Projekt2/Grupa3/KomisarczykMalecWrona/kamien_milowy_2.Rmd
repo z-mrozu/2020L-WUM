@@ -1,0 +1,283 @@
+---
+title: "Inżynieria cech, wstępne modelowanie"
+author: "Mikołaj Malec, Patryk Wrona, Konrad Komisarczyk"
+date: "5/26/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(12)
+```
+
+## Wstęp
+
+W naszym projekcie dokonujemy klasteryzacji zbioru ksiąg religijnych. Dostępny jest zbiór danych **books** opisujący rozdziały książek oraz stworzone na jego podstawie **emotions** i **speech parts**, które określają odpowiednio ile emocji i części mowy było w każdym rozdziale księgi.
+
+- **books** : ilość wybranych słów
+
+- **emotions** : ilość słów o danym nacechowaniu
+
+- **speech parts** : ilość słów o danej części mowy
+
+Chcemy połączyć te wszystkie zbiory i na ich podstawie zrobić klasteryzację.
+
+```{r download}
+#ładowanie danych
+books <- readRDS("./books.RDS")
+#kopia
+orginal_books <- books
+
+#usuwanie kolumny z nazwami ksiąg
+books_label <- books[,-1]
+books <- books[,-1] 
+#wymiary zbioru
+dim(books)
+```
+
+Niestety, zbiór **books** jest zbiorem za dużym - musimy w pewien sposób zmniejszyć ich wymiar poprzez selekcję najważniejszych słów, tzw. **Feature Selection**.
+
+Należy pamiętać, że każda usunięta kolumna to strata informacji, jednak usuwanie kolumn sprawia, że model jest w ten sposób łatwiej wytłumaczalny i pozbywamy się kolumn, które mogą wprowadzać szum do danych.
+
+## Usuwanie kolumn - słów z małą częstotliwością występowania
+
+```{r 1 delete}
+#usuwanie kolumn, które mają tylko jedna pozycję różną od 0
+#nie da się przez to zgrupować na podstawie tej kolumny
+n <- dim(books)[2]
+col_to_del <- c()
+for(i in 1:n){
+#slowo musi wystapic wiecej niz w 1 rozdziale księgi
+how_many_book_has_this_word <- sum( as.logical( books[,i]))
+if( how_many_book_has_this_word <= 1){ col_to_del <- c(i, col_to_del)}
+}
+
+books[, col_to_del] <- NULL
+
+dim(books)
+```
+
+Najpierw zostały usunięte kolumny (słowa), które posiadają tylko jedną niezerową wartość. Co oznacza, że słowo występuje tylko w jednym rozdziale w jednej księdze. 
+
+Intuicyjnie trudno zgrupować tylko na podstawie wydarzenia, które występuje tylko raz. Może to wprowadzać szum do danych. Ponadto, usunięte zostało około połowy kolumn (`r length(col_to_del)` słów usuniętych). Nie jest to typowy sposób na ograniczenie danych; ten krok został wymyślony przez nas. Typowo usuwa się tylko kolumny o zerowej wariancji (tutaj takowe nie występują).
+
+## Próg wariancji
+
+Usuwamy kolumny o małej wariancji; nic niewnoszące do danych.
+
+```{r Variance Thresholding}
+variance_threshold <- 0.5
+
+n <- dim(books)[2]
+col_to_del <- c()
+var <- rep(0, n)
+num_var_deleted <- 0
+for(i in 1:n){
+  #slowo musi wystapic wiecej niz 1 ksiazce
+  variance <- var( books[,i])
+  if( variance < variance_threshold){ 
+    col_to_del <- c(i, col_to_del)
+    num_var_deleted <- num_var_deleted+1
+  }
+  var[i] <- variance
+}
+
+books[, col_to_del] <- NULL
+
+dim(books)
+```
+
+Idea ograniczenia przez wariancję jest prosta. Jeśli dane mają małą wariancję, to niosą małą ilość informacji. W tym przypadku trudno byłoby rozróżnić obserwacje, ponieważ wartości są w miarę 'blisko' siebie. Usunięte zostały `r length(col_to_del)` słowa.
+
+## Próg korelacji
+
+Usuwamy kolumny skorelowane ze sobą.
+
+```{r Corelacion Threshold}
+corelacion_threshold <- 0.9
+
+num_col_deleted <- 0
+i <- 1
+while ( i < dim(books)[2]) {
+  j <- i+1
+  while ( j <= dim(books)[2]) {
+    if( cor( books[,i], books[,j]) > corelacion_threshold){
+      #lista podobnych słów
+      print( c( names(books[i]), names(books[j]), cor( books[,i], books[,j])))
+      #losowo i lub j
+      column_to_delete <- sample( c(i,j), 1)
+      books[, column_to_delete] <- NULL
+      um_col_deleted  <- num_col_deleted+1
+    }
+    j <- j+1
+  }
+  i <- i+1
+}
+
+dim(books)
+```
+
+Ograniczanie przez korelację wychodzi z założenia, że skorelowane cechy niosą ze sobą tę samą informację. Ponadto skorelowane cechy mogą mieć negatywny wpływ na modelowanie. Jeśli 2 kolumny są skorelowane, to usuwana jest losowa jedna z tych dwóch. Usunięte zostały `r num_col_deleted` słowa.
+
+Ostatecznie na podstawie przeprowadzonego Feature Selection wybraliśmy te kolumny (słowa), które mają potencjalnie największe znaczenie dla modelu.
+
+```{r words}
+sort( names( books))
+```
+
+```{r count}
+words_count <- sort( unlist( lapply( orginal_books[-1], sum)), decreasing = TRUE)
+is_in <- names( words_count) %in% names( books)
+barplot( words_count[1:200],
+col = is_in)
+title( main = "Liczba wystapien danego slowa we wszystkich ksiegach\n(pierwsze 200)",
+xlab = "czarny kolor - slowa w ostatecznym zbiorze (nieusuniete)")
+# words_count
+```
+
+Ten wykres ma pokazać że słowa które zostały wybrane (czarne) są zazwyczaj wśród tych słów które często występują. Dzięki temu jest większe prawdopodobieństwo, że dane słowa występują we wszystkich rozdziałach z danej księgi. Etykietki na osi x: *shall*, *may* ... oznaczają przykładowe słowa i są nieważnym elementem wykresu - służą tylko w celu orientacji.
+
+Natomiast jeśli dane słowo występuje tylko w kilku rozdziałach, może to wprowadzić niepotrzebny szum. Jednak zdajemy sobie sprawę, że możemy w ten sposób wyrzucić słowa, które występują tylko w danej księdze (przez co mają małą wariancję). Usuwanie słów może mieć olbrzymi efekt przy wybieraniu odpowiedniej liczby klastrów.
+
+## Przetwarzanie cech
+
+Zanim połączymy tabele, stworzymy **dodatkowe 2 tabele** na jej podstawie:
+
+- **books_log** - kolumny zlogarytmowane
+
+- **books_1** - kolumny mają postać binarną (występuje/ nie występuje)
+
+Mianowicie, problemem jest to w jaki sposób model rozumie odległości. **Większość modeli klasteryzujących działa na zasadzie odległości** (np. metryki Euklidesowej), co prowadzi w naszym przypadku do pewnych 2 komplikacji: 
+
+1) Otóż obserwacja gdzie np. występuje tylko 1 słowo *'god'* dla modelu jest bliżej obserwacji bez tego słowa niż obserwacja, która ma 10 razy *'god'*. 
+
+2) Jest też ważne czy słowo dane występuje, czy nie występuje, nie ważne w jakiej ilości. 
+
+W celu sprawdzenia, czy powyższe 2 kwestie wpłyną na model, zamierzamy sprawdzić, jaki wpływ ma **logarytmowanie** jak i **kodowanie naszych danych do postaci binarnych**.
+
+```{r new feach}
+#logarytm
+books_log <- log10( books +1)
+
+head(books_log)
+
+#księga posiada / nie posiada danego słowa
+books_1 <- as.data.frame( lapply( lapply( books, as.logical), as.numeric))
+
+head(books_1)
+```
+
+Łączymy wszystko - dodajemy tabele **emotions** i **speech parts**.
+
+```{r combine}
+speech_parts <- readRDS("./speech_parts_aggregated.RDS")[-1]
+emotions <- readRDS("./emotions.RDS")[-1]
+
+data_books <- scale( cbind( books, speech_parts, emotions))
+data_books_log <- scale( cbind( books_log, speech_parts, emotions))
+data_books_1 <- scale( cbind( books_1, speech_parts, emotions))
+```
+
+## Wstępne modelowanie
+
+Celem tego punktu jest zastoowanie modelu klasteryzacji w celu oceny naszych 3 rodzajów przetwarzania cech - będzie to rozszerzane w następnym kamieniu milowym.
+
+De facto, chcemy porównać który z 3 sposobów kodowania jest najlepszy: bez zmian, logarytmiczny czy encoding. Przeprowadzimy w tym celu podstawową klasteryzację z użyciem **kmeans**, a następnie zmierzymy wyniki klasteryzacji za pomocą metryk **Connectivity**, **Dunn Index** oraz **The Silhouette Width**.
+
+Wyborem najlepszej liczby klastrów zajmiemy się dokładniej w 3 kamieniu milowym. Na początek założyliśmy, że znamy z góry ilość klastrów (8).
+
+```{r}
+library( clValid)
+d_data_books <- dist(data_books, method = "euclidean")
+d_data_books_log <- dist(data_books_log, method = "euclidean")
+d_data_books_1 <- dist(data_books_1, method = "euclidean")
+
+km_data_books <- kmeans(data_books, 8) # 8 klastrów
+km_data_books_log <- kmeans(data_books_log, 8) # 8 klastrów
+km_data_books_1 <- kmeans(data_books_1, 8) # 8 klastrów
+```
+
+## Wstępne wybranie ilości klastrów (k).
+
+```{r}
+#maksymalna liczba klastrów
+k_max <- round( sqrt( dim( data_books)[1]))
+
+#wektor sumy kwadratów odległości wewnątrz grupy
+wss <- rep(0, k_max)
+
+for (i in 1:k_max) wss[i] <- sum(kmeans(data_books, centers=i)$withinss)
+
+plot(1:k_max, wss, type="b", xlab="Liczba klastrow",
+ylab="Suma kwadratow odległosci wewnatrz grupy")
+title( main = "")
+```
+
+Jednym ze sposobów ustalania najlepszej liczby klastrów jest sprawdzenie dla jakiej liczby klastrów suma kwadratów odległości wewnątrz grupy przestaje maleć. W naszym przypadku wybralibyśmy ten punkt gdzieś koło 15, lecz wiemy, że różnych ksiąg jest 8. Jest to warte mieć na uwadze, kiedy w modelowaniu będziemy wybierać liczbę klastrów.
+
+### Connectivity
+
+**Opis metryki:**
+
+Mierzy zwartość partycji klastra. Connectivity ma wartość od zera do ∞ i powinna być **zminimalizowana**.
+
+```{r}
+connectivity_of_data_books <- connectivity(distance = d_data_books, clusters = km_data_books$cluster)
+connectivity_of_data_books_log <- connectivity(distance = d_data_books_log, clusters = km_data_books_log$cluster)
+connectivity_of_data_books_1 <- connectivity(distance = d_data_books_1, clusters = km_data_books_1$cluster)
+```
+
+### Dunn Index
+
+**Opis metryki:**
+
+Dunn Index to stosunek najmniejszej odległości między obserwacjami spoza tej samej grupy do największej odległości wewnątrz klastra. Mówi się, że pokazuje najgorszy scenariusz. Dunn Index ma wartość od zera do ∞ i powinien być **maksymalizowany**.
+
+```{r}
+dunn_of_data_books <- dunn(distance = d_data_books, clusters = km_data_books$cluster)
+dunn_of_data_books_log <- dunn(distance = d_data_books_log, clusters = km_data_books_log$cluster)
+dunn_of_data_books_1 <- dunn(distance = d_data_books_1, clusters = km_data_books_1$cluster)
+```
+
+### The Silhouette Width
+
+**Opis metryki:**
+
+Silhouette Width jest średnią wartością sylwetki każdej obserwacji. Wartość Silhouette mierzy stopień ufności w przypisywaniu klastrów konkretnej obserwacji, przy czym **dobrze zgrupowane obserwacje mają wartości bliskie 1**, a słabo zgrupowane obserwacje mają wartości bliskie -1.
+
+```{r}
+silhouette_width <- function(clusters, distance){summary( silhouette( clusters, dist = distance))$avg.width}
+
+silhouette_width_of_data_books <- silhouette_width(distance = d_data_books, clusters = km_data_books$cluster)
+silhouette_width_of_data_books_log <- silhouette_width(distance = d_data_books_log, clusters = km_data_books_log$cluster)
+silhouette_width_of_data_books_1 <- silhouette_width(distance = d_data_books_1, clusters = km_data_books_1$cluster)
+```
+
+```{r}
+par( mfrow=c(1,3))
+
+connectivity_vec <- c(connectivity_of_data_books, connectivity_of_data_books_log, connectivity_of_data_books_1)
+barplot( connectivity_vec,
+names.arg = c("books","books_log", "books_1"), las=2, col = connectivity_vec %in% min(connectivity_vec))
+title("connectivity")
+
+dunn_vec <- c(dunn_of_data_books, dunn_of_data_books_log, dunn_of_data_books_1)
+barplot( dunn_vec,
+names.arg = c("books","books_log", "books_1"), las=2, col = dunn_vec %in% max(dunn_vec))
+title("dunn")
+
+silhouette_width_vec <- c(silhouette_width_of_data_books, silhouette_width_of_data_books_log, silhouette_width_of_data_books_1)
+barplot( silhouette_width_vec,
+names.arg = c("books","books_log", "books_1"), las=2, col = silhouette_width_vec %in% max(silhouette_width_vec))
+title("silhouette_width")
+```
+
+Na czarno zaznaczono najlepszą tabelę w danej kategorii. Warto zwrócić uwagę, że connectivity powinno byc zminimalizowana.
+
+Tabela z tylko zeskalowaną liczbą słów (**books**) poradziła sobie najlepiej w 2 z 3 metryk. Będzie to zatem opcja, którą wykorzystamy w modelowaniu. Metryka **Dunn's index** jest ważną metryką, ale trzeba mieć na uwadze, że jest ona bardzo 'wymagająca' i nie bierze pod uwagę ogólnej miary klasteryzacji, tylko szuka najgorszego przypadku.
+
+*Notatka:* Na prezentacji stwierdziliśmy, że zlogarytmowanie daje najlepsze rezultaty. Niestety znaleźliśmy błąd dopiero po prezentacji. Otóż tabele wcześniej nie były zeskalowane, co dało inne rezultaty. Dane, które się modeluje za pomocą kmeans, powinny być wcześniej zeskalowane. Błąd jest już naprawiony.
+
+# Oświadczenie
+
+Potwierdzam samodzielność powyższej pracy oraz niekorzystanie przeze mnie z niedozwolonych źródeł.
