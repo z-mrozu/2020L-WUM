@@ -8,4 +8,8 @@ https://us04web.zoom.us/j/76144529378?pwd=WDRjeThFNW5aOWtFWmtobGM5c2hTUT09
 - PCA
 - TSNE
 
-19:00 **Konsultacje**
+19:00 **Ankieta DataCamp**
+- zasady uzyskania dodatkowych 10 punktów
+- https://forms.gle/zQu54rXxjHLgXVPm8
+
+19:10 **Konsultacje**
