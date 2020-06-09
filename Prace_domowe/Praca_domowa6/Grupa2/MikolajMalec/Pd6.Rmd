@@ -1,0 +1,214 @@
+---
+title: "Clustering"
+author: "Mikołaj Malec"
+date: "1/6/2020"
+output: html_document
+---
+
+## Preparation
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r begin, message=FALSE, warning=FALSE}
+set.seed(123)
+
+#import data
+clustering_raw <- read.csv( "https://raw.githubusercontent.com/Miki-Mal/2020L-WUM/master/Prace_domowe/Praca_domowa6/clustering_R3.csv", header = 1)
+
+#prepare data
+clustering <- as.data.frame( scale(clustering_raw)) # standardize variables
+
+#distance matrix
+d <- dist(clustering, method = "euclidean") # distance matrix
+
+library(plotly)
+#look at data
+plot_ly( data = clustering_raw, x=~X1, y=~X2, z=~X3)
+
+MASS::parcoord( clustering_raw)
+```
+
+Parallel coordinates plots is very useful for representing multi dimensional data. Each vertical line labeled X1, X2, X3 represents dimensions and other lines represent points connecting their values on every dimension axis.
+
+The task is to cluster points on 3D plane. Data was standardized for use in algorithms. There is no big outliers, so it wont cause big problems. In my opinion there should be 4 clusters: 2 small clusters and 2 big 'columns'.
+
+## Choosing best number of clusters (k) by K-Means algorithm
+
+### How k-means works
+
+The Κ-means clustering algorithm uses iterative refinement to produce a final result. The algorithm inputs are the number of clusters Κ and the data set. The data set is a collection of features for each data point. The algorithms starts with initial estimates for the Κ centroids, which can either be randomly generated or randomly selected from the data set. The algorithm then literates between two steps:
+
+1. Data assignment step:
+
+Each centroid defines one of the clusters. In this step, each data point is assigned to its nearest centroid, based on the squared Euclidean distance.
+
+2. Centroid update step:
+
+In this step, the centroids are recomputed. This is done by taking the mean of all data points assigned to that centroid's cluster.
+
+### Choosing k
+
+```{r k_max}
+(k_max <- round( sqrt( dim( clustering)[1])))
+```
+
+Maximum predicted number of clusters. It's often set as round squared of number of points.
+
+```{r K-Means wss}
+factoextra::fviz_nbclust( clustering, kmeans, method = "wss", k.max = k_max)
+```
+
+One way of choosing the best k is to look at plot of within sum of squares depended on number of clusters used in specific algorithm. The best k is where increase in number of clusters doesn't get much better result. Here it should be 4 or 6.
+
+```{r K-Means silhouette}
+factoextra::fviz_nbclust( clustering, kmeans, method = "silhouette", k.max = k_max)
+```
+
+Another option is to look at silhouette metric for clustering and choose one, for witch silhouette is in the maximum. Here proposed number of clusters are 2, 4, 6 or 8.
+
+```{r K-Means clusGap}
+gap_stat <- cluster::clusGap(clustering, FUN = kmeans, nstart = 25,
+K.max = k_max, B = 50)
+factoextra::fviz_gap_stat(gap_stat)
+```
+
+Last way is to calculate a goodness of clustering measure, the “gap” statistic and pick k, using the "firstmax" method. Here 10 is proposed as the best number of clusters, but 5, 7, 9 are aslo good to pick. 
+
+Overall 6 seem to be the best pick for all. I will conduct an experiment, to see if 6 is optimal number of clusters.
+
+```{r kmeans6}
+km_6 <- kmeans(clustering, 6, nstart = 100) # 6 cluster solution
+plot_ly( data = clustering_raw, x=~X1, y=~X2, z=~X3, color = km_6$cluster)
+
+MASS::parcoord( clustering_raw, col = km_6$cluster, main = "K-means")
+```
+
+Visual it's not a best clustering.
+
+## Choosing best number of clusters (k) by Hierarchical Agglomerative algorithm
+
+### How Hierarchical Agglomerative works
+
+Let's try with different clustering method: Hierarchical Agglomerative with single method. This function performs a hierarchical cluster analysis using a set of dissimilarities for the n objects being clustered. Initially, each object is assigned to its own cluster and then the algorithm proceeds iteratively, at each stage joining the two most similar clusters, continuing until there is just a single cluster. At each stage distances between clusters are recomputed by the Lance–Williams dissimilarity update formula according to the particular clustering method being used. For the *single* link or MIN version of hierarchical clustering, the proximity of two clusters is defined as the minimum of the distance (maximum of the similarity) between any two points in the two different clusters. I used single, because in the visualization clusters are well connected and there are little or any noise points.
+
+### Choosing k
+
+```{r hc_ward_fun_single, echo=FALSE}
+#simple function: in - data and number of clusters, out - one element list, clusters
+#used in factoextra functions
+hc_ward_fun_single <- function(x,k){
+out <- list()
+
+d <- dist(x, method = "euclidean")
+hc_ward <- hclust(d, method="single")
+out$cluster <- cutree(hc_ward, k=k)
+
+return(out)
+}
+
+factoextra::fviz_nbclust( clustering, hc_ward_fun_single, method = "wss", k.max = k_max)
+factoextra::fviz_nbclust( clustering, hc_ward_fun_single, method = "silhouette", k.max = k_max)
+
+
+gap_stat <- cluster::clusGap(clustering, FUN = hc_ward_fun_single,
+K.max = k_max, B = 50)
+factoextra::fviz_gap_stat(gap_stat)
+```
+
+The optimal number of clusters using methods:
+
+within cluster sums of squares: 2, 4, 6
+
+average silhouette: 2, 3
+
+gap statistics: 4, 6
+
+4 clusters solution is best number to fit for all methods. Also visualy for me is the best solution so I will use that number for comparison.
+
+## Comaparson of K-means and Hierarchical Agglomerative
+
+Let visualise the grouping in 4 groups by those algorithms. I used 4 groups also for k-means because metrics I used doesn't work well for comparing different number of clusters.
+
+```{r comp}
+# Hierarchical Agglomerative single
+hc_single <- hclust(d, method="single")
+hc_single_4 <- cutree(hc_single, k=4) # cut tree into 4 clusters
+
+plot_ly( data = clustering_raw, x=~X1, y=~X2, z=~X3, color = hc_single_4, colors = rainbow( 4))
+
+MASS::parcoord( clustering_raw, col = hc_single_4, main = "Hierarchical Agglomerative single")
+
+#kmeans 4 cluster
+km_4 <- kmeans(clustering, 4, nstart = 100) # 4 cluster solution
+plot_ly( data = clustering_raw, x=~X1, y=~X2, z=~X3, color = km_4$cluster)
+
+MASS::parcoord( clustering_raw, col = km_4$cluster, main = "K-means")
+```
+
+On visualization there can clearly seen differences in how algorithm work. K-Means is centroid-based clustering, so it splits the two 'columns' in half. Hierarchical Agglomerative is hierarchical clustering, so it combines the nearest points together. In my opinion Hierarchical Agglomerative clusters better in this case, but let's look at the metrics.
+
+## Metrics
+
+I used 3 metric for comparison. It's important that metrics for different algorithms should be compared only in the same number of groups, because number of groups affect metric.
+
+### Connectivity
+
+It measures the compactness of the cluster partitions. The
+connectivity has a value between zero and ∞ and should be minimized.
+
+### Dunn Index
+
+The Dunn Index is the ratio of the smallest distance between observations not in the same cluster to the largest intra-cluster distance. It's said that it show worst-case scenario. The Dunn Index has a value between zero and ∞, and should be maximized.
+
+### The Silhouette Width
+
+The Silhouette Width is the average of each observation’s Silhouette value. The Silhouette value measures the degree of confidence in the clustering assignment of a particular observation, with well-clustered observations having values near 1 and poorly clustered observations having values near −1.
+
+```{r Metrics}
+Silhouette <- c( 
+summary(cluster::silhouette( km_4$cluster, d))$avg.width,
+summary(cluster::silhouette( hc_single_4, d))$avg.width
+)
+
+Dunn <- c(
+clValid::dunn( distance = d, km_4$cluster),
+clValid::dunn( distance = d, hc_single_4)
+)
+
+Connectivity <- c(
+clValid::connectivity( distance = d, km_4$cluster),
+clValid::connectivity( distance = d, hc_single_4)
+)
+
+data.frame(
+Dunn, Connectivity, Silhouette, 
+row.names = c("kmean", "hclust")
+)
+```
+
+Hierarchical Agglomerative (hclust) is much better compared by Dunn index and Connectivity (Connectivity should be minimized). It's still worse compared by Silhouette Width. I think that is because ends of 'columns' can have low Silhouette value, but it's too small to make a difference. Overall Hierarchical Agglomerative is better clustering algorithm for this data.
+
+## Session info
+
+```{r, echo=FALSE}
+sessionInfo()
+```
+
+## Bibliography
+
+I use some text from:
+
+https://www-users.cs.umn.edu/~kumar001/dmbook/ch8.pdf
+
+https://blogs.oracle.com/datascience/introduction-to-k-means-clustering
+
+clValid library manual
+
+ 
+
+ 
+
+ 
+
