@@ -106,7 +106,7 @@ test_pca <- as.data.frame(as.matrix(test_do_PCA) %*% train_pca$rotation)
 dane <- test_pca[, 1:100]
 
 
-# unnamed 1
+# chunk4b
 data <- dane
 
 sil_scores <- numeric(15)
@@ -127,7 +127,7 @@ for(k in 2:15){
 }
 
 
-# unnamed 2
+# chunk4c
 scores_elbow <- scores_elbow[-1]
 tmp <- data.frame(scores_elbow/1000000) %>% mutate(k = row_number()+1)
 colnames(tmp) <- c("scores_milions", "k")

@@ -165,7 +165,7 @@ dane <- test_pca[, 1:100]
 
 Algorytm k-means ustala centroidy, względem których ustalana jest przynależność punktów do klastrów.
 
-```{r, warning=FALSE}
+```{r chunk4b, warning=FALSE}
 quiet( source("spectral.R") )
 
 data <- dane
@@ -173,6 +173,8 @@ data <- dane
 sil_scores <- numeric(15)
 scores_elbow <- numeric(15)
 kmeans_klaster <- matrix(nrow=dim(dane)[1], ncol=15)
+
+
 
 task <- makeClusterTask(data = data)
 for(k in 2:15){
@@ -190,7 +192,7 @@ for(k in 2:15){
 
 Metoda łokcia i miara silhouette dla sprawdzenia, czy z danych wynika, że $6$ powinno być dobrą ilościa klastrów:
 
-```{r}
+```{r chunk4c, dependson="chunk4b"}
 scores_elbow <- scores_elbow[-1]
 tmp <- data.frame(scores_elbow/1000000) %>% mutate(k = row_number()+1)
 colnames(tmp) <- c("scores_milions", "k")
@@ -216,19 +218,19 @@ tmp %>%
   ggtitle("Metoda silhouette dla clusteringu k-means.")
 ```
 
-Jak widzimy, dla $k\ =\ 7$ algorytm bardzo gubi się i podział nie jest laprzy od wcześniej wykonanego, czyli dla $k\ =\ 6$. Jest to znak, że powinniśmy rozwarzyć $k\ =\ 6$, gdyż potem dzieje się coś niedobrego.
+Jak widzimy na wykresie łokcia, dla $k\ =\ 8$ algorytm bardzo gubi się i podział nie jest leprzy od wcześniej wykonanego, czyli dla $k\ =\ 7$. Jest to znak, że powinniśmy rozwarzać $k\ < 8$, gdyż potem dzieje się coś niedobrego.
 
 
-Sprawdźmy jak wygląda podział na $7$ klastrów i czemu jest on taki słaby:
+Sprawdźmy jak wygląda podział na $8$ klastrów i czemu jest on taki słaby:
 
 ```{r}
-data %>% mutate(klastry = as.factor(kmeans_klaster[,7])) %>% 
+data %>% mutate(klastry = as.factor(kmeans_klaster[,8])) %>% 
   ggplot(aes(x=PC3, y=PC2, colour=klastry)) +
   geom_density_2d() +
-  ggtitle("Gęstość dla 7 klastrów według kmeans")
+  ggtitle("Gęstość dla 8 klastrów według kmeans")
 ```
 
-Widzimy więc, że algorytm nie zdecydował się na podział typu $3-4$, lecz na $2-5$, co miało swój efekt w niskich wynikach jakości rozwiązania.
+Widzimy więc, że algorytm nie zdecydował się na podział typu $4-4$, lecz na $2-6$, co miało swój efekt w niskich wynikach jakości rozwiązania.
 
 ### k-means - podział na 6
 
