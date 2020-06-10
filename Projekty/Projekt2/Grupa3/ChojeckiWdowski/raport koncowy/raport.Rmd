@@ -1,0 +1,840 @@
+---
+title: "Raport końcowy"
+author: "Przemysław Adam Chojecki, Michał Wdowski"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = FALSE, cache=TRUE)
+
+hook_output <- knit_hooks$get("output")
+knit_hooks$set(output = function(x, options) {
+  lines <- options$output.lines
+  if (is.null(lines)) {
+    return(hook_output(x, options))  # pass to default hook
+  }
+  x <- unlist(strsplit(x, "\n"))
+  more <- "..."
+  if (length(lines)==1) {        # first n lines
+    if (length(x) > lines) {
+      # truncate the output, but add ....
+      x <- c(head(x, lines), more)
+    }
+  } else {
+    x <- c(more, x[lines], more)
+  }
+  # paste these lines together
+  x <- paste(c(x, ""), collapse = "\n")
+  hook_output(x, options)
+})
+
+source("spectral.R")
+library(ddpcr)
+
+activity_labels <- c("WALKING", "WALKING_UPSTAIRS", "WALKING_DOWNSTAIRS", "SITTING", "STANDING", "LAYING")
+```
+
+# Wstęp
+Niniejszy raport jest efektem prac zespołu nad zbiorem danych dotyczących aktywności fizycznych rejestrowanych przy pomocy telefonu. Zbiór ten jest szczegółowo opisany w następnym paragrafie. [(Link do zbioru)](http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones) \
+Celem projektu było sprawdzenie, czy z samych danych naturalnie wynika ich podział na $6$ grup tak, jak to wynika z metody ich pozyskania.
+
+
+# Opis zbioru danych
+Analizowane dane to zbiór $561$ kolumn po $10299$ obserwacji. Reprezentują one zebrane sygnały od $30$ wolontariuszy i wolontariuszkek, z których każda osoba wykonywała $6$ czynności:\
+1. Chodzenie po płaskiej powierzchni, \
+2. Chodzenie po schodach w górę, \
+3. Chodzenie po schodach w dół, \
+4. Siadanie, \
+5. Wstawanie, \
+6. Kładzenie się. \
+Każda z nich wykonywana była przez około $1$ minutę i $15$ sekund. W czasie ich wykonywania testerzy posiadali przyczepiony do pasa telefon komórkowy, którym wykonywane były pomiary za pomocą akcelerometru oraz żyroskopu. Wideo pokazujące przykładowy pomiar można obejrzeć [tutaj](https://youtu.be/XOEN9W05_4A). \
+Następnie dane pocięte zostały na $2.56$ sekundowe fragmenty (nazwane oknami - ang. *windows*) nakładające się na siebie. Na tych właśnie fragmentach policzone zostały różne statystyki, m.in. średnia, mediana, maksimum, minimum, odchylenie standardowe, miara energii (Energy measure), suma kwadratów podzielona przez liczbę wartości, entropia (Signal entropy) i wiele innych. Na koniec statystyki te zostały jeszcze przeskalowane. Tak powstało $265$ kolumn danych. Następne $289$ powstało podobnie z tą różnicą, że każde z okien zostało przetworzone algorytmem Szybkiej Transformaty Fouriera (FFT). Ostatnie $7$ natomiast, jest to kąt między wektorem grawitacji, a mierzonym parametrem.
+
+
+
+
+
+# PCA
+Ze względu na wielkość danych postanowiono podjąć próbę zmniejszenia ich wymiarów za pomocą algorytmu PCA.
+
+```{r chunk1}
+train_raw <- read.csv(file = "data/train.csv", header = TRUE, sep = ",")
+test_raw <- read.csv(file = "data/test.csv", header = TRUE, sep = ",")
+label_train <- read.csv(file = "data/y_train.txt", header = FALSE, sep = ";")
+label_test <- read.csv(file = "data/y_test.txt", header = FALSE, sep = ";")
+subjectID_train <- read.csv(file = "data/subject_train.txt", header = FALSE, sep = ";")
+subjectID_test <- read.csv(file = "data/subject_test.txt", header = FALSE, sep = ";")
+
+quiet( library(dplyr) )
+quiet( library(ggplot2) )
+
+train <- train_raw
+test <- test_raw
+
+train$label <- as.factor(label_train$V1)
+test$label <- as.factor(label_test$V1)
+train$subjectID <- as.factor(subjectID_train$V1)
+test$subjectID <- as.factor(subjectID_test$V1)
+train$partition <- as.factor("train")
+test$partition <- as.factor("test")
+
+full_data <- rbind(train, test)
+
+full_data_do_PCA <- full_data %>% dplyr::select(X1:X561)
+full_data_PCA <- prcomp(full_data_do_PCA, scale. = TRUE, center = TRUE)
+```
+
+
+
+```{r chunk2}
+full_data_PCA$x %>% as.data.frame() %>% 
+  mutate(czynnosc = activity_labels[full_data$label]) %>%
+  ggplot(aes(x=PC1, y=PC2, color = czynnosc)) +
+  geom_point() +
+  ggtitle("PCA - pierwsza oraz druga kolumna")
+```
+
+
+Po przeskalowaniu danych za pomocą PCA wyraźnie można zauważyć podział zbioru na $2$ grupy: \
+1. Grupa pierwsza: \
+a) Chodzenie po płaskim, \
+b) Chodzenie po schodach w górę, \
+c) Chodzenie po schodach w dół, \
+2. Grupa druga: \
+a) Siadanie, \
+b) Wstawanie, \
+c) Kładzenie się.
+
+
+Co jednak napawa pesymizmem, nie wygląda na to, żeby wewnątrz tych grup łatwo było je od siebie rozróżnić.
+
+
+Ponadto można zaobserwować, że czynności z pierwszej grupy wydają się łatwiejsze w odróżnieniu niż te z drugiej. Okazuje się jednak, że na wykresie pierwszej kolumny z czwartą można zyskać odwrotne przekonanie, co widać poniżej:
+
+```{r chunk3}
+full_data_PCA$x %>% as.data.frame() %>% 
+  mutate(czynnosc = activity_labels[full_data$label]) %>%
+  ggplot(aes(x=PC1, y=PC4, color = czynnosc)) +
+  geom_point() +
+  ggtitle("PCA - pierwsza oraz czwarta kolumna")
+```
+
+# t-SNE
+
+W celu uzyskania innej perspektywy w spojrzeniu na rozmieszczenie punktów w przestrzeni, zdecydowaliśmy się spojrzeć na te dane po wykonaniu na nich algorytmu t-SNE, który służy do zrzutowania wektorów wielowymiarowych na mniejszą liczbę wymiarów w taki sposób, żeby zachować wzajemne rozmieszczenie punktów. \
+Ponieważ t-SNE jest dość kosztowne obliczeniowo, wybraliśmy losowo $1000$ wierszy oraz $30$ pierwszych kolumn z PCA.
+
+```{r tsne, message=FALSE, eval=TRUE}
+library(tsne)
+
+ktore <- sample(1:10299, 1000) # losowanie 1000 wierszy ze wszystkich
+
+tsne_data <- as.data.frame(full_data_PCA$x[ktore, 1:30])
+tsne_labels <- full_data$label[ktore]
+
+tsne_punkty <- tsne(tsne_data)
+tsne_punkty <- as.data.frame(tsne_punkty) %>% mutate(czynnosc = activity_labels[tsne_labels])
+ggplot(data = tsne_punkty, aes(x = V1, y = V2, color = czynnosc)) +
+    geom_point()
+```
+
+Być może dało by się wydzielić grupę pierwszych trzech czynności od drugiej trójki, widac też dość dobrze skupioną czynność nr $6$. Jednak ten wykres nie napawa zbytnim optymizmem. Należy jednak zwrócić uwagę, że nie są to pełne dane.
+
+# Podziały według algorytmów klasteryzacji
+
+W naszych eksperymentach postanowiliśmy badać jedynie przygotowaną wcześniej część testową danych (podział na zbiory `test` i `train` został wprowadzony przez autorów zbioru), który stanowi około $30\%$ wszytskich rekordów. Wzięliśmy pierwsze $100$ kolumn po PCA, ponieważ odpowiadają one aż za $77\%$ wariancji.
+
+```{r chunk4}
+train_do_PCA <- train %>% dplyr::select(X1:X561)
+test_do_PCA <- test %>% dplyr::select(X1:X561)
+
+train_pca <- prcomp(train_do_PCA, scale. = FALSE, center = FALSE)
+
+test_pca <- as.data.frame(as.matrix(test_do_PCA) %*% train_pca$rotation)
+
+dane <- test_pca[, 1:100]
+```
+
+## k-means
+
+Algorytm k-means ustala centroidy, względem których ustalana jest przynależność punktów do klastrów.
+
+```{r, warning=FALSE}
+quiet( source("spectral.R") )
+
+data <- dane
+
+sil_scores <- numeric(15)
+scores_elbow <- numeric(15)
+kmeans_klaster <- matrix(nrow=dim(dane)[1], ncol=15)
+
+task <- makeClusterTask(data = data)
+for(k in 2:15){
+  learner <- makeLearner("cluster.kmeans", centers = k)
+  model <- train(learner, task)
+  pred <- predict(model, task)
+  
+  scores_elbow[k] <- suma_wewnatrz_klastra(dane, pred$data$response)
+  Sil <- silhouette(x = pred$data$response, dist = dist(dane))
+  sil_scores[k] <- (sum(Sil[,3]))/dim(Sil)[1]
+  
+  kmeans_klaster[,k] <- pred$data$response
+}
+```
+
+Metoda łokcia i miara silhouette dla sprawdzenia, czy z danych wynika, że $6$ powinno być dobrą ilościa klastrów:
+
+```{r}
+scores_elbow <- scores_elbow[-1]
+tmp <- data.frame(scores_elbow/1000000) %>% mutate(k = row_number()+1)
+colnames(tmp) <- c("scores_milions", "k")
+
+tmp %>% 
+  ggplot(aes(x=k, y=scores_milions)) +
+  geom_line() +
+  scale_x_continuous(breaks = 2:15) +
+  geom_vline(xintercept = 6, linetype="dashed", color = "red") +
+  ylab("score w milionach") +
+  ggtitle("Metoda łokcia dla clusteringu k-means.")
+
+sil_scores <- sil_scores[-1]
+tmp <- data.frame(sil_scores) %>% mutate(k = row_number()+1)
+colnames(tmp) <- c("scores", "k")
+
+tmp %>%
+  ggplot(aes(x=k, y=scores)) +
+  geom_line() +
+  scale_x_continuous(breaks = 2:15) +
+  geom_vline(xintercept = 6, linetype="dashed", color = "red") +
+  ylab("score") +
+  ggtitle("Metoda silhouette dla clusteringu k-means.")
+```
+
+Jak widzimy, dla $k\ =\ 7$ algorytm bardzo gubi się i podział nie jest laprzy od wcześniej wykonanego, czyli dla $k\ =\ 6$. Jest to znak, że powinniśmy rozwarzyć $k\ =\ 6$, gdyż potem dzieje się coś niedobrego.
+
+
+Sprawdźmy jak wygląda podział na $7$ klastrów i czemu jest on taki słaby:
+
+```{r}
+data %>% mutate(klastry = as.factor(kmeans_klaster[,7])) %>% 
+  ggplot(aes(x=PC3, y=PC2, colour=klastry)) +
+  geom_density_2d() +
+  ggtitle("Gęstość dla 7 klastrów według kmeans")
+```
+
+Widzimy więc, że algorytm nie zdecydował się na podział typu $3-4$, lecz na $2-5$, co miało swój efekt w niskich wynikach jakości rozwiązania.
+
+### k-means - podział na 6
+
+```{r clusterkmeans6}
+set.seed(4321)
+
+data <- dane
+
+task <- makeClusterTask(data = data)
+learner <- makeLearner("cluster.kmeans", centers = 6)
+model <- train(learner, task)
+
+pred <- predict(model, task)
+```
+
+Następujący wykres przedstawia rozłożenie zmodelowanych klastrów
+```{r, dependson="clusterkmeans6"}
+data %>% mutate(klastry = as.factor(pred$data$response)) %>% 
+  ggplot(aes(x=PC3, y=PC2, colour=klastry)) +
+    geom_point() +
+    ggtitle("podział wygenerowany")
+```
+
+Na tym wykresie widzimy rozłożenie w oryginalnych danych
+```{r, dependson="clusterkmeans6"}
+data %>% mutate(czynnosc = as.factor(activity_labels[label_test$V1])) %>% 
+  ggplot(aes(x=PC3, y=PC2, colour=czynnosc)) +
+    geom_point() +
+    ggtitle("podział oryginalny")
+```
+
+
+Silhouette:
+```{r chunk50a}
+Sil <- silhouette(x = pred$data$response, dist = dist(dane))
+(sum(Sil[,3]))/dim(Sil)[1]
+```
+DB score:
+```{r chunk51a}
+quiet( library(clusterSim) )
+index.DB(x = dane, cl = pred$data$response)$DB
+```
+Dunn index:
+```{r chunk52a}
+quiet( library(clValid) )
+dunn(dist(dane), pred$data$response)
+```
+Indeksy FM i AR (podobieństwo do "prawdziwego podziału"):
+```{r chunk53a}
+quiet( library(labelled))
+FM_index(pred$data$response, label_test$V1) %>% remove_attributes("E_FM") %>% remove_attributes("V_FM")
+adjustedRandIndex(pred$data$response, label_test$V1)
+```
+
+
+## Genie
+
+### Metoda łokcia i silhouette dla genie
+
+Genie to algorytm aglomeracyjny, czyli opiera swoje działanie na iteracyjnym łączeniu za sobą mniejszych klastrów w większe skupiska. Jego autorzy podkreślają też jego szybkość działania.
+
+```{r}
+quiet( library(genie) )
+
+dane <- test_pca[,1:100]
+
+sil_scores_g <- numeric(15)
+scores <- numeric(15)
+genie_klaster <- matrix(nrow=dim(dane)[1], ncol=15)
+for(k in 2:15){
+  tmp <- cutree(hclust2(dist(dane)), k = k)
+  scores[k] <- suma_wewnatrz_klastra(dane, tmp)
+  Sil <- silhouette(x = tmp, dist = dist(dane))
+  sil_scores_g[k] <- (sum(Sil[,3]))/dim(Sil)[1]
+  genie_klaster[,k] <- tmp
+}
+```
+
+Metoda łokcia i miara silhouette dla sprawdzenia, czy z danych wynika, że $6$ powinno być dobrą ilościa klastrów:
+
+```{r}
+scores <- scores[-1]
+tmp <- data.frame(scores/1000000) %>% mutate(k = row_number()+1)
+colnames(tmp) <- c("scores_milions", "k")
+
+tmp %>% 
+  ggplot(aes(x=k, y=scores_milions)) +
+  geom_line() +
+  scale_x_continuous(breaks = 2:15) +
+  geom_vline(xintercept = 6, linetype="dashed", color = "red") +
+  ylab("score w milionach") +
+  ggtitle("Metoda łokcia dla clusteringu genie.")
+
+sil_scores_g <- sil_scores_g[-1]
+tmp <- data.frame(sil_scores_g) %>% mutate(k = row_number()+1)
+colnames(tmp) <- c("scores", "k")
+
+tmp %>%
+  ggplot(aes(x=k, y=scores)) +
+  geom_line() +
+  scale_x_continuous(breaks = 2:15) +
+  geom_vline(xintercept = 6, linetype="dashed", color = "red") +
+  ylab("score") +
+  ggtitle("Metoda silhouette dla clusteringu genie.")
+```
+
+Nieprawdą byłoby stwierdzenie, że wykres ten sugeruje wybór $k\ =\ 6$. Jednakże na pewno go nie odradza.
+
+### genie - podział na 6
+```{r}
+pred <- cutree(hclust2(dist(dane)), k = 6)
+```
+
+Następujący wykres przedstawia rozłożenie zmodelowanych klastrów
+```{r}
+data %>% mutate(klastry = as.factor(pred)) %>% 
+  ggplot(aes(x=PC3, y=PC2, colour=klastry)) +
+    geom_point() +
+    ggtitle("podział wygenerowany")
+```
+
+Na tym wykresie widzimy rozłożenie w oryginalnych danych
+```{r}
+data %>% mutate(czynnosc = as.factor(activity_labels[label_test$V1])) %>% 
+  ggplot(aes(x=PC3, y=PC2, colour=czynnosc)) +
+    geom_point() +
+    ggtitle("podział oryginalny")
+```
+Silhouette:
+```{r chunk50b}
+Sil <- silhouette(x = pred, dist = dist(dane))
+(sum(Sil[,3]))/dim(Sil)[1]
+```
+DB score:
+```{r chunk51b}
+index.DB(x = dane, cl = pred)$DB
+```
+Dunn index:
+```{r chunk52b}
+dunn(dist(dane), pred)
+```
+Indeksy FM i AR (podobieństwo do "prawdziwego podziału"):
+```{r chunk53b}
+FM_index(pred, label_test$V1) %>% remove_attributes("E_FM") %>% remove_attributes("V_FM")
+adjustedRandIndex(pred, label_test$V1)
+```
+
+
+# Podział na 2
+Skoro wyszstkie algorytmy według miary silhouette informują nas, że najbardziej optymalnym jest podział tego zbioru na $2$ grupy, to spróbujmy równiez tego podziału. Podzielmy najpierw zbiór na $2$, zgodnie z propozycją algorytmów. \
+
+```{r chunk11}
+quiet( library(cluster) )
+
+na_dwa <- pam(dane, 2)$clustering
+
+dane %>% as.data.frame() %>% 
+  mutate(klaster = as.factor(na_dwa)) %>%
+  ggplot(aes(x=PC1, y=PC2, color = klaster)) +
+  geom_point() +
+  ggtitle("PAM podział na 2 klastry")
+```
+
+Zauważmy, iż podział ten, zgodnie z oczekiwani, jest porównywalny z oryginalnym podziałem według czynności: \
+
+```{r chunk12}
+dane %>% as.data.frame() %>% 
+  mutate(czynnosc = as.factor(activity_labels[label_test$V1])) %>%
+  ggplot(aes(x=PC1, y=PC2, color = czynnosc)) +
+  geom_point() +
+  ggtitle("Oryginalny podział na czynności")
+```
+
+Grupie o indeksie $1$ odpowiadają czynności siadania, wstawania oraz leżenia. Grupie o indeksie $2$ odpowiadają czynności chodzenia po płaskim, chodzenia po schodach w górę oraz chodzenia po schodach w dół. \
+Sprawdźmy jaki podział każdej z tych części jest optymalny: \
+
+
+## Pierwsza grupa
+```{r chunk13}
+silhouette_score_jeden <- numeric(15)
+pam_klaster_jeden <- matrix(nrow=((na_dwa==1) %>% sum), ncol=15)
+
+for(k in 2:15){
+  tmp <- pam(dane[na_dwa==1,], k)$clustering
+  Sil <- silhouette(x = tmp, dist = dist(dane[na_dwa==1,]))
+  silhouette_score_jeden[k] <- (Sil[,3] %>% sum())/dim(Sil)[1]
+  
+  pam_klaster_jeden[,k] <- tmp
+}
+```
+
+```{r chunk14}
+silhouette_score_jeden <- silhouette_score_jeden[-1] %>% data.frame()
+colnames(silhouette_score_jeden) <- "score"
+mutate(silhouette_score_jeden, k = row_number()+1) %>% 
+  ggplot(aes(x=k, y=score)) +
+  geom_line() +
+  scale_x_continuous(breaks = 2:15) +
+  ggtitle("PAM silhouette dla pierwszego zbioru")
+```
+
+
+Wygląda więc na to, że zbiór ten powinien być podzielony na $2$ części, ale następny w kolejce jest podział na $3$. Przyjżyjmy się proponowanemu podziałowi.
+
+
+```{r chunk15}
+p1 <- dane[na_dwa==1,] %>% as.data.frame() %>% 
+  mutate(klaster = as.factor(pam_klaster_jeden[,3])) %>%
+  ggplot(aes(x=PC1, y=PC2, color = klaster)) +
+  geom_point() +
+  ggtitle("Otrzymany podział dla pierwszego zbioru")
+
+p2 <- (dane)[na_dwa==1,] %>% as.data.frame() %>% 
+  mutate(czynnosc = as.factor(activity_labels[(label_test$V1)[na_dwa==1]])) %>%
+  ggplot(aes(x=PC1, y=PC2, color = czynnosc)) +
+  geom_point() +
+  ggtitle("Oryginalne czynności dla pierwszego zbioru")
+
+quiet( library(gridExtra) )
+grid.arrange(p1, p2, ncol=1)
+```
+
+Jest on trochę podobny do oryginalnego, szczególnie klaster $3$ jest podobny do czynności leżenia.
+
+
+## Druga grupa
+```{r chunk17}
+silhouette_score_dwa <- numeric(10)
+pam_klaster_dwa <- matrix(nrow=((na_dwa==2) %>% sum), ncol=10)
+
+for(k in 2:10){
+  tmp <- pam(dane[na_dwa==2,], k)$clustering
+  Sil <- silhouette(x = tmp, dist = dist(dane[na_dwa==2,]))
+  silhouette_score_dwa[k] <- (Sil[,3] %>% sum())/dim(Sil)[1]
+  
+  pam_klaster_dwa[,k] <- tmp
+}
+```
+
+```{r chunk18}
+silhouette_score_dwa <- silhouette_score_dwa[-1] %>% data.frame()
+colnames(silhouette_score_dwa) <- "score"
+mutate(silhouette_score_dwa, k = row_number()+1) %>% 
+  ggplot(aes(x=k, y=score)) +
+  geom_line() +
+  scale_x_continuous(breaks = 2:10) +
+  ggtitle("PAM silhouette dla drugiego")
+```
+
+```{r chunk19}
+p1 <- (dane)[na_dwa==2,] %>% as.data.frame() %>% 
+  mutate(klaster = as.factor(pam_klaster_dwa[,3])) %>%
+  ggplot(aes(x=PC1, y=PC2, color = klaster)) +
+  geom_point() +
+  ggtitle("Otrzymany podział dla pierwszego zbioru")
+
+p2 <- (dane)[na_dwa==2,] %>% as.data.frame() %>% 
+  mutate(czynnosc = as.factor(activity_labels[(label_test$V1)[na_dwa==2]])) %>%
+  ggplot(aes(x=PC1, y=PC2, color = czynnosc)) +
+  geom_point() +
+  ggtitle("Oryginalne czynności dla drugiego zbioru")
+
+grid.arrange(p1, p2, ncol=1)
+```
+
+
+Podział ten w żadnym stopniu nie przypomina tego, czego oczekiwaliśmy.
+
+
+# GMM
+W dalszej części raportu opisujemy podział zbioru za pomocą algorytmu Gaussian Mixture Models. 
+
+```{r chunk20}
+train_do_PCA <- train %>% dplyr::select(X1:X561)
+test_do_PCA <- test %>% dplyr::select(X1:X561)
+
+train_pca <- prcomp(train_do_PCA, scale. = FALSE, center = FALSE)
+
+test_pca <- as.data.frame(as.matrix(test_do_PCA) %*% train_pca$rotation)
+```
+
+## łokieć z miarą Bayesian information criterion
+
+```{r chunk21, dependson="chunk20"}
+quiet( library(ClusterR) )
+quiet( library(clusterSim) )
+quiet( library(clValid) )
+quiet( library(labelled) )
+
+dane <- test_pca[1:100]
+
+# łokieć z miarą BIC - Bayesian information criterion
+opt_gmm <- Optimal_Clusters_GMM(dane, max_clusters = 15, criterion = "BIC", dist_mode = "eucl_dist", seed_mode = "random_spread", km_iter = 10, em_iter = 10, var_floor = 1e-10, plot_data = T)
+```
+
+![](obrazki/gmm-lokiec.png)
+Tak samo jak we wcześniejszych wykresach tego typu - nieprawdą byłoby stwierdzenie, że wykres ten sugeruje wybór $k\ =\ 6$. Jednakże na pewno go nie odradza. Jest to ostatni moment, kiedy wynik spada o $50000$, a potem już o co najwyżej $~25000$, czyli $50\%$ mniej.
+
+## Miara silhouette
+```{r chunk22, dependson="chunk20"}
+silhouette_score <- numeric(15)
+pam_klaster <- matrix(nrow=2947, ncol=15)
+for(k in 2:15){
+    gmm <- GMM(dane, k, dist_mode = "eucl_dist", seed_mode = "random_spread", km_iter = 10, em_iter = 10, verbose = F, seed=420)
+    tmp <- predict_GMM(dane, gmm$centroids, gmm$covariance_matrices, gmm$weights)$cluster_labels
+    Sil <- silhouette(x = tmp, dist = dist(dane))
+    silhouette_score[k] <- (Sil[,3] %>% sum())/dim(Sil)[1]
+    
+    pam_klaster[,k] <- tmp
+}
+```
+
+```{r chunk23, dependson="chunk20"}
+silhouette_score <- silhouette_score[-1] %>% data.frame()
+colnames(silhouette_score) <- "score"
+mutate(silhouette_score, k = row_number()+1) %>% 
+    ggplot(aes(x=k, y=score)) +
+    geom_line() +
+    scale_x_continuous(breaks = 2:15) +
+    geom_vline(xintercept = 6, linetype="dashed", color = "red") +
+    ggtitle("GMM silhouette")
+```
+
+Wykres ten uparcie wciąż sugeruje, żeby zdecydować się na podział na $2$ kalstry. Gdybyśmy jednak uparcie chciali podzielić na większą ich ilość, to, na podstawie tego wykresu można wnioskować, że dobrym pomysłem byłby wybór $6$ lub $7$ klastrów.
+
+## Testowanie odpowiednich parametrów
+
+### GMM random_spread
+
+Metoda GMM dla wyboru `random_spread` i metryki euklidesowej.
+
+```{r chunk24}
+gmm <- GMM(dane, 6, dist_mode = "eucl_dist", seed_mode = "random_spread", km_iter = 10, em_iter = 10, verbose = F, seed=420)
+pred <- predict_GMM(dane, gmm$centroids, gmm$covariance_matrices, gmm$weights)
+```
+
+
+
+```{r chunk25}
+p1 <- dane %>% mutate(klaster = as.factor(pred$cluster_labels)) %>%
+    ggplot(aes(x=PC2, y=PC3, color = klaster )) +
+    geom_point() +
+    ggtitle("GMM podział na 6 klastrów")
+p2 <- dane %>% mutate(czynnosc = as.factor(activity_labels[label_test$V1])) %>%
+    ggplot(aes(x=PC2, y=PC3, color = czynnosc)) +
+    geom_point() +
+    ggtitle("Oryginalny podział na 6 czynności")
+
+grid.arrange(p1, p2, ncol=1)
+```
+
+
+Silhouette:
+```{r chunk26}
+Sil <- silhouette(x = pred$cluster_labels, dist = dist(dane))
+(sum(Sil[,3]))/dim(Sil)[1]
+```
+
+
+DB score:
+```{r chunk27}
+index.DB(x = dane, cl = pred$cluster_labels)$DB
+```
+
+Dunn index:
+```{r chunk28}
+dunn(dist(dane), pred$cluster_labels)
+```
+
+Indeksy FM i AR (podobieństwo do "prawdziwego podziału"):
+```{r chunk29}
+FM_index(pred$cluster_labels, label_test$V1) %>% remove_attributes("E_FM") %>% remove_attributes("V_FM")
+adjustedRandIndex(pred$cluster_labels, label_test$V1)
+```
+
+
+
+
+
+### GMM - metryka manhattan
+
+Dla porównania prezentujemy metod GMM dla wyboru `random_spread` i metryki Manhattan.
+
+```{r chunk30}
+gmm <- GMM(dane[, 1:90], 6, dist_mode = "maha_dist", seed_mode = "random_spread", km_iter = 10, em_iter = 10, verbose = F, seed=420)
+pred <- predict_GMM(dane[, 1:90], gmm$centroids, gmm$covariance_matrices, gmm$weights)
+```
+
+
+```{r chunk31}
+p1 <- dane %>% mutate(klaster = as.factor(pred$cluster_labels)) %>%
+    ggplot(aes(x=PC2, y=PC3, color = klaster )) +
+    geom_point() +
+    ggtitle("GMM podział na 6 klastrów")
+p2 <- dane %>% mutate(czynnosc = as.factor(activity_labels[label_test$V1])) %>%
+    ggplot(aes(x=PC2, y=PC3, color = czynnosc)) +
+    geom_point() +
+    ggtitle("Oryginalny podział na 6 czynności")
+
+grid.arrange(p1, p2, ncol=1)
+```
+
+
+Silhouette:
+```{r chunk32}
+Sil <- silhouette(x = pred$cluster_labels, dist = dist(dane))
+(sum(Sil[,3]))/dim(Sil)[1]
+```
+
+
+DB score:
+```{r chunk33}
+index.DB(x = dane, cl = pred$cluster_labels)$DB
+```
+
+Dunn index:
+```{r chunk34}
+dunn(dist(dane), pred$cluster_labels)
+```
+
+Indeksy FM i AR (podobieństwo do "prawdziwego podziału"):
+```{r chunk35}
+FM_index(pred$cluster_labels, label_test$V1) %>% remove_attributes("E_FM") %>% remove_attributes("V_FM")
+adjustedRandIndex(pred$cluster_labels, label_test$V1)
+```
+
+
+### GMM random_subset
+Metoda GMM dla wyboru `random_subset` i metryki euklidesowej. Metryka Manhattan wykonuje się jeszcze gorzej, więc opuścimy jej przedstawaienie.
+
+```{r chunk36}
+gmm <- GMM(dane, 6, dist_mode = "eucl_dist", seed_mode = "random_subset", km_iter = 10, em_iter = 10, verbose = F, seed=420)
+pred <- predict_GMM(dane, gmm$centroids, gmm$covariance_matrices, gmm$weights)
+```
+
+
+```{r chunk37}
+p1 <- dane %>% mutate(klaster = as.factor(pred$cluster_labels)) %>%
+    ggplot(aes(x=PC2, y=PC3, color = klaster )) +
+    geom_point() +
+    ggtitle("GMM podział na 6 klastrów")
+p2 <- dane %>% mutate(czynnosc = as.factor(activity_labels[label_test$V1])) %>%
+    ggplot(aes(x=PC2, y=PC3, color = czynnosc)) +
+    geom_point() +
+    ggtitle("Oryginalny podział na 6 czynności")
+
+grid.arrange(p1, p2, ncol=1)
+```
+
+
+Silhouette:
+```{r chunk38}
+Sil <- silhouette(x = pred$cluster_labels, dist = dist(dane))
+(sum(Sil[,3]))/dim(Sil)[1]
+```
+
+
+DB score:
+```{r chunk39}
+index.DB(x = dane, cl = pred$cluster_labels)$DB
+```
+
+Dunn index:
+```{r chunk40}
+dunn(dist(dane), pred$cluster_labels)
+```
+
+Indeksy FM i AR (podobieństwo do "prawdziwego podziału"):
+```{r chunk41}
+FM_index(pred$cluster_labels, label_test$V1) %>% remove_attributes("E_FM") %>% remove_attributes("V_FM")
+adjustedRandIndex(pred$cluster_labels, label_test$V1)
+```
+
+
+
+### GMM static_spread
+Metoda GMM dla wyboru `static_spread` i metryki euklidesowej. Metryka Manhattan wykonuje się jeszcze gorzej, więc opuścimy jej przedstawaienie.
+
+```{r chunk42}
+gmm <- GMM(dane, 6, dist_mode = "eucl_dist", seed_mode = "static_spread", km_iter = 10, em_iter = 10, verbose = F, seed=420)
+pred <- predict_GMM(dane, gmm$centroids, gmm$covariance_matrices, gmm$weights)
+```
+
+```{r chunk43}
+p1 <- dane %>% mutate(klaster = as.factor(pred$cluster_labels)) %>%
+    ggplot(aes(x=PC2, y=PC3, color = klaster )) +
+    geom_point() +
+    ggtitle("GMM podział na 6 klastrów")
+p2 <- dane %>% mutate(czynnosc = as.factor(activity_labels[label_test$V1])) %>%
+    ggplot(aes(x=PC2, y=PC3, color = czynnosc)) +
+    geom_point() +
+    ggtitle("Oryginalny podział na 6 czynności")
+
+grid.arrange(p1, p2, ncol=1)
+```
+
+
+Silhouette:
+```{r chunk44}
+Sil <- silhouette(x = pred$cluster_labels, dist = dist(dane))
+(sum(Sil[,3]))/dim(Sil)[1]
+```
+
+
+DB score:
+```{r chunk45}
+index.DB(x = dane, cl = pred$cluster_labels)$DB
+```
+
+Dunn index:
+```{r chunk46}
+dunn(dist(dane), pred$cluster_labels)
+```
+
+Indeksy FM i AR (podobieństwo do "prawdziwego podziału"):
+```{r chunk47}
+FM_index(pred$cluster_labels, label_test$V1) %>% remove_attributes("E_FM") %>% remove_attributes("V_FM")
+adjustedRandIndex(pred$cluster_labels, label_test$V1)
+```
+
+
+
+### GMM static_subset + maha_dist
+Metoda GMM dla wyboru `static_subset` i metryki Manhattan. Jest to model osiągający najlepsze wyniki spośród modeli GMM.
+
+
+```{r chunk48}
+gmm <- GMM(dane, 6, dist_mode = "maha_dist", seed_mode = "static_subset", km_iter = 10, em_iter = 10, verbose = F, seed=420)
+pred <- predict_GMM(dane, gmm$centroids, gmm$covariance_matrices, gmm$weights)
+```
+
+```{r chunk49}
+p1 <- dane %>% mutate(klaster = as.factor(pred$cluster_labels)) %>%
+    ggplot(aes(x=PC2, y=PC3, color = klaster )) +
+    geom_point() +
+    ggtitle("GMM podział na 6 klastrów")
+p2 <- dane %>% mutate(czynnosc = as.factor(activity_labels[label_test$V1])) %>%
+    ggplot(aes(x=PC2, y=PC3, color = czynnosc)) +
+    geom_point() +
+    ggtitle("Oryginalny podział na 6 czynności")
+
+grid.arrange(p1, p2, ncol=1)
+```
+
+
+Silhouette:
+```{r chunk50}
+Sil <- silhouette(x = pred$cluster_labels, dist = dist(dane))
+(sum(Sil[,3]))/dim(Sil)[1]
+```
+
+
+DB score:
+```{r chunk51}
+index.DB(x = dane, cl = pred$cluster_labels)$DB
+```
+
+Dunn index:
+```{r chunk52}
+dunn(dist(dane), pred$cluster_labels)
+```
+
+Indeksy FM i AR (podobieństwo do "prawdziwego podziału"):
+```{r chunk53}
+FM_index(pred$cluster_labels, label_test$V1) %>% remove_attributes("E_FM") %>% remove_attributes("V_FM")
+adjustedRandIndex(pred$cluster_labels, label_test$V1)
+```
+
+## Podsumowanie
+
+GMM z wyborem `static_subset` i metryką Manhattan osiągnął najlepsze wyniki. Również dobrze poradził sobie `random_spread` z metryką euklidesową. pozostałe algorytmy dzieliły zbiór na $6$ klastrów nierównomiernie.
+
+
+
+
+# Podsumowanie
+
+Podział na $6$ klastrów nie jest łątwy do osiągnięcia. Klastry nachodzą na siebie, niezawsze są wyraźnie rozgraniczone, trudno jest też znaleźć ich bardziej zagęszczone miejsca. Najlepiej poradził sobie algorytm genie, nawet pomimo faktu, że podzielił klastry nierównomiernie (tzn. 2-4, a nie 3-3). Podział na $2$ z kolei jest bardzo oczywisty, widoczny nawet gołym okiem. Algorytmy nie miały problemów z rozdzieleniem dwóch grup czynności.
+
+# Oświadczenie
+
+Oświadczamy, że niniejsza praca stanowiąca podstawę do uznania osiągnięcia efektów uczenia się z przedmiotu "Wstęp do Uczenia Maszynowego" została wykonana przez nas samodzielnie.
+
+Przemysław Adam Chojecki, 298814
+
+Michał Wdowski, 298848
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
