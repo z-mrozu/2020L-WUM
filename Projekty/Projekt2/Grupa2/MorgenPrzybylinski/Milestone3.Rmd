@@ -1,0 +1,179 @@
+---
+title: "Milestone 3"
+author: "Paweł Morgen, Dawid Przybyliński"
+date: "9 06 2020"
+output: 
+    html_document:
+        df_print: kable
+        code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dtwclust)
+library(dplyr)
+library(ggplot2)
+```
+
+# Klasteryzacja szeregów czasowych
+
+## Teoria
+
+Pomimo pozornych różnic, to zadanie jest dość podobne do *normalnego* zadania klasteryzacji punktów. Różnica polega na tym, że klasteryzujemy nie punkty w $R^n$, tylko *ciągi* (szeregi czasowe) punktów. Istnieją metryki pozwalające liczyć *odległość* (miarę, jak bardzo się od siebie różnią) szeregi czasowe. Jedną z nich jest *Dynamic Time Warping*.
+
+![](DTW.jpg)
+
+Poniżej prezentujemy tabelkę z porównianiem zadania klasycznej klasteryzacji oraz klasteryzacji szeregów czasowych:
+
+|                          |Punkty                         |Szeregi czasowe                |
+|--------------------------|-------------------------------|-------------------------------|
+|Obiekt                    |Punkt w $R^n$                  |Szereg czasowy długości $m$    |
+|Reprezentacja matematyczna|Wektor $1 \times n$            |Macierz $m \times n$           |
+|Metryka dystansu          |Euklidesowa                    |DTW                            |
+|Algorytm klasteryzujący   |PAM, Hclust, ...               |PAM, Hclust, ...               |
+|Metryka ewaluacyjna       |Davies-Bouldin, Silhouette, ...|Davies-Bouldin, Silhouette, ...|
+
+Jak widzimy, od pewnego momentu w pracy zadania są te same - w obu przypadkach możemy korzystać z tych samych algorytmów i tych samych metryk ewaluacyjnych.
+
+## Praktyka 
+
+Do takiej formy klasteryzacji został użyty pakiet *dwtclust*.  
+
+```{r dtw_load, include=FALSE, cache=TRUE}
+source('create_ts.R')
+```
+```{r plots, fig.width=8, fig.asp=1}
+tsclust(ts_list[sample(1:length(ts_list), 40)], type = "h", k = 6, control = hierarchical_control("ward.D")) %>%
+  plot()
+```
+
+### Wybór ilości klastrów oraz najlepszych metod
+
+Porównaniu zostały poddane algorytmy stosujące *partitional clustering* (z metodami *mean*, *median* oraz *pam* - partition around medoids) oraz *hierarchical clustering* (z metrykami Warda, *complete*, *average* oraz *genie*). Porównywano je za pomocą pięciu metryk:
+
+ * Indeksu Davida - Bouldina
+ * Indeksu Calińskiego - Harabasza
+ * metryki Silhouette
+ * Indeksu Fowlkesa-Mallowsa
+ * Dostosowanego (*Adjusted*) indeksu Randa.
+ 
+```{r load_comps, include = FALSE}
+load("data/comparison.rda")
+```
+```{r create_comps, eval = FALSE}
+cfg  <- compare_clusterings_configs(
+        types = c("p", "h"),
+        k = 2:10,
+        controls = list(
+                partitional = partitional_control(iter.max = 20L, nrep = 5),
+                hierarchical = hierarchical_control(method = c("ward.D",
+                                                               "complete",
+                                                               "average"))
+        ),
+        centroids = pdc_configs(
+                "centroid",
+                partitional = list(
+                        mean = list(),
+                        median = list(),
+                        pam = list()
+                ),
+                hierarchical = list(
+                        default = list()
+                )
+        )
+)
+evaluators <- cvi_evaluators(c("ARI", "DB", "FM", "Sil","CH") , ground.truth = ts_labels)
+comparison <- compare_clusterings(ts_list, types = c("p","h"),
+                                  configs = cfg, trace = TRUE,
+                                  score.clus = evaluators$score,
+                                  pick.clus = evaluators$pick)
+```
+```{r genie_comp, cache = TRUE, echo = FALSE}
+t_genie <- tsclust(ts_list, 2:10, type = "h", control = hierarchical_control(method = genie::hclust2))
+res_genie <- sapply(t_genie, cvi, b = ts_labels, type = c("ARI", "FM", "DB", "CH", "Sil")) %>%
+        t() %>% as_tibble() %>%
+        mutate(k = 2:10, method = "h_genie")
+```
+```{r plot_comps, fig.width=10, fig.asp=1}
+comp_p <- select(comparison$results$partitional,
+                 rep, k, centroid, DB:FM) %>%
+  rename(method = "centroid") %>%
+  mutate(method = paste0("part_", method)) %>%
+  tidyr::pivot_longer(cols = DB:FM,
+                      names_to = "metric") %>%
+  group_by(k, method, metric) %>%
+  summarise(value = mean(value))
+
+comp_h <- select(comparison$results$hierarchical,
+                 k, method, DB:FM) %>%
+  mutate(method = paste0("h_", method)) %>%
+  bind_rows(res_genie) %>%
+  tidyr::pivot_longer(cols = c("ARI", "FM", "DB", "CH", "Sil"),
+                      names_to = "metric")
+
+bind_rows(comp_p, comp_h) %>%
+  mutate(metric = factor(metric, levels = c("CH", "DB", "Sil", "ARI", "FM"))) %>%
+  ggplot(aes(x = k, y = value, col = method)) +
+  geom_line(size = 1) +
+  facet_wrap( ~ metric, nrow = 2, scales = "free_y") +
+  labs(title = "Comparison of clustering methods using various metrics") +
+  ylab("Metric value") +
+  xlab("Number of clusters k")
+select(comparison$pick, k, method, centroid, DB:FM)
+```
+
+Nasuwa się kilka wniosków:
+
+ * Metody *hierarchical* biją na głowę metody *partitional* po wzięciu pod uwagę wszystkich metryk poza indeksem Daviesa-Bouldina.
+ * Skuteczność metod hierarchicznych (poza *genie*) mocno zależy od ilości klastrów. Może być bardzo dobra lub fatalna.
+ * Metryki podpowiadają różne ilości klastrów. CH i Sil osiągają najlepsze wartości dla **4** oraz **7**, a pozostałe dla **2**, **5** i **8**.
+ * Ekstrema, w zależności od metryk, osiągają: metoda hierarchiczna Warda (Sil, CH), metody dzielące (DB) oraz metody hierarchiczne *average* oraz *complete* (ARI, FM). 
+ 
+ Przyjrzyjmy się bliżej proponowanym podziałom:
+ 
+```{r viz, cache=TRUE}
+all_clusters <- tsclust(ts_list, type = "h", 
+                        k = 8, control = hierarchical_control("complete"))
+table(all_clusters@cluster) %>%
+  as.data.frame() %>%
+  rename(cluster_no = Var1) %>%
+  ggplot(aes(x = cluster_no, y = Freq)) +
+  geom_col() +
+  labs(title = "Size of clusters",
+       subtitle = "Hierarchical clustering")
+```
+
+Jak widzimy, zyskiwanie nowych klastrów niezbyt polepsza jakość klasteryzacji. Tworzą się 2 klastry, do których trafia znaczna część obserwacji, i 6 pomniejszych.
+
+Spójrzmy, jak rozkłada się podział proponowany przez *partitional clustering*:
+
+```{r viz2, cache=TRUE}
+all_clusters <- tsclust(ts_list, type = "p", 
+                        k = 6, centroid = "mean")
+table(all_clusters@cluster) %>%
+  as.data.frame() %>%
+  rename(cluster_no = Var1) %>%
+  ggplot(aes(x = cluster_no, y = Freq)) +
+  geom_col() +
+  labs(title = "Size of clusters",
+       subtitle = "Partitional clustering")
+
+table(all_clusters@cluster, ts_labels) %>%
+  knitr::kable()
+```
+
+Tutaj nieco lepiej.
+
+Mamy dwie propozycje: podział na 4 klastry przy pomocy odpowiednika algorytmów k-średnich oraz podział na 2 klastry przy pomocy algorytmu hierarchicznego Warda. Oba podziały są klarowne, polecane przez część metryk i dość interpretowalne.
+
+### Interpretacja podziału na 4 klastry
+
+```{r vis3, cache=TRUE}
+final_clusters <- tsclust(ts_list, type = "p", 
+          k = 4, centroid = "mean", control = partitional_control(nrep = 5))
+pick <- sapply(final_clusters, cvi, b = ts_labels,  type = "FM") %>%
+  which.max()
+
+table(final_clusters[[pick]]@cluster, ts_labels) %>%
+  knitr::kable()
+```
