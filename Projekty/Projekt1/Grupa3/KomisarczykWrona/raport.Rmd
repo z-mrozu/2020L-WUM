@@ -49,6 +49,32 @@ Analizowaliśmy wzajemne zależności zmiennych parami, ale wniosków, które z 
 
 ![](smokers.png)
 
+Przedstawiamy również boxplot dotyczący liczby lat stosowania antykoncepcji hormonalnej:
+
+![](hormonal_contraceptive.png)
+
+jak również i liczbę paczek papierosów wypalanych rocznie:
+
+![](packs_per_year.png)
+
+## Wykresy dotyczące kolumny celu - Biopsy
+
+W ostatecznym modelowaniu wybraliśmy zmienną **Biopsy** jako zmienną celu. 
+
+Poniżej przedstawiamy szereg rozkładów dla pacjentów z pozytywną Biopsią (rakiem) po lewej oraz negatywnym wynikiem Biopsji po lewej (brak raka).
+
+![](biopsy-wiek.png)
+
+Jak widzimy z powyższego wykresu jest bardzo mało starszych pacjentek po 45, które tego raka nie mają - prawdopodobnie ma to związek z **wysoką śmiertelnością w grupie wiekowej 40-50 lat**.
+
+![](biopsy-partnerzy.png)
+
+Tutaj natomiast nie ma większych różnic w rozkładzie.
+
+![](biopsy-ciaze.png)
+
+Z powyższego wykresu wynika dodatnia zależność między liczbą ciaż, a szansą na raka macicy.
+
 Analiza PCA pokazała, że za pomocą 10 komponentów możemy wyjaśnić `78%` wariancji, co uznaliśmy za niewystarczająco satysfakcjonujący wynik, aby z tego skorzystać.
 
 Jednej z innych grup udało się zauważyć, że w zbiorze występowały niepoprawne obserwacje, które zdecydowali się usunąć. Nam jednak nie udało się ich znaleźć.

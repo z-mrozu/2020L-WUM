@@ -1,0 +1,450 @@
+---
+title: "WUM - Projekt 2: Raport końcowy"
+author: "Paweł Morgen, Dawid Przybyliński"
+output: 
+  html_document:
+    df_print: kable
+    code_folding: show
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(dtwclust)
+source("plot_corrgraph.R")
+source("load.R")
+```
+
+# Wstęp
+
+Zbiór zawiera wyniki eksperymentu przeprowadzonego na grupie 30 osób z przedziału wikekowego 19-48 lat. Każda z osób wykonywała 6 czynności (chodzenie, chodzenie w górę po schodach, chodzenie w dół po schodach, siedzenie, stanie, leżenie). Zapisane zostały odczyty żyroskopu i akcelerometru ze smartfona umieszczonego przy pasie badanego. Domyślnie zbiór został podzielony na treningowy i testowy w proporcji 7 : 3, jednakże jako że narazie wykonujemy eksplorację danych, a następnym celem będzie klasteryzacja, połączyliśmy na początku te dwa zbiory. Warto też wspomnieć, że zbiór nie zawiera braków danych. 
+
+## Dane - pierwsze spojrzenie
+
+```{r first_look, echo = FALSE}
+print(sprintf("Number of features: %d", ncol(X)))
+```
+
+W datasecie jest porażające 561 numerycznych, znormalizowanych (z przedziału $[-1,1]$) zmiennych. Opisują one:
+
+ * wskazania akcelerometru oraz żyroskopu w 3 wymiarach, przefiltrowane, by wyciszyć szumy
+ * przeliczone przyspieszenie ludzkie oraz grawitacyjne 
+ * *zryw* (zmianę przyspieszenia w czasie, ang. *jerk*)
+ * przeliczoną *Fast Fourier Transform* .
+
+Dla niemal każdej z powyższych zostały policzone statystyki (średnia, odchylenie, min/max, energia, entropia, ...)
+
+## Powiązania 
+
+```{r cors}
+# Uwaga - korelacje!
+cor(X) -> cor_mat
+cor_toplot <- data.frame(Cor_value = as.vector(cor_mat))
+ggplot(cor_toplot, aes(x = Cor_value)) +
+  geom_histogram(binwidth = 0.05) +
+  labs(title = "Distribution of correlations among variables")
+
+f <- function(cutoff) (length(cor_mat[abs(cor_mat) > cutoff]) - ncol(X))
+cutoffs <- c(0.7, 0.8, 0.9, 0.95, 0.99, 0.999)
+knitr::kable(data.frame(
+  Count = sapply(cutoffs, f) / 2,
+  Percentile = round(sapply(cutoffs, f) / length(cor_mat), 4) * 100,
+  Cutoff = cutoffs))
+```
+
+Powyższa tabelka przedstawia, ile **par** zmiennych (`Count`) jest ze sobą skorelowana w stopniu wyższym niż `cutoff`. Jasno widać, że można sporo zyskać na czasie obliczeniowym, jeśli odrzucimy część zmiennych. 
+
+Wiedza na temat zmiennych pozwala nam dla celów eksploracji brać tylko zmienne traktujące o wartości średniej danego odczytu w danej osi w danej chwili.
+
+```{r corred_vals}
+mean_features_names <- grep(x = colnames(X), pattern = "^[^_]+_mean(_.*)?$", value = TRUE)
+X_mean <- X[,mean_features_names]
+cor_mat <- cor(X_mean)
+X_final <- X_mean[,c(sapply(1:(ncol(cor_mat)-1), function(i){
+  all(abs(cor_mat[i, (i+1):ncol(cor_mat)]) < 0.95)
+}), FALSE)]
+```
+Następujące zmienne mają wysoko skorelowane odpowiedniki:
+```{r, echo=FALSE}
+print(setdiff(colnames(X_mean), colnames(X_final)))
+```
+```{r plot_corrgraph}
+plot_corrgraph(X_final)
+
+```
+
+Przyjrzyjmy się kilku z nich:
+
+```{r chosen}
+X_final[,c("tBodyAccJerk_mean_Z", "tBodyGyroJerk_mean_Z", "fBodyGyro_mean_Z")] -> df
+mutate(df, Time = round(1:nrow(df) / 20)) %>%
+  group_by(Time) %>%
+  summarise(AccJerk = mean(tBodyAccJerk_mean_Z),
+            GyroJerk = mean(tBodyGyroJerk_mean_Z),
+            Gyro = mean(fBodyGyro_mean_Z)) %>%
+tidyr::pivot_longer(cols = 2:4, values_to = 'value', names_to = "name") %>%
+  ggplot(aes(x = Time, y = value, col = name)) +
+  geom_line()
+```
+
+## Związek danych z danymi etykietami
+
+Wraz z odczytem z żyroskopu i akcelerometru, dostępna jest cecha dotycząca wykonywanej w danej chwili czynności (dodana była jako zmienna celu dla problemu klasyfikacji). Jako że ma ona 6 klas, może być wykorzystana jako przykład dobrze wykonanej późniejszej klasteryzacji, natomiast porównanie z nią - jako miara jakości modelu (co jest o tyle przydatne, że dane nie mają natury punktów z przestrzeni n-wymiarowej, co sprawia że powszechnie używane metryki mogą być mniej miarodajne w zależności od celu klasteryzacji - np. gdy chcemy dostać podział na czynności, jak przy danych nam labelach). Z poniższego histogramu możemy wywnioskować, że cecha ta jest dosyć dobrze zbalansowana.
+
+```{r warning=FALSE}
+ggplot() +
+  aes(y) +
+  geom_histogram(stat="count") +
+  labs(title = "Distribution of given labels") +
+  xlab("activity") +
+  theme(axis.text.x = element_text(angle = 10))
+
+```
+
+Mediana długości wektora średniego przyspieszenia jest podobna zarówno dla czynności w których ciało ma małą wartość prędkości (stanie, siedzenie, leżenie), jak i dużą (chodzenie). Wynika to z tego że zarówno mniejsze jak i większe ruchy są wykonywane z podobnym przyspieszeniem. Z tego powodu poniższe boxploty mają podobne umiejscowienie.
+
+```{r}
+mutate(X_final, tBodyAcc_mean 
+       = sqrt(X_final$tBodyAcc_mean_X^2 + X_final$tBodyAcc_mean_Y^2 + X_final$tBodyAcc_mean_Z^2)) %>%
+  mutate(y=y) %>%
+  ggplot() +
+    geom_boxplot(aes(x=y, y=tBodyAcc_mean)) +
+    labs(title = "Average body acceleration") +
+    xlab("activity") +
+    ylab("acceleration absolute value") +
+    theme(axis.text.x = element_text(angle = 10))
+```
+
+Zwrócmy zatem uwagę na analogiczne odczyty dotyczące zrywu. Tutaj da się już zauważyć, iż w przypadku siedzenia lub leżenia mediana znalazła się niżej niż dla innych czynności, co daje nadzieję że wykorzystane w następych etapach algorytmy klasteryzacji dadzą wynik zbliżony do tego opisanego danymi etykietami.
+
+```{r}
+mutate(X_mean, tBodyAccJerk_mean 
+       = sqrt(X_mean$tBodyAccJerk_mean_X^2 + X_mean$tBodyAccJerk_mean_Y^2 + X_mean$tBodyAccJerk_mean_Z^2)) %>%
+  mutate(y=y) %>%
+  ggplot() +
+  geom_boxplot(aes(x=y, y=tBodyAccJerk_mean)) +
+  xlab("activity") +
+  ylab("jerk value") +
+  theme(axis.text.x = element_text(angle = 10))
+```
+
+## Inżynieria cech
+
+Jak wspomniano, w zbiorze znajdują się zmienne wysoko skorelowane, a więc redundantne (np. odchylenie standardowe, współczynnik IQR, średnie odchylenie bezwzględne, kurtoza...). Redukcję przeprowadzono przy użyciu pakietu `caret`. Ponadto, w celu dalszej redukcji, szukano kombinacji liniowych (bez skutku) oraz zastosowano algorytm PCA.
+
+```{r reduction, results='hold', cache=TRUE}
+library(caret)
+
+# Usuwamy skorelowane zmienne
+corred <- findCorrelation(cor(X), cutoff = 0.8, names = FALSE)
+cat(paste0("Ilość skorelowanych zmiennych do usunięcia: ", length(corred), " z ", ncol(X), "\n"))
+# Usuwamy 389 zmiennych
+X_uncorred <- X[,-corred]
+
+# Usuwamy kombinacje liniowe innych zmiennych
+linearCombos <- findLinearCombos(data.matrix(X_uncorred))
+
+cat(paste0("Kombinacje liniowe do usunięcia: ", linearCombos$remove))
+
+# PCA
+prepPCA <- preProcess(X_uncorred, method = "pca")
+X_PCAd <- predict(prepPCA, X_uncorred)
+```
+
+# Wstępna klasteryzacja
+
+Znajomość metadanych zbioru danych pozwala określić, że szukamy **6** klastrów.
+
+Skorzystamy z kilku metod: `kmeans`, `genie` oraz klastrowanie hierarchiczne Warda.
+
+```{r preds, cache=TRUE}
+preds_kmeans <- kmeans(X_PCAd, 6, iter.max = 100)
+d <- dist(X_PCAd)
+preds_genie <- genie::hclust2(d)
+preds_hclust <- hclust(d, method = "ward.D2")
+preds <- list(kmeans = preds_kmeans$cluster, 
+              genie = cutree(preds_genie, 6), 
+              ward = cutree(preds_hclust, 6))
+```
+
+## Weryfikacja i porównanie z oczekiwanymi etykietami
+
+Do weryfikacji użyto średniej oraz odchylenia standardowego odległości między punktami w klastrze.
+
+Do porównania użyto indeksów Randa oraz Fowlkesa-Mallowsa.
+
+```{r measures, cache=TRUE}
+mean_dist <- function(X, y){
+  mean(sapply(split(1:nrow(X), as.factor(y)), function(i){
+    mean(dist(X[i,]))
+  }))
+}
+
+mean_sd <- function(X, y){
+  mean(sapply(split(1:nrow(X), as.factor(y)), function(i){
+    sd(dist(X[i,]))
+  }))
+}
+
+df_ver <- data.frame(Algorytm = names(preds),
+           mean_dist = sapply(preds, function(p) mean_dist(X_PCAd, p)),
+           mean_sd = sapply(preds, function(p) mean_sd(X_PCAd, p)),
+           FM_index = sapply(preds, function(p) dendextend::FM_index(p, y)),
+           Rand_index = sapply(preds, function(p) mclust::adjustedRandIndex(p, y)))
+
+rownames(df_ver) <- NULL
+knitr::kable(df_ver)
+```
+
+Jak łatwo zauważyć, wyniki nie są zadowalające. W przypadku algorytmów konwencjonalnych winna może być natura zbioru danych - jest to szereg czasowy, w którym numer obserwacji ma znaczenie. Powyższe algorytmy traktują obserwacje jak punkty w $R^n$ i tracą wymiar czasowy. 
+
+## Inna ilość klastrów
+
+Zweryfikowano skuteczność konwencjonalnych algorytmów dla innych ilości klastrów.
+
+```{r another_ks, cache=TRUE, results='hold'}
+ks <- 2:20
+lapply(ks, function(k){
+  p1 <- kmeans(X_PCAd, k, iter.max = 100)$cluster
+  p2 <- cutree(preds_genie, k)
+  p3 <- cutree(preds_hclust, k)
+  data.frame(kmeans_FM = dendextend::FM_index(p1, y),
+             genie_FM = dendextend::FM_index(p2, y),
+             hclust_FM = dendextend::FM_index(p3, y),
+             kmeans_silh = mean(cluster::silhouette(p1, dist = d)[,3]),
+             genie_silh = mean(cluster::silhouette(p2, dist = d)[,3]),
+             hclust_silh = mean(cluster::silhouette(p3, dist = d)[,3]))
+}) -> res
+
+bind_rows(res) %>%
+  mutate(k = ks) %>%
+  select(c(1:3, 7)) %>%
+  tidyr::pivot_longer(1:3) %>%
+  ggplot(aes(x = k, y = value, col = name)) +
+  geom_line() +
+  labs(title = "Goodness of fit with original labels") +
+  ylab("FM index")
+
+bind_rows(res) %>%
+  mutate(k = ks) %>%
+  select(c(4:7)) %>%
+  tidyr::pivot_longer(1:3) %>%
+  ggplot(aes(x = k, y = value, col = name)) +
+  geom_line() +
+  labs(title = "Silhouette score")
+```
+
+Wg wartości Silhouette najlepszą (!) ilością klastrów jest **2**. Jest to problematyczny rezultat.
+
+## Komentarz
+
+Zbiór danych powstawał na podstawie wartości sygnału urządzeń. Te sygnały w czasie nie miały wartości stałej. 
+
+```{r ver1, echo=FALSE}
+df <- data.frame(y = X[1:150, 1],
+                 col = y[1:150],
+                 x = 1:150)
+ggplot(df, aes(x = x, y = y, col = col)) +
+  geom_line() +
+  geom_hline(yintercept = mean(df[1:25, 'y']), linetype = 'dashed') +
+  labs(title = colnames(X)[1],
+       subtitle = "First 150 observations")
+```
+
+Gdyby klasteryzację przeprowadzić wyłącznie na podstawie tej jednej zmiennej, punkty blisko czarnej prostej trafiłyby do jednego klastra. Jest to wynik niepożądany, jeśli zależy nam na zbliżeniu się do oryginalnych etykiet.
+
+Przyjrzyjmy się, jak poszczególne algorytmy klasyfikowały tę przykładową zmienną:
+
+```{r ver2, echo=FALSE}
+cbind(df, as.data.frame(sapply(preds, factor))[1:150,]) %>%
+  mutate(col = factor(as.integer(col))) %>%
+  rename(original = col) %>%
+tidyr::pivot_longer(cols = c(2, 4:6)) %>%
+  ggplot(aes(x = x, y = y, col = value)) +
+  geom_point() +
+  facet_wrap(~name, ncol = 2)
+```
+
+## Inne podejście?
+
+Między innymi niecodzienna natura danych sprawia iż standarodowe metody klasteryzacji sprawdzają się nie najlepiej. Z tego powodu postanowiliśmy zabrać się do problemu od innej strony - poddać klasteryzacji nie pojedyncze obserwacje, a ich fragmenty. Mogliśmy się do tego zabrać na dwa sposoby: albo połączyć kolejne obserwacje w grupy i szukać *trendów* charakterystycznych dla różnych czynności na poziomie tych grup, albo potraktować całe dane jako jeden szereg czasowy i próbować go podzielić na kawałki z podobnymi *trendami*.
+
+Podejście drugie to zagadnienie poruszane w świecie ML, znane pod nazwą *Subsequence clustering*. Co zaskakujące, autorzy [tego](http://www.cs.ucr.edu/~eamonn/meaningless.pdf) artykułu naukowego argumentują, że takie zadanie jest... pozbawione matematycznego sensu.
+
+Wobec tego, po konsultacji z prowadzącym, zastosowaliśmy podejscie pierwsze.
+
+# Klasteryzacja szeregów czasowych
+
+## Teoria
+
+Pomimo pozornych różnic, to zadanie jest dość podobne do *normalnego* zadania klasteryzacji punktów. Różnica polega na tym, że klasteryzujemy nie punkty w $R^n$, tylko *ciągi* (szeregi czasowe) punktów. Istnieją metryki pozwalające liczyć *odległość* (miarę, jak bardzo się od siebie różnią) szeregi czasowe. Jedną z nich jest *Dynamic Time Warping*.
+
+![](DTW.jpg)
+
+Poniżej prezentujemy tabelkę z porównianiem zadania klasycznej klasteryzacji oraz klasteryzacji szeregów czasowych:
+
+|                          |Punkty                         |Szeregi czasowe                |
+|--------------------------|-------------------------------|-------------------------------|
+|Obiekt                    |Punkt w $R^n$                  |Szereg czasowy długości $m$    |
+|Reprezentacja matematyczna|Wektor $1 \times n$            |Macierz $m \times n$           |
+|Metryka dystansu          |Euklidesowa                    |DTW                            |
+|Algorytm klasteryzujący   |PAM, Hclust, ...               |PAM, Hclust, ...               |
+|Metryka ewaluacyjna       |Davies-Bouldin, Silhouette, ...|Davies-Bouldin, Silhouette, ...|
+
+Jak widzimy, od pewnego momentu w pracy zadania są te same - w obu przypadkach możemy korzystać z tych samych algorytmów i tych samych metryk ewaluacyjnych.
+
+## Praktyka 
+
+Do takiej formy klasteryzacji został użyty pakiet *dwtclust*.  
+
+```{r dtw_load, include=FALSE, cache=TRUE}
+source('create_ts.R')
+```
+```{r plots, fig.width=8, fig.asp=1}
+tsclust(ts_list[sample(1:length(ts_list), 40)], type = "h", k = 6, control = hierarchical_control("ward.D")) %>%
+  plot()
+```
+
+### Wybór ilości klastrów oraz najlepszych metod
+
+Porównaniu zostały poddane algorytmy stosujące *partitional clustering* (z metodami *mean*, *median* oraz *pam* - partition around medoids) oraz *hierarchical clustering* (z metrykami Warda, *complete*, *average* oraz *genie*). Porównywano je za pomocą pięciu metryk:
+
+ * Indeksu Davida - Bouldina
+ * Indeksu Calińskiego - Harabasza
+ * metryki Silhouette
+ * Indeksu Fowlkesa-Mallowsa
+ * Dostosowanego (*Adjusted*) indeksu Randa.
+ 
+```{r load_comps, include = FALSE}
+load("data/comparison.rda")
+```
+```{r create_comps, eval = FALSE}
+cfg  <- compare_clusterings_configs(
+        types = c("p", "h"),
+        k = 2:10,
+        controls = list(
+                partitional = partitional_control(iter.max = 20L, nrep = 5),
+                hierarchical = hierarchical_control(method = c("ward.D",
+                                                               "complete",
+                                                               "average"))
+        ),
+        centroids = pdc_configs(
+                "centroid",
+                partitional = list(
+                        mean = list(),
+                        median = list(),
+                        pam = list()
+                ),
+                hierarchical = list(
+                        default = list()
+                )
+        )
+)
+evaluators <- cvi_evaluators(c("ARI", "DB", "FM", "Sil","CH") , ground.truth = ts_labels)
+comparison <- compare_clusterings(ts_list, types = c("p","h"),
+                                  configs = cfg, trace = TRUE,
+                                  score.clus = evaluators$score,
+                                  pick.clus = evaluators$pick)
+```
+```{r genie_comp, cache = TRUE, echo = FALSE}
+t_genie <- tsclust(ts_list, 2:10, type = "h", control = hierarchical_control(method = genie::hclust2))
+res_genie <- sapply(t_genie, cvi, b = ts_labels, type = c("ARI", "FM", "DB", "CH", "Sil")) %>%
+        t() %>% as_tibble() %>%
+        mutate(k = 2:10, method = "h_genie")
+```
+```{r plot_comps, fig.width=10, fig.asp=1}
+comp_p <- select(comparison$results$partitional,
+                 rep, k, centroid, DB:FM) %>%
+  rename(method = "centroid") %>%
+  mutate(method = paste0("part_", method)) %>%
+  tidyr::pivot_longer(cols = DB:FM,
+                      names_to = "metric") %>%
+  group_by(k, method, metric) %>%
+  summarise(value = mean(value))
+
+comp_h <- select(comparison$results$hierarchical,
+                 k, method, DB:FM) %>%
+  mutate(method = paste0("h_", method)) %>%
+  bind_rows(res_genie) %>%
+  tidyr::pivot_longer(cols = c("ARI", "FM", "DB", "CH", "Sil"),
+                      names_to = "metric")
+
+bind_rows(comp_p, comp_h) %>%
+  mutate(metric = factor(metric, levels = c("CH", "DB", "Sil", "ARI", "FM"))) %>%
+  ggplot(aes(x = k, y = value, col = method)) +
+  geom_line(size = 1) +
+  facet_wrap( ~ metric, nrow = 2, scales = "free_y") +
+  labs(title = "Comparison of clustering methods using various metrics") +
+  ylab("Metric value") +
+  xlab("Number of clusters k")
+select(comparison$pick, k, method, centroid, DB:FM)
+```
+
+Nasuwa się kilka wniosków:
+
+ * Metody *hierarchical* biją na głowę metody *partitional* po wzięciu pod uwagę wszystkich metryk poza indeksem Daviesa-Bouldina.
+ * Skuteczność metod hierarchicznych (poza *genie*) mocno zależy od ilości klastrów. Może być bardzo dobra lub fatalna.
+ * Metryki podpowiadają różne ilości klastrów. CH i Sil osiągają najlepsze wartości dla **4** oraz **7**, a pozostałe dla **2**, **5** i **8**.
+ * Ekstrema, w zależności od metryk, osiągają: metoda hierarchiczna Warda (Sil, CH), metody dzielące (DB) oraz metody hierarchiczne *average* oraz *complete* (ARI, FM). 
+ 
+ Przyjrzyjmy się bliżej proponowanym podziałom:
+ 
+```{r viz, cache=TRUE}
+all_clusters <- tsclust(ts_list, type = "h", 
+                        k = 8, control = hierarchical_control("complete"))
+table(all_clusters@cluster) %>%
+  as.data.frame() %>%
+  rename(cluster_no = Var1) %>%
+  ggplot(aes(x = cluster_no, y = Freq)) +
+  geom_col() +
+  labs(title = "Size of clusters",
+       subtitle = "Hierarchical clustering")
+```
+
+Jak widzimy, zyskiwanie nowych klastrów niezbyt polepsza jakość klasteryzacji. Tworzą się 2 klastry, do których trafia znaczna część obserwacji, i 6 pomniejszych.
+
+Spójrzmy, jak rozkłada się podział proponowany przez *partitional clustering*:
+
+```{r viz2, cache=TRUE}
+all_clusters <- tsclust(ts_list, type = "p", 
+                        k = 6, centroid = "mean")
+table(all_clusters@cluster) %>%
+  as.data.frame() %>%
+  rename(cluster_no = Var1) %>%
+  ggplot(aes(x = cluster_no, y = Freq)) +
+  geom_col() +
+  labs(title = "Size of clusters",
+       subtitle = "Partitional clustering")
+
+table(all_clusters@cluster, ts_labels) %>%
+  knitr::kable()
+```
+
+Tutaj nieco lepiej.
+
+Mamy dwie propozycje: podział na 4 klastry przy pomocy odpowiednika algorytmów k-średnich oraz podział na 2 klastry przy pomocy algorytmu hierarchicznego Warda. Oba podziały są klarowne, polecane przez część metryk i dość interpretowalne.
+
+### Interpretacja podziału na 4 klastry
+
+```{r vis3, cache=TRUE}
+final_clusters <- tsclust(ts_list, type = "p", 
+          k = 4, centroid = "mean", control = partitional_control(nrep = 5))
+pick <- sapply(final_clusters, cvi, b = ts_labels, type = "FM") %>%
+  which.max()
+
+table(final_clusters[[pick]]@cluster, ts_labels) %>%
+  knitr::kable()
+```
+
+# Podsumowanie
+Niestety dla zbioru jaki otrzymaliśmy nie udało się przeprowadzić klasteryzacji dającej rezultat podobny do dostępnych nam labeli - winna była natura danych. Poszczególne momenty w szeregach czasowych dla różnych czynności mogły być podobne, co sprawiło że standardowe algorytmy nie mogły sklastrować obserwacji tak, by odzwierciedlić wykonywane czynności. Jedyne co mogły osiągnąć to znalezienie podobnych odczytów, jednakże pochodzących z innych rodzajów ludzkich działań. Ze względu na naturę labeli, do których chcieliśmy się zbliżyć, musieliśmy dostosować naturę zbioru danych. Zamiast badać pojedyncze obserwacje, klastrowaliśmy większe szeregi czasowe (aby je uzyskać musieliśmy wspomóc się labelami, przez co nie możemy tego nazwać klasteryzacją dla zbioru danych, którego otrzymaliśmy pierwotnie), zmienił się więc typ naszego zadania. Jednakże dało to nam możliwość poznania innych technik oraz pojęć, w tym wypadku mierzenie odległości/podobieństwa szeregów czasowych za pomocą Dynamic Time Warping.
+
+### Używane w projekcie pakiety i ich wersje
+
+```{r session_info}
+sessionInfo()
+```
