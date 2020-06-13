@@ -1,6 +1,5 @@
 # 2020L-WUM
 #### Strona laboratorium z przedmiotu Wstęp Do Uczenia Maszynowego w semestrze letnim 2020.
-
 ### Terminarz
 
 | Data  | Ćwiczenia                                                                 | Prace domowe                     | Projekty                     |
@@ -18,10 +17,10 @@
 | 5.05  |                                                                         | Konsultacje                      | Oddanie kamienia milowego 1. |
 | 12.05 | Brak zajęć -- piątek na PW                                              |                                  |                              |
 | 19.05 | Klasteryzacja c.d.                                                      | Termin oddania PD5, początek PD6 | Konsultacje                  |
-| 26.06 |                                                                         | Konsultacje                      | Oddanie kamienia milowego 2. |
+| 26.05 |                                                                         | Konsultacje                      | Oddanie kamienia milowego 2. |
 | 2.06  | Redukcja wymiarów                                                       | Termin oddania PD6, początek PD7 | Konsultacje                  |
 | 9.06  |                                                                         | Konsultacje                      | Prezentacja projektu 2.      |
-| 16.06 | Analiza koszykowa                                                       | Termin oddania PD7               |                              |
+| 16.06 | Rano: Wstęp do sieci neuronowych / Wieczorem: Analiza koszykowa                                                     | Termin oddania PD7               |                              |
 
 ### Zasady oceniania laboratoriów:
 
@@ -34,6 +33,6 @@
   * 5 pkt -- eksploracja danych (kamień milowy 1.)
   * 5 pkt -- inżynieria cech, wstępne modelowanie (kamień milowy 2.)
   * 10 pkt -- finalne modele, prezentacja rezultatów i raport (kamień milowy 3.)
-* 10 pkt -- zaliczenie 3 kursów na DataCamp
+* 10 pkt -- zaliczenie 3 kursów na DataCamp + wypełnienie ankiety https://forms.gle/zQu54rXxjHLgXVPm8
 
-Do zaliczenia laboratorium wymagane jest uzyskanie ponad połowy możliwych do zdobycia punktów (czyli ponad 40). Dodatkowo wymagane jest zdobycie ponad 10 punktów z każdego z projektów oraz ponad 15 punktów z prac domowych.
+Do zaliczenia laboratorium wymagane jest uzyskanie ponad połowy możliwych do zdobycia punktów (czyli ponad 40). Dodatkowo wymagane jest zdobycie ponad 10 punktów z każdego z projektów oraz ponad 15 punktów z prac domowych. Wszelkie projekty, ankiety. Termin na dosyłanie projektów, prac domowych i ankiet kończy się o 23:59 16.06 - na podstawie wysłanych do tego czasu prac będą wystawiane oceny.

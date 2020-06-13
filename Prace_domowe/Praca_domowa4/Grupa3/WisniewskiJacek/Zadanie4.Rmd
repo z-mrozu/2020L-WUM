@@ -1,0 +1,130 @@
+---
+title: "Praca Domowa 4"
+author: "Jacek Wiśniewski"
+date: "26/04/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(DALEX)
+library(mlr)
+library(tidyverse)
+library(measures)
+library(mlbench)
+```
+
+# Wstęp
+
+W celu poznania lepiej algorytmu SVM stworzyłem 2 modele predykcyjne dla zbiorów danych apartments i BostonHousing korzystając z tego algorytmu. Modele są stworzone przy pomocy biblioteki mlr, w trakcie trenowania są strojone dla 3 hiperparametrów, a na koniec są mierzone 4 miarami.
+
+# Model apartments
+
+```{r apartments, warning=FALSE, message=FALSE}
+set.seed(123)
+
+n <- sample(1:nrow(apartments), 0.7*nrow(apartments))
+apartments_train <- apartments[n, ]
+apartments_test <- apartments[-n, ]
+
+task <- makeRegrTask(id = "apartments", data = apartments_train, target = "m2.price")
+learner <- makeLearner(cl = "regr.svm")
+
+# getParamSet("regr.svm")
+paramset <- makeParamSet(
+  makeNumericParam("cost", lower = 0, upper = 10),
+  makeNumericParam("gamma", lower = 0, upper = 10),
+  makeIntegerParam("degree", lower = 1, upper = 5)
+)
+
+ctrl_random <- makeTuneControlRandom(maxit = 50)
+cross_val <- makeResampleDesc("RepCV", folds = 3 * 3)
+learner_tune <- tuneParams(learner, task,
+                           resampling = cross_val,
+                           control = ctrl_random,
+                           par.set = paramset,
+                           measures = list(rmse, rsq, mlr::expvar, kendalltau))
+
+hyperParEffect <- generateHyperParsEffectData(learner_tune, partial.dep = TRUE)
+# hyperParEffect$data
+plotHyperParsEffect(hyperParEffect, partial.dep.learn = "regr.glm",
+                    x = "degree", y = "rmse.test.rmse",
+                    plot.type = "line")
+
+plotHyperParsEffect(hyperParEffect, partial.dep.learn = "regr.glm",
+                    x = "cost", y = "rmse.test.rmse",
+                    plot.type = "line")
+
+plotHyperParsEffect(hyperParEffect, partial.dep.learn = "regr.glm",
+                    x = "gamma", y = "rmse.test.rmse",
+                    plot.type = "line")
+```
+
+Z wykresów wynika, że model się najlepiej zachowuje dla małych hiperparametrów degree i gamma za to dużego hiperparametru cost.
+
+```{r apratment_2, warning=FALSE, message=FALSE}
+
+learner_best <- setHyperPars(learner, par.vals = list(cost = learner_tune$x$cost,
+                                                      gamma = learner_tune$x$gamma,
+                                                      degree = learner_tune$x$degree))
+model_best <- train(learner_best, task)
+prediction <- predict(model_best, newdata = apartments_test)
+knitr::kable(performance(prediction, measures = list(rmse, rsq, mlr::expvar, kendalltau)))
+```
+
+# Model BostonHousing
+
+```{r Boston, warning=FALSE, message=FALSE}
+data("BostonHousing")
+
+n2 <- sample(1:nrow(BostonHousing), 0.7*nrow(BostonHousing))
+Boston_train <- BostonHousing[n2, ]
+Boston_test <- BostonHousing[-n2, ]
+
+task2 <- makeRegrTask(id = "Boston", data = Boston_train, target = "medv")
+learner2 <- makeLearner(cl = "regr.svm")
+
+# getParamSet("regr.svm")
+paramset2 <- makeParamSet(
+  makeNumericParam("cost", lower = 0, upper = 10),
+  makeNumericParam("gamma", lower = 0, upper = 10),
+  makeIntegerParam("degree", lower = 1, upper = 5)
+)
+
+ctrl_random2 <- makeTuneControlRandom(maxit = 50)
+cross_val2 <- makeResampleDesc("RepCV", folds = 3 * 3)
+learner_tune2 <- tuneParams(learner2, task2,
+                           resampling = cross_val2,
+                           control = ctrl_random2,
+                           par.set = paramset2,
+                           measures = list(rmse, rsq, mlr::expvar, kendalltau))
+
+hyperParEffect2 <- generateHyperParsEffectData(learner_tune2, partial.dep = TRUE)
+# hyperParEffect2$data
+plotHyperParsEffect(hyperParEffect2, partial.dep.learn = "regr.glm",
+                    x = "degree", y = "rmse.test.rmse",
+                    plot.type = "line")
+
+plotHyperParsEffect(hyperParEffect2, partial.dep.learn = "regr.glm",
+                    x = "cost", y = "rmse.test.rmse",
+                    plot.type = "line")
+
+plotHyperParsEffect(hyperParEffect2, partial.dep.learn = "regr.glm",
+                    x = "gamma", y = "rmse.test.rmse",
+                    plot.type = "line")
+```
+
+W przypadku BostonHousing hiperparametry degree i cost powinny być duże, a gamma małe.
+
+```{r Boston_2, warning=FALSE, message=FALSE}
+learner_best2 <- setHyperPars(learner2, par.vals = list(cost = learner_tune2$x$cost,
+                                                      gamma = learner_tune2$x$gamma,
+                                                      degree = learner_tune2$x$degree))
+model_best2 <- train(learner_best2, task2)
+prediction2 <- predict(model_best2, newdata = Boston_test)
+knitr::kable(performance(prediction2, measures = list(rmse, rsq, mlr::expvar, kendalltau)))
+```
+
+# Wnioski
+
+Model w obu przypadkach przewiduje zmienną celu w akceptowalny sposób. Lepiej sobie radzi na zbiorze apartments co może wynikać z tego, że apartments ma więcej rekordów od BostonHousing.
